@@ -61,10 +61,10 @@ Includes three files:
 
 
 ```r
-knitr::include_graphics("./rseqc/GC_plot.png")
+knitr::include_graphics("./img/GC_plot.png")
 ```
 
-<img src="./rseqc/GC_plot.png" width="500px" />
+<img src="./img/GC_plot.png" width="500px" />
 
 **3. Determine reads duplication rate**
 
@@ -91,10 +91,10 @@ Includes 4 files
 
 
 ```r
-knitr::include_graphics("./rseqc/duplication.DupRate_plot.png")
+knitr::include_graphics("./img/duplication.DupRate_plot.png")
 ```
 
-<img src="./rseqc/duplication.DupRate_plot.png" width="500px" />
+<img src="./img/duplication.DupRate_plot.png" width="500px" />
 
 **4. Calculate the distribution of deletions across reads**
 
@@ -115,10 +115,10 @@ NOTE: It says "Process BAM file ...  Total reads used: 69828". Overriding this v
 
 
 ```r
-  knitr::include_graphics("./rseqc/deletion_profile-1.png")
+  knitr::include_graphics("./img/deletion_profile-1.png")
 ```
 
-<img src="./rseqc/deletion_profile-1.png" width="500px" />
+<img src="./img/deletion_profile-1.png" width="500px" />
 
 **5. Calculate the distributions of inserted nucleotides across reads**
 
@@ -139,16 +139,16 @@ Includes four files:
 
 
 ```r
-knitr::include_graphics("./rseqc/insertion_profile.R1-1.png")
+knitr::include_graphics("./img/insertion_profile.R1-1.png")
 ```
 
-<img src="./rseqc/insertion_profile.R1-1.png" width="500px" />
+<img src="./img/insertion_profile.R1-1.png" width="500px" />
 
 ```r
-knitr::include_graphics("./rseqc/insertion_profile.R2-1.png")
+knitr::include_graphics("./img/insertion_profile.R2-1.png")
 ```
 
-<img src="./rseqc/insertion_profile.R2-1.png" width="500px" />
+<img src="./img/insertion_profile.R2-1.png" width="500px" />
 
 **6. Calculate the distribution of mismatches across reads.**
 
@@ -167,10 +167,10 @@ Output:
 
 
 ```r
-knitr::include_graphics("./rseqc/mismatch_profile-1.png")
+knitr::include_graphics("./img/mismatch_profile-1.png")
 ```
 
-<img src="./rseqc/mismatch_profile-1.png" width="500px" />
+<img src="./img/mismatch_profile-1.png" width="500px" />
 
 
 
