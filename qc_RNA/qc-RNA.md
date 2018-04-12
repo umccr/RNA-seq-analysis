@@ -111,7 +111,7 @@ Includes three files:
 
 * output.deletion_profile.pdf: Graphical output generated from R script
 
-NOTE: It says "Process BAM file ...  Total reads used: 69828". Overriding this value by providing an explicit input with "-n" didn't change it.
+NOTE: It says "Process BAM file ...  Total reads used: 69828". Overriding this value by providing an explicit input with "-n" didn't change it.:confused:
 
 
 ```r
