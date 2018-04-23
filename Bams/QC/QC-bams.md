@@ -1,0 +1,85 @@
+---
+title: "QC BAM Files (Work in Progress)"
+author: "Sehrish Kanwal"
+date: "Mon 2018-Apr-23"
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+This report documents the work undertaken for QC for star bam and kallisto's psedobam.
+
+### Extract unmapped reads from bam file
+
+For QC check, it might be a good idea to clean-up the data first by removing unmapped reads from the bam file. 
+
+The command used is:
+
+```
+samtools view -b -F 4 input.bam > output.mapped.bam
+    -b output bam file
+    -F Do not output alignments with any bits set in INT present in the FLAG field. 
+     4 SAM flag value for read unmapped
+```
+
+The output file for star and kallistto are located under (respectively):
+
+```
+/data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/align/RNA-Test-kallisto/RNA-Test-kallisto_star/RNA-Test-kallisto.mapped.bam
+
+/data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/kallisto/RNA-Test-kallisto/pseudoalignment/pseudoalignments.sorted.mapped.bam
+```
+
+*Note*:
+
+Interestingly, kallisto bam file had more un-mapped reads as the file size reduced from 2.1G to 1.4G. On the other hand, star bam file remained roughly the same size (2.2G -> 2.1G). Need to investigate this further.
+
+Running `samtools flagstats` on star bam file produces the following output.
+
+```
+48967081 + 0 in total (QC-passed reads + QC-failed reads)
+3077887 + 0 secondary
+26247 + 0 supplementary
+0 + 0 duplicates
+48231706 + 0 mapped (98.50% : N/A)
+45862947 + 0 paired in sequencing
+22931472 + 0 read1
+22931475 + 0 read2
+45057520 + 0 properly paired (98.24% : N/A)
+45127464 + 0 with itself and mate mapped
+108 + 0 singletons (0.00% : N/A)
+32314 + 0 with mate mapped to a different chr
+32314 + 0 with mate mapped to a different chr (mapQ>=5)
+```
+
+98.5% of the total reads are mapped (which explains why the difference of size after removing unmapped reads is negligible).
+
+Running `samtools flagstats` on kallisto ba, produces the following output.
+
+```
+49077810 + 0 in total (QC-passed reads + QC-failed reads)
+3214860 + 0 secondary
+0 + 0 supplementary
+0 + 0 duplicates
+38828548 + 0 mapped (79.12% : N/A)
+45862950 + 0 paired in sequencing
+22931475 + 0 read1
+22931475 + 0 read2
+35252004 + 0 properly paired (76.86% : N/A)
+35252004 + 0 with itself and mate mapped
+361684 + 0 singletons (0.79% : N/A)
+0 + 0 with mate mapped to a different chr
+0 + 0 with mate mapped to a different chr (mapQ>=5)
+```
+
+79.12% of the total reads are mapped (which further explains why there is a significant difference in sizes of the file after removing unmapped reads).
+
+
+
+
+
+
