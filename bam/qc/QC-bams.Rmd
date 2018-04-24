@@ -80,9 +80,50 @@ Running `samtools flagstats` on kallisto ba, produces the following output.
 
 79.12% of the total reads are mapped (which further explains why there is a significant difference in sizes of the file after removing unmapped reads).
 
-### FatsQC
+### FastQC
 
-Currently running - need to analyse results
+The summary of the FastQC result for both bam files is shown below.
+
+| Summary                | Star-Bam   | Kallisto-Bam
+|------------------------|-------------|--------------|
+| `Basic Statistics`     |  PASS  | PASS  |
+| `Per base sequence quality`   | PASS  | PASS  |
+| `Per tile sequence quality`    | PASS  | PASS |
+| `Per base sequence content`     | FAIL     | FAIL   |
+| `Per sequence GC content` | FAIL            | FAIL  |
+| `Sequence Length Distribution`  |  PASS  | PASS  |
+| `Overrepresented sequences` | PASS  | PASS  |
+| `Adapter Content`     | PASS  | PASS  |
+
+#### Per base sequence quality in both bams look nice
+
+*Star*
+
+```{r, out.width = "600px"}
+knitr::include_graphics("./images/fastqc/star-base-sequence-quality.png")
+```
+
+*Kallisto*
+
+```{r, out.width = "600px"}
+knitr::include_graphics("./images/fastqc/kallisto-base-sequence-quality.png")
+```
+
+#### Including the failed matrices plots
+
+*Star*
+
+```{r, out.width = "600px"}
+knitr::include_graphics("./images/fastqc/star-base-sequence-content.png")
+knitr::include_graphics("./images/fastqc/star-GC-content.png")
+```
+
+*Kallisto*
+
+```{r, out.width = "600px"}
+knitr::include_graphics("./images/fastqc/kallisto-base-sequence-content.png")
+knitr::include_graphics("./images/fastqc/kallisto-GC-content.png")
+```
 
 
 

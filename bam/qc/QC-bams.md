@@ -1,7 +1,7 @@
 ---
 title: "QC BAM Files (Work in Progress)"
 author: "Sehrish Kanwal"
-date: "Mon 2018-Apr-23"
+date: "Tue 2018-Apr-24"
 output: 
   html_document: 
     keep_md: yes
@@ -78,6 +78,72 @@ Running `samtools flagstats` on kallisto ba, produces the following output.
 
 79.12% of the total reads are mapped (which further explains why there is a significant difference in sizes of the file after removing unmapped reads).
 
+### FastQC
+
+The summary of the FastQC result for both bam files is shown below.
+
+| Summary                | Star-Bam   | Kallisto-Bam
+|------------------------|-------------|--------------|
+| `Basic Statistics`     |  PASS  | PASS  |
+| `Per base sequence quality`   | PASS  | PASS  |
+| `Per tile sequence quality`    | PASS  | PASS |
+| `Per base sequence content`     | FAIL     | FAIL   |
+| `Per sequence GC content` | FAIL            | FAIL  |
+| `Sequence Length Distribution`  |  PASS  | PASS  |
+| `Overrepresented sequences` | PASS  | PASS  |
+| `Adapter Content`     | PASS  | PASS  |
+
+#### Per base sequence quality in both bams look nice
+
+*Star*
+
+
+```r
+knitr::include_graphics("./images/fastqc/star-base-sequence-quality.png")
+```
+
+<img src="./images/fastqc/star-base-sequence-quality.png" width="600px" />
+
+*Kallisto*
+
+
+```r
+knitr::include_graphics("./images/fastqc/kallisto-base-sequence-quality.png")
+```
+
+<img src="./images/fastqc/kallisto-base-sequence-quality.png" width="600px" />
+
+#### Including the failed matrices plots
+
+*Star*
+
+
+```r
+knitr::include_graphics("./images/fastqc/star-base-sequence-content.png")
+```
+
+<img src="./images/fastqc/star-base-sequence-content.png" width="600px" />
+
+```r
+knitr::include_graphics("./images/fastqc/star-GC-content.png")
+```
+
+<img src="./images/fastqc/star-GC-content.png" width="600px" />
+
+*Kallisto*
+
+
+```r
+knitr::include_graphics("./images/fastqc/kallisto-base-sequence-content.png")
+```
+
+<img src="./images/fastqc/kallisto-base-sequence-content.png" width="600px" />
+
+```r
+knitr::include_graphics("./images/fastqc/kallisto-GC-content.png")
+```
+
+<img src="./images/fastqc/kallisto-GC-content.png" width="600px" />
 
 
 
