@@ -1,7 +1,7 @@
 ---
 title: "Quality Report for RNA Data"
 author: "Sehrish Kanwal"
-date: "Thu 2018-Apr-12"
+date: "Fri 2018-Apr-27"
 output: 
   html_document: 
     keep_md: yes

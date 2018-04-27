@@ -1,7 +1,7 @@
 ---
 title: "QC BAM Files (Work in Progress)"
 author: "Sehrish Kanwal"
-date: "Thu 2018-Apr-26"
+date: "Fri 2018-Apr-27"
 output: 
   html_document: 
     keep_md: yes
@@ -209,8 +209,70 @@ The head of the output bed file `/data/cephfs/punim0010/projects/Kanwal_RNASeq_T
 1	14362	24886	ENST00000541675	0	-	14362	24886	0	9	467,69,202,132,7,137,147,102,153,	0,607,2491,2870,3135,3243,3552,3905,10371,
 1	14362	29370	ENST00000423562	0	-	14362	29370	0	10	467,69,152,159,198,136,137,147,154,50,	0,607,1433,2244,2495,2870,3243,3552,10375,14958,
 ```
+The column values definetely make more sense according to description of the bed columns above.
 
-Running the RSeQC module `inner_distance.py` with the output bed file from the perl script ran successfully :relieved: 
+Running the RSeQC module `inner_distance.py` with the output bed file from the perl script ran successfully :boom: 
+
+#### Including output of few RSeQC modules
+
+**Inputs**
+
+1. Star bam - /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/align/RNA-Test-kallisto/RNA-Test-kallisto_star/RNA-Test-kallisto.mapped.bam
+
+2. Kallisto bam - /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/kallisto/RNA-Test-kallisto/pseudoalignment/pseudoalignments.sorted.mapped.bam
+
+3. bed file - /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/RSeQC/ref-transcripts12.bed
+
+**Clipping profile**
+
+This program is used to estimate clipping profile of RNA-seq reads from BAM or SAM file. Note that to use this funciton, CIGAR strings within SAM/BAM file should have ‘S’ operation (This means your reads aligner should support clipped mapping). ‘S’ stands for *soft clipping*. Soft-clipped bases in 5' and 3' of the read are NOT part of the alignment but are also not removed from the read sequence in the bam file. Quoting, https://www.biostars.org/p/109333/
+
+Hard masked bases do not appear in the SEQ string, soft masked bases do.
+
+So, if your cigar is: `10H10M10H` then the SEQ will only be 10 bases long.
+
+if your cigar is `10S10M10S` then the SEQ and base-quals will be 30 bases long.
+
+In the case of soft-masking, even though the SEQ is present, it is not used by variant callers and not displayed when you view your data in a viewer. In either case, masked bases should not be used in calculating coverage
+
+*Star bam*
+
+<img src="./images/rseqc//star.clipping_profile.R1.jpg" width="450px" /><img src="./images/rseqc//star.clipping_profile.R2.jpg" width="450px" />
+
+*kallisto bam*
+
+<img src="./images/rseqc//kallisto.clipping_profile.R1.jpg" width="450px" /><img src="./images/rseqc//kallisto.clipping_profile.R2.jpg" width="450px" />
+
+**Deletion profile**
+
+Calculate the distributions of deletions across reads (left - kallisto | right - star). Deletion in CIGAR string is indicated with ‘D’.
+
+Interestingly, there are no deletions in the pseudoaligned reads to reference. Also, in star total reads used were `69828`.
+
+<img src="./images/rseqc//kallisto.deletion_profile.jpg" width="450px" /><img src="./images/rseqc//star.deletion_profile.jpg" width="450px" />
+
+**Insertion profile**
+
+Calculate the distributions of inserted nucleotides across reads. Note that to use this funciton, CIGAR strings within SAM/BAM file should have ‘I’ operation. No insertions in kallisto's psedobam again.
+
+*Star bam*
+
+<img src="./images/rseqc//star.insertion_profile.R1.jpg" width="450px" /><img src="./images/rseqc//star.insertion_profile.R2.jpg" width="450px" />
+
+*kallisto bam*
+
+<img src="./images/rseqc//kallisto.insertion_profile.R1.jpg" width="450px" /><img src="./images/rseqc//kallisto.insertion_profile.R2.jpg" width="450px" />
+
+**Mismatch profile**
+
+Calculate the distribution of mismatches across reads. Note that the “MD” tag must exist in BAM file.
+
+No mismatches were found in kallisto's pseudo bam. The mismatch profile for star is:
 
 
+```r
+knitr::include_graphics("./images/rseqc/star.mismatch_profile.jpg")
+```
+
+<img src="./images/rseqc/star.mismatch_profile.jpg" width="600px" />
 

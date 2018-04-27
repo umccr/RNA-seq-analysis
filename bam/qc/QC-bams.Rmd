@@ -189,8 +189,87 @@ The head of the output bed file `/data/cephfs/punim0010/projects/Kanwal_RNASeq_T
 1	14362	24886	ENST00000541675	0	-	14362	24886	0	9	467,69,202,132,7,137,147,102,153,	0,607,2491,2870,3135,3243,3552,3905,10371,
 1	14362	29370	ENST00000423562	0	-	14362	29370	0	10	467,69,152,159,198,136,137,147,154,50,	0,607,1433,2244,2495,2870,3243,3552,10375,14958,
 ```
+The column values definetely make more sense according to description of the bed columns above.
 
-Running the RSeQC module `inner_distance.py` with the output bed file from the perl script ran successfully :relieved: 
+Running the RSeQC module `inner_distance.py` with the output bed file from the perl script ran successfully :boom: 
 
+#### Including output of few RSeQC modules
+
+**Inputs**
+
+1. Star bam - /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/align/RNA-Test-kallisto/RNA-Test-kallisto_star/RNA-Test-kallisto.mapped.bam
+
+2. Kallisto bam - /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/kallisto/RNA-Test-kallisto/pseudoalignment/pseudoalignments.sorted.mapped.bam
+
+3. bed file - /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/RSeQC/ref-transcripts12.bed
+
+**Clipping profile**
+
+This program is used to estimate clipping profile of RNA-seq reads from BAM or SAM file. Note that to use this funciton, CIGAR strings within SAM/BAM file should have ‘S’ operation (This means your reads aligner should support clipped mapping). ‘S’ stands for *soft clipping*. Soft-clipped bases in 5' and 3' of the read are NOT part of the alignment but are also not removed from the read sequence in the bam file. Quoting, https://www.biostars.org/p/109333/
+
+Hard masked bases do not appear in the SEQ string, soft masked bases do.
+
+So, if your cigar is: `10H10M10H` then the SEQ will only be 10 bases long.
+
+if your cigar is `10S10M10S` then the SEQ and base-quals will be 30 bases long.
+
+In the case of soft-masking, even though the SEQ is present, it is not used by variant callers and not displayed when you view your data in a viewer. In either case, masked bases should not be used in calculating coverage
+
+*Star bam*
+
+```{r, out.width = "450px", echo=FALSE}
+my_images <- list.files(path = "./images/rseqc/", pattern = "star.clipping_profile.*.jpg", full.names = TRUE)
+knitr::include_graphics(my_images)
+```
+
+*kallisto bam*
+
+```{r, out.width = "450px", echo=FALSE}
+my_images <- list.files(path = "./images/rseqc/", pattern = "kallisto.clipping_profile.*.jpg", full.names = TRUE)
+knitr::include_graphics(my_images)
+```
+
+**Deletion profile**
+
+Calculate the distributions of deletions across reads (left - kallisto | right - star). Deletion in CIGAR string is indicated with ‘D’.
+
+Interestingly, there are no deletions in the pseudoaligned reads to reference. Also, in star total reads used were `69828`.
+
+```{r, out.width = "450px", echo=FALSE}
+my_images <- list.files(path = "./images/rseqc/", pattern = "*.deletion_profile.jpg", full.names = TRUE)
+knitr::include_graphics(my_images)
+```
+
+**Insertion profile**
+
+Calculate the distributions of inserted nucleotides across reads. Note that to use this funciton, CIGAR strings within SAM/BAM file should have ‘I’ operation. No insertions in kallisto's psedobam again.
+
+*Star bam*
+
+```{r, out.width = "450px", echo=FALSE}
+my_images <- list.files(path = "./images/rseqc/", pattern = "star.insertion_profile.*.jpg", full.names = TRUE)
+knitr::include_graphics(my_images)
+```
+
+*kallisto bam*
+
+```{r, out.width = "450px", echo=FALSE}
+my_images <- list.files(path = "./images/rseqc/", pattern = "kallisto.insertion_profile.*.jpg", full.names = TRUE)
+knitr::include_graphics(my_images)
+```
+
+**Mismatch profile**
+
+Calculate the distribution of mismatches across reads. Note that the “MD” tag must exist in BAM file.
+
+No mismatches were found in kallisto's pseudo bam. The mismatch profile for star is:
+
+```{r, out.width = "600px", echo=FALSE}
+knitr::include_graphics("./images/rseqc/star.mismatch_profile.jpg")
+```
+
+**Read quality**
+
+According to SAM specification, if Q is the character to represent “base calling quality” in SAM file, then Phred Quality Score = ord(Q) - 33. Here ord() is python function that returns an integer representing the Unicode code point of the character when the argument is a unicode object, for example, ord(‘a’) returns 97. Phred quality score is widely used to measure “reliability” of base-calling, for example, phred quality score of 20 means there is 1/100 chance that the base-calling is wrong, phred quality score of 30 means there is 1/1000 chance that the base-calling is wrong. In general: Phred quality score = -10xlog(10)P, here P is probability that base-calling is wrong.
 
 
