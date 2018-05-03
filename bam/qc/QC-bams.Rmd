@@ -13,7 +13,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This report documents the work undertaken for QC for star bam and kallisto's psedobam.
+This report documents the work undertaken regarding QC for star bam and kallisto's psedobam.
 
 ### Extract unmapped reads from bam file
 
@@ -60,7 +60,7 @@ Running `samtools flagstats` on star bam file produces the following output.
 
 98.5% of the total reads are mapped (which explains why the difference of size after removing unmapped reads is negligible).
 
-Running `samtools flagstats` on kallisto ba, produces the following output.
+Running `samtools flagstats` on kallisto bam, produces the following output.
 
 ```
 49077810 + 0 in total (QC-passed reads + QC-failed reads)

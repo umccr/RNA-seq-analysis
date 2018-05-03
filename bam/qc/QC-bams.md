@@ -1,7 +1,7 @@
 ---
 title: "QC BAM Files (Work in Progress)"
 author: "Sehrish Kanwal"
-date: "Mon 2018-Apr-30"
+date: "Thu 2018-May-03"
 output: 
   html_document: 
     keep_md: yes
@@ -11,7 +11,7 @@ editor_options:
 
 
 
-This report documents the work undertaken for QC for star bam and kallisto's psedobam.
+This report documents the work undertaken regarding QC for star bam and kallisto's psedobam.
 
 ### Extract unmapped reads from bam file
 
@@ -58,7 +58,7 @@ Running `samtools flagstats` on star bam file produces the following output.
 
 98.5% of the total reads are mapped (which explains why the difference of size after removing unmapped reads is negligible).
 
-Running `samtools flagstats` on kallisto ba, produces the following output.
+Running `samtools flagstats` on kallisto bam, produces the following output.
 
 ```
 49077810 + 0 in total (QC-passed reads + QC-failed reads)
