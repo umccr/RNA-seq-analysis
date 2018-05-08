@@ -1,7 +1,7 @@
 ---
 title: "BAM-Comparison-IGV"
 author: "Sehrish Kanwal"
-date: "Mon 2018-Apr-23"
+date: "Mon 2018-Apr-30"
 output: 
   html_document: 
     keep_md: yes
