@@ -255,7 +255,7 @@ head(myCPM)
 ```
 
 ```r
-# Which values in myCPM are greater than 0.5?
+# Which values in myCPM are greater than 0.25?
 thresh <- myCPM > 0.25
 
 # This produces a logical matrix with TRUEs and FALSEs
@@ -272,7 +272,55 @@ head(thresh)
 ## ENSG00000240361        FALSE
 ```
 
-A CPM of 0.25 is used as it corresponds to a count of 10-15 for the library sizes in this data set. If the count is any smaller, it is considered to be very low, indicating that the associated gene is not expressed in that sample. As a general rule, a good threshold can be chosen by identifying the CPM that corresponds to a count of 10, which in this case is about 0.5. It is important to filter with CPMs rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples.
+```r
+table(rowSums(thresh))
+```
+
+```
+## 
+##     0     1 
+## 36153 21752
+```
+
+```r
+# Would like to keep genes that have TRUE thresh value
+keep <- rowSums(thresh) == 1
+
+# Subset the rows of countdata to keep the more highly expressed genes
+counts.keep <- countdata[keep, ,  drop = FALSE]
+
+# Taking a look at the subset data
+summary(keep)
+```
+
+```
+##    Mode   FALSE    TRUE 
+## logical   36153   21752
+```
+
+```r
+head(counts.keep)
+```
+
+```
+##                 kallisto_bam
+## ENSG00000223972           62
+## ENSG00000227232          550
+## ENSG00000237613           23
+## ENSG00000238009           21
+## ENSG00000233750           74
+## ENSG00000237683           93
+```
+
+```r
+dim(counts.keep)
+```
+
+```
+## [1] 21752     1
+```
+
+A CPM of 0.25 is used as it corresponds to a count of 10-15 for the library sizes in this data set. If the count is any smaller, it is considered to be very low, indicating that the associated gene is not expressed in that sample. As a general rule, a good threshold can be chosen by identifying the CPM that corresponds to a count of 10, which in this case is about 0.25. It is important to filter with CPMs rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples.
 
 
 ```r
@@ -294,7 +342,31 @@ abline(v = 0.25, h = 10, col=c("blue", "red"))
 
 ![](featureCount_files/figure-html/unnamed-chunk-6-2.png)<!-- -->
 
+### Converting counts to DGEList Object
 
+This is an object used by edgeR to store count data. It has a number of slots for storing various parameters about the data. 
+
+
+```r
+y <- DGEList(thresh)
+y
+```
+
+```
+## An object of class "DGEList"
+## $counts
+##                 kallisto_bam
+## ENSG00000223972         TRUE
+## ENSG00000227232         TRUE
+## ENSG00000243485        FALSE
+## ENSG00000237613         TRUE
+## ENSG00000268020        FALSE
+## 57900 more rows ...
+## 
+## $samples
+##              group lib.size norm.factors
+## kallisto_bam     1    21752            1
+```
 
 
 

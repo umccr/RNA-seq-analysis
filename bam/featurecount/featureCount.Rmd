@@ -175,6 +175,19 @@ thresh <- myCPM > 0.25
 
 # This produces a logical matrix with TRUEs and FALSEs
 head(thresh)
+
+table(rowSums(thresh))
+
+# Would like to keep genes that have TRUE thresh value
+keep <- rowSums(thresh) == 1
+
+# Subset the rows of countdata to keep the more highly expressed genes
+counts.keep <- countdata[keep, ,  drop = FALSE]
+
+# Taking a look at the subset data
+summary(keep)
+head(counts.keep)
+dim(counts.keep)
 ```
 
 A CPM of 0.25 is used as it corresponds to a count of 10-15 for the library sizes in this data set. If the count is any smaller, it is considered to be very low, indicating that the associated gene is not expressed in that sample. As a general rule, a good threshold can be chosen by identifying the CPM that corresponds to a count of 10, which in this case is about 0.25. It is important to filter with CPMs rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples.
@@ -192,7 +205,14 @@ plot(myCPM[,1],countdata[,1],ylim=c(0,50),xlim=c(0,3))
 abline(v = 0.25, h = 10, col=c("blue", "red"))
 ```
 
+### Converting counts to DGEList Object
 
+This is an object used by edgeR to store count data. It has a number of slots for storing various parameters about the data. 
+
+```{r}
+y <- DGEList(thresh)
+y
+```
 
 
 
