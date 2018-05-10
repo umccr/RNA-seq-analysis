@@ -1,7 +1,7 @@
 ---
 title: "QC BAM Files (Work in Progress)"
 author: "Sehrish Kanwal"
-date: "Thu 2018-May-03"
+date: "Thu 2018-May-10"
 output: 
   html_document: 
     keep_md: yes
@@ -78,11 +78,19 @@ Running `samtools flagstats` on kallisto bam, produces the following output.
 
 79.12% of the total reads are mapped (which further explains why there is a significant difference in sizes of the file after removing unmapped reads).
 
+### Summary of statistics
+
+
+|Sample  |Total Reads |Mapped Reads  |Properly Paired|
+|--------|------------|--------------|---------------|
+|Star.bam|  48967081  |48231706 (98.50%) |45057520 (98.24%)|
+|Kallisto.bam  |49077810  |38828548 (79.12%) |35252004 (76.86%)|
+
 ### FastQC
 
 The summary of the FastQC result for both bam files is shown below.
 
-| Summary                | Star-Bam   | Kallisto-Bam
+| Summary                | Star-Bam   | Kallisto-Bam  |
 |------------------------|-------------|--------------|
 | `Basic Statistics`     |  PASS  | PASS  |
 | `Per base sequence quality`   | PASS  | PASS  |
@@ -397,5 +405,7 @@ Novel Splicing Junctions:	0
 ```
 
 <img src="./images/rseqc//kallisto.splice.events.jpg" width="400px" /><img src="./images/rseqc//kallisto.splice.junction.jpg" width="400px" />
+
+
 
 
