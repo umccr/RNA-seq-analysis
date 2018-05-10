@@ -212,7 +212,7 @@ abline(v = 0.25, h = 10, col=c("blue", "red"))
 ```{r}
 # also look at dplyr's arrange function
 # Arrange count values in ascending order
-sorted_counts <- counts_keep[order(-counts_keep$kallisto_bam), , drop = FALSE]
+sorted_counts_kallisto <- counts_keep[order(-counts_keep$kallisto.bam), , drop = FALSE]
 
 # High, medium and low expressed genes
 

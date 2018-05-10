@@ -1,7 +1,7 @@
 ---
 title: "BAM-featureCount"
 author: "Sehrish Kanwal"
-date: "Wed 2018-May-09"
+date: "Thu 2018-May-10"
 output: 
   html_document: 
     keep_md: yes
@@ -42,6 +42,7 @@ library(gplots)
 ```
 
 ```r
+library(ggplot2)
 library(dplyr)
 ```
 
@@ -458,6 +459,72 @@ title("Boxplots of logCPMs (unnormalised)")
 
 ![](featureCount-combined_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
+### Stratifying into high, medium and low expressed genes
 
+
+**High expressed genes**
+
+|Star |Star_Count|Kallisto| Kallisto_Count|
+|-----|--------|----------|---------------|
+|ENSG00000258486  | 733053| ENSG00000258486 | 1368704|
+|ENSG00000265150  | 446140| ENSG00000265150 | 993379 |  
+|ENSG00000202198  | 416096| ENSG00000265735 | 475017 |  
+|ENSG00000165092  | 389228| ENSG00000202198 | 427748 | 
+|ENSG00000259001 |  290600| ENSG00000165092 | 392580  | 
+|ENSG00000156508  | 247791| ENSG00000156508 | 327939   |
+|ENSG00000251562  | 220488| ENSG00000259001 | 293543   |
+|ENSG00000087086 |  205158| ENSG00000263740 | 234616   |
+|ENSG00000269900  | 194717| ENSG00000251562 |  222226   |
+|ENSG00000198074  | 184560| ENSG00000087086 | 205203 |
+
+
+**Medium expressed genes**
+
+|Star |Star_Count|Kallisto| Kallisto_Count|
+|-----|--------|----------|---------------|
+|ENSG00000164626     | 392|  ENSG00000109501 |  445|     
+|ENSG00000046647     | 392|  ENSG00000170846  | 445|     
+|ENSG00000137720     | 392|  ENSG00000204520  | 445 |    
+|ENSG00000006283     | 392|  ENSG00000183242  | 445 |    
+|ENSG00000163596     | 391|  ENSG00000180979  | 445  |   
+|ENSG00000096080     | 391|  ENSG00000164181  | 444 |    
+|ENSG00000059769     | 391|  ENSG00000124496 |  444 |    
+|ENSG00000167281     | 391|  ENSG00000136840 |  444  |   
+|ENSG00000121989     | 390|  ENSG00000138621 |  444 |    
+|ENSG00000114948     | 390|  ENSG00000197943 |  444|
+
+**Low expressed genes**
+
+|Star |Star_Count|Kallisto| Kallisto_Count|
+|-----|--------|-----------|---------------|
+|ENSG00000269950       | 8|  ENSG00000205702 |10|        
+|ENSG00000234509       | 8|  ENSG00000273366 |  10 |    
+|ENSG00000180509       | 8|  ENSG00000100429  | 10 |   
+|ENSG00000230212       | 8|  ENSG00000269950  | 10 |     
+|ENSG00000228107       | 8|  ENSG00000230212  | 10 |    
+|ENSG00000198054       | 8|  ENSG00000231324  | 10 |    
+|ENSG00000237373       | 8|  ENSG00000237373  | 10 |     
+|ENSG00000183778      |  8|  ENSG00000227702  | 10 |    
+|ENSG00000225745      |  8|  ENSG00000184274  | 10 |    
+|ENSG00000160183      |  8|  ENSG00000228137  | 10|
+
+### Trying out a plot
+
+I am not yet completely sure of its interpretation.
+
+
+```r
+ggplot(counts_keep, aes(x=log2(star.bam+1), y=log2(kallisto.bam+1))) + geom_point() + geom_smooth(method="lm") + geom_abline(slope=1, intercept = 0, color="red") + annotate("text", x=10, y=15, label= "spearman cor = 0.96") + ggtitle("star bam counts versus kallisto bam counts")
+```
+
+![](featureCount-combined_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
+
+```r
+cor(log2(counts_keep$star.bam+1), log2(counts_keep$kallisto.bam+1), method="spearman")
+```
+
+```
+## [1] 0.9655874
+```
 
 
