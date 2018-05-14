@@ -1,7 +1,7 @@
 ---
 title: "BAM-featureCount"
 author: "Sehrish Kanwal"
-date: "Thu 2018-May-10"
+date: "Tue 2018-May-15"
 output: 
   html_document: 
     keep_md: yes
@@ -508,23 +508,7 @@ title("Boxplots of logCPMs (unnormalised)")
 |ENSG00000225745      |  8|  ENSG00000184274  | 10 |    
 |ENSG00000160183      |  8|  ENSG00000228137  | 10|
 
-### Trying out a plot
-
-I am not yet completely sure of its interpretation.
 
 
-```r
-ggplot(counts_keep, aes(x=log2(star.bam+1), y=log2(kallisto.bam+1))) + geom_point() + geom_smooth(method="lm") + geom_abline(slope=1, intercept = 0, color="red") + annotate("text", x=10, y=15, label= "spearman cor = 0.96") + ggtitle("star bam counts versus kallisto bam counts")
-```
-
-![](featureCount-combined_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
-
-```r
-cor(log2(counts_keep$star.bam+1), log2(counts_keep$kallisto.bam+1), method="spearman")
-```
-
-```
-## [1] 0.9655874
-```
 
 
