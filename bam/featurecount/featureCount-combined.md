@@ -1,7 +1,7 @@
 ---
 title: "BAM-featureCount"
 author: "Sehrish Kanwal"
-date: "Tue 2018-May-15"
+date: "Wed 2018-May-16"
 output: 
   html_document: 
     keep_md: yes
@@ -462,6 +462,36 @@ title("Boxplots of logCPMs (unnormalised)")
 ### Stratifying into high, medium and low expressed genes
 
 
+```r
+# also look at dplyr's arrange function
+# Arrange count values in ascending order
+sorted_counts_kallisto <- counts_keep[order(-counts_keep$kallisto.bam), , drop = FALSE]
+sorted_counts_star <- counts_keep[order(-counts_keep$star.bam), , drop = FALSE]
+
+# High expressed genes in both bams
+
+high_sorted_counts_kallisto <- head(sorted_counts_kallisto, n = 10)
+high_kallisto <-  data.frame(names = row.names(high_sorted_counts_kallisto), high_sorted_counts_kallisto$kallisto.bam)
+
+high_sorted_counts_star <- head(sorted_counts_star, n = 10)
+high_star<-  data.frame(names = row.names(high_sorted_counts_star), high_sorted_counts_star$star.bam)
+
+# Medium expressed genes in both bams
+
+medium_sorted_counts_kallisto <- tail(head(sorted_counts_kallisto, n = round(nrow(sorted_counts_kallisto) / 2)), n = 10)
+medium_kallisto <- data.frame(names = row.names(medium_sorted_counts_kallisto), medium_sorted_counts_kallisto$kallisto.bam)
+
+medium_sorted_counts_star <- tail(head(sorted_counts_star, n = round(nrow(sorted_counts_star) / 2)), n = 10)
+medium_star <- data.frame(names = row.names(medium_sorted_counts_star), medium_sorted_counts_star$star.bam)
+
+# Low expressed genes in both bams
+
+low_sorted_counts_kallisto <- tail(sorted_counts_kallisto, n = 10)
+low_kallisto <- data.frame(names = row.names(low_sorted_counts_kallisto), low_sorted_counts_kallisto$kallisto.bam)
+
+low_sorted_counts_star <- tail(sorted_counts_star, n = 10)
+low_star <- data.frame(names = row.names(low_sorted_counts_star), low_sorted_counts_kallisto$star.bam)
+```
 **High expressed genes**
 
 |Star |Star_Count|Kallisto| Kallisto_Count|
@@ -476,6 +506,25 @@ title("Boxplots of logCPMs (unnormalised)")
 |ENSG00000087086 |  205158| ENSG00000263740 | 234616   |
 |ENSG00000269900  | 194717| ENSG00000251562 |  222226   |
 |ENSG00000198074  | 184560| ENSG00000087086 | 205203 |
+
+Genes that are common between both bams among the high expressed genes hit
+
+
+```
+## Joining, by = "names"
+```
+
+```
+##             names high_sorted_counts_star.star.bam high_sorted_counts_kallisto.kallisto.bam
+## 1 ENSG00000258486                           733053                                  1368704
+## 2 ENSG00000265150                           446140                                   993379
+## 3 ENSG00000202198                           416096                                   427748
+## 4 ENSG00000165092                           389228                                   392580
+## 5 ENSG00000259001                           290600                                   293543
+## 6 ENSG00000156508                           247791                                   327939
+## 7 ENSG00000251562                           220488                                   222226
+## 8 ENSG00000087086                           205158                                   205203
+```
 
 
 **Medium expressed genes**
@@ -493,6 +542,18 @@ title("Boxplots of logCPMs (unnormalised)")
 |ENSG00000121989     | 390|  ENSG00000138621 |  444 |    
 |ENSG00000114948     | 390|  ENSG00000197943 |  444|
 
+Genes that are common between both bams among the medium expressed genes hit
+
+
+```
+## Joining, by = "names"
+```
+
+```
+## [1] names                                      medium_sorted_counts_star.star.bam         medium_sorted_counts_kallisto.kallisto.bam
+## <0 rows> (or 0-length row.names)
+```
+
 **Low expressed genes**
 
 |Star |Star_Count|Kallisto| Kallisto_Count|
@@ -508,6 +569,19 @@ title("Boxplots of logCPMs (unnormalised)")
 |ENSG00000225745      |  8|  ENSG00000184274  | 10 |    
 |ENSG00000160183      |  8|  ENSG00000228137  | 10|
 
+Genes that are common between both bams among the low expressed genes hit
+
+
+```
+## Joining, by = "names"
+```
+
+```
+##             names low_sorted_counts_kallisto.star.bam low_sorted_counts_kallisto.kallisto.bam
+## 1 ENSG00000269950                                  19                                      10
+## 2 ENSG00000230212                                   8                                      10
+## 3 ENSG00000237373                                   8                                      10
+```
 
 
 

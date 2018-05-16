@@ -243,16 +243,35 @@ title("Boxplots of logCPMs (unnormalised)")
 
 ### Stratifying into high, medium and low expressed genes
 
-```{r, echo=FALSE}
+```{r}
 # also look at dplyr's arrange function
 # Arrange count values in ascending order
-sorted_counts <- counts_keep[order(-counts_keep$kallisto.bam), , drop = FALSE]
+sorted_counts_kallisto <- counts_keep[order(-counts_keep$kallisto.bam), , drop = FALSE]
+sorted_counts_star <- counts_keep[order(-counts_keep$star.bam), , drop = FALSE]
 
-# High, medium and low expressed genes
+# High expressed genes in both bams
 
-high_sorted_counts <- head(sorted_counts, n = 10)
-medium_sorted_counts <- tail(head(sorted_counts, n = round(nrow(sorted_counts) / 2)), n = 10)
-low_sorted_counts <- tail(sorted_counts, n = 10)
+high_sorted_counts_kallisto <- head(sorted_counts_kallisto, n = 10)
+high_kallisto <-  data.frame(names = row.names(high_sorted_counts_kallisto), high_sorted_counts_kallisto$kallisto.bam)
+
+high_sorted_counts_star <- head(sorted_counts_star, n = 10)
+high_star<-  data.frame(names = row.names(high_sorted_counts_star), high_sorted_counts_star$star.bam)
+
+# Medium expressed genes in both bams
+
+medium_sorted_counts_kallisto <- tail(head(sorted_counts_kallisto, n = round(nrow(sorted_counts_kallisto) / 2)), n = 10)
+medium_kallisto <- data.frame(names = row.names(medium_sorted_counts_kallisto), medium_sorted_counts_kallisto$kallisto.bam)
+
+medium_sorted_counts_star <- tail(head(sorted_counts_star, n = round(nrow(sorted_counts_star) / 2)), n = 10)
+medium_star <- data.frame(names = row.names(medium_sorted_counts_star), medium_sorted_counts_star$star.bam)
+
+# Low expressed genes in both bams
+
+low_sorted_counts_kallisto <- tail(sorted_counts_kallisto, n = 10)
+low_kallisto <- data.frame(names = row.names(low_sorted_counts_kallisto), low_sorted_counts_kallisto$kallisto.bam)
+
+low_sorted_counts_star <- tail(sorted_counts_star, n = 10)
+low_star <- data.frame(names = row.names(low_sorted_counts_star), low_sorted_counts_kallisto$star.bam)
 
 ```
 **High expressed genes**
@@ -270,6 +289,12 @@ low_sorted_counts <- tail(sorted_counts, n = 10)
 |ENSG00000269900  | 194717| ENSG00000251562 |  222226   |
 |ENSG00000198074  | 184560| ENSG00000087086 | 205203 |
 
+Genes that are common between both bams among the high expressed genes hit
+
+```{r, echo=FALSE, warning=FALSE}
+inner_join(high_star, high_kallisto)
+```
+
 
 **Medium expressed genes**
 
@@ -286,6 +311,12 @@ low_sorted_counts <- tail(sorted_counts, n = 10)
 |ENSG00000121989     | 390|  ENSG00000138621 |  444 |    
 |ENSG00000114948     | 390|  ENSG00000197943 |  444|
 
+Genes that are common between both bams among the medium expressed genes hit
+
+```{r, echo=FALSE, warning=FALSE}
+inner_join(medium_star, medium_kallisto)
+```
+
 **Low expressed genes**
 
 |Star |Star_Count|Kallisto| Kallisto_Count|
@@ -301,6 +332,11 @@ low_sorted_counts <- tail(sorted_counts, n = 10)
 |ENSG00000225745      |  8|  ENSG00000184274  | 10 |    
 |ENSG00000160183      |  8|  ENSG00000228137  | 10|
 
+Genes that are common between both bams among the low expressed genes hit
+
+```{r, echo=FALSE, warning=FALSE}
+inner_join(low_star, low_kallisto)
+```
 
 ```{r, echo = FALSE}
 #ggplot(counts_keep, aes(x=log2(star.bam+1), y=log2(kallisto.bam+1))) + geom_point() + geom_smooth(method="lm") + geom_abline(slope=1, intercept = 0, color="red") + annotate("text", x=10, y=15, label= "spearman cor = 0.96") + ggtitle("star bam counts versus kallisto bam counts")
