@@ -1,7 +1,7 @@
 ---
 title: "BAM-featureCount"
 author: "Sehrish Kanwal"
-date: "Wed 2018-May-16"
+date: "Tue 2018-May-22"
 output: 
   html_document: 
     keep_md: yes
@@ -330,8 +330,6 @@ str(counts_keep)
 ```
 
 A CPM of 0.25 is used as it corresponds to a count of 10-15 for the library sizes in this data set. If the count is any smaller, it is considered to be very low, indicating that the associated gene is not expressed in that sample. As a general rule, a good threshold can be chosen by identifying the CPM that corresponds to a count of 10, which in this case is about 0.25. It is important to filter with CPMs rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples.
-
-However, it should be noted that the graph for kallisto bam is not as linear and clean as star bam, which indicates  
 
 
 ```r
