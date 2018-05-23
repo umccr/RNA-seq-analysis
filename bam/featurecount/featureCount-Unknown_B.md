@@ -4,6 +4,8 @@ author: "Sehrish Kanwal"
 date: "Wed 2018-May-23"
 output: 
   html_document: 
+    toc: true
+    theme: united
     keep_md: yes
 editor_options: 
   chunk_output_type: console
@@ -16,67 +18,12 @@ editor_options:
 
 ```r
 library(edgeR)
-```
-
-```
-## Loading required package: limma
-```
-
-```r
 library(limma)
 library(Glimma)
 library(gplots)
-```
-
-```
-## 
-## Attaching package: 'gplots'
-```
-
-```
-## The following object is masked from 'package:stats':
-## 
-##     lowess
-```
-
-```r
 library(ggplot2)
 library(dplyr)
-```
-
-```
-## 
-## Attaching package: 'dplyr'
-```
-
-```
-## The following objects are masked from 'package:stats':
-## 
-##     filter, lag
-```
-
-```
-## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union
-```
-
-```r
 library(reshape)
-```
-
-```
-## 
-## Attaching package: 'reshape'
-```
-
-```
-## The following object is masked from 'package:dplyr':
-## 
-##     rename
-```
-
-```r
 options(width = 140)
 library(ggrepel)
 ```
@@ -90,7 +37,7 @@ Conda installed subread on spartan. It is available under `/home/sehrishk/.minic
 The command used to run featurecounts is:
 
 ```
-	1. /home/sehrishk/.miniconda3/envs/kall/bin/kallisto quant --genomebam --pseudobam --gtf /data/cephfs/punim0010/local/development/bcbio/genomes/Hsapi$
+/home/sehrishk/.miniconda3/envs/kall/bin/kallisto quant --genomebam --pseudobam --gtf /data/cephfs/punim0010/local/development/bcbio/genomes/Hsapi$
 ns/GRCh37/rnaseq/ref-transcripts.gtf -o /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/unknown_B_RNA -i /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/kallisto/index/GRCh37/GRCh37.idx /data/cephfs/puni
 m0010/projects/Hofmann_WTS/data/merged/Unknown_B_RNA_R1.fastq.gz /data/cephfs/punim0010/projects/Hofmann_WTS/data/merged/Unknown_B_RNA_R2.fastq.gz
 ```

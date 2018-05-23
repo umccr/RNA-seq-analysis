@@ -4,6 +4,8 @@ author: "Sehrish Kanwal"
 date: "`r format(Sys.time(), '%a %Y-%b-%d')`"
 output: 
   html_document: 
+    toc: true
+    theme: united
     keep_md: yes
 editor_options: 
   chunk_output_type: console
@@ -15,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Required R packages
 
-```{r}
+```{r, message=FALSE}
 library(edgeR)
 library(limma)
 library(Glimma)
@@ -36,7 +38,7 @@ Conda installed subread on spartan. It is available under `/home/sehrishk/.minic
 The command used to run featurecounts is:
 
 ```
-	1. /home/sehrishk/.miniconda3/envs/kall/bin/kallisto quant --genomebam --pseudobam --gtf /data/cephfs/punim0010/local/development/bcbio/genomes/Hsapi$
+/home/sehrishk/.miniconda3/envs/kall/bin/kallisto quant --genomebam --pseudobam --gtf /data/cephfs/punim0010/local/development/bcbio/genomes/Hsapi$
 ns/GRCh37/rnaseq/ref-transcripts.gtf -o /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/unknown_B_RNA -i /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/kallisto/index/GRCh37/GRCh37.idx /data/cephfs/puni
 m0010/projects/Hofmann_WTS/data/merged/Unknown_B_RNA_R1.fastq.gz /data/cephfs/punim0010/projects/Hofmann_WTS/data/merged/Unknown_B_RNA_R2.fastq.gz
 ```
