@@ -526,7 +526,7 @@ q3 <- quantile(df$kallisto.bam)[4]
 
 # Plot stat_ecdf for kallisto 
 p <- ggplot(df, aes(df$kallisto.bam)) + 
-  stat_ecdf(geom = "step") +
+  stat_ecdf(geom = "step", size = 0.25) +
   geom_vline(xintercept = q1, linetype="dotted", color = "red") +
   geom_text(aes(x=q1, label="Q1", y=0), family="Times", size = 3) +
   geom_vline(xintercept = q2, linetype="dotted", color = "red") +
@@ -559,8 +559,8 @@ q2 <- quantile(df$star.bam)[3]
 q3 <- quantile(df$star.bam)[4]
 
 # Plot stat_ecdf for kallisto 
-p <- ggplot(df, aes(df$star.bam)) + 
-  stat_ecdf(geom = "step") + scale_size_manual(values=c(1))+
+p <- ggplot(df, aes(df$star.bam)) +
+  stat_ecdf(geom = "step", size = 0.25) + 
   geom_vline(xintercept = q1, linetype="dotted", color = "red") +
   geom_text(aes(x=q1, label="Q1", y=0), family="Times", size = 3) +
   geom_vline(xintercept = q2, linetype="dotted", color = "red") +

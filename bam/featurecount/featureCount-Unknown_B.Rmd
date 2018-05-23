@@ -265,7 +265,7 @@ q3 <- quantile(df$kallisto.bam)[4]
 
 # Plot stat_ecdf for kallisto 
 p <- ggplot(df, aes(df$kallisto.bam)) + 
-  stat_ecdf(geom = "step") +
+  stat_ecdf(geom = "step", size = 0.25) +
   geom_vline(xintercept = q1, linetype="dotted", color = "red") +
   geom_text(aes(x=q1, label="Q1", y=0), family="Times", size = 3) +
   geom_vline(xintercept = q2, linetype="dotted", color = "red") +
@@ -289,8 +289,8 @@ q2 <- quantile(df$star.bam)[3]
 q3 <- quantile(df$star.bam)[4]
 
 # Plot stat_ecdf for kallisto 
-p <- ggplot(df, aes(df$star.bam)) + 
-  stat_ecdf(geom = "step") + scale_size_manual(values=c(1))+
+p <- ggplot(df, aes(df$star.bam)) +
+  stat_ecdf(geom = "step", size = 0.25) + 
   geom_vline(xintercept = q1, linetype="dotted", color = "red") +
   geom_text(aes(x=q1, label="Q1", y=0), family="Times", size = 3) +
   geom_vline(xintercept = q2, linetype="dotted", color = "red") +
@@ -300,7 +300,6 @@ p <- ggplot(df, aes(df$star.bam)) +
   geom_point(aes(x=df["ENSG00000136997", 2], y=0.99 , colour = "yellow"), show.legend = FALSE, label="MYC") +
   geom_text(aes(x=9.4, label="MYC", y=0.96), family="Times", size = 3) +
   labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 fold change in star bam")
-
 p <- p + expand_limits(x = -5, y = 0)
 p
 ```
