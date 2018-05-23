@@ -1,10 +1,11 @@
 ---
-title: "featurecount-Unknown_B"
+title: "Empirial Cumulative Density Function (ECDF) Analysis on Sample Unknown_B"
 author: "Sehrish Kanwal"
 date: "Wed 2018-May-23"
 output: 
   html_document: 
     toc: true
+    toc_depth: 3
     theme: united
     keep_md: yes
 editor_options: 
@@ -158,7 +159,6 @@ dim(countdata)
 ```
 ## [1] 57905     2
 ```
-
 
 Add rownames i.e. GeneIDs to data
 
@@ -353,7 +353,7 @@ abline(v = 0.15, h = 10, col=c("blue", "red"))
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-6-4.png)<!-- -->
 
-## Distribution Plot
+### Distribution Plot
 
 Count data is not normally distributed, so if we want to examine the distributions of the raw counts we need to log the counts. Next we’ll use box plots to check the distribution of the read counts on the log2 scale. We can use the cpm function to get log2 counts per million, which are corrected for the different library sizes. The cpm function also adds a small offset to avoid taking log of zero.
 
@@ -440,7 +440,9 @@ title("Boxplots of logCPMs (unnormalised)")
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
-## Plotting cumulative fraction VS gene log2 fold change using Empirical Cumulative Density Function (ecdf)
+## Plotting cumulative fraction VS gene log2 fold change 
+
+For this task, Empirical Cumulative Density Function (ecdf) is used.
 
 
 ```r
@@ -460,7 +462,7 @@ p
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
-## Adding Quartiles and MYC for kallisto bam
+### Adding Quartiles and MYC for kallisto bam
 
 
 ```r
@@ -496,7 +498,7 @@ p
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
-## Adding Quartiles information and MYC for star bam
+### Adding Quartiles information and MYC for star bam
 
 
 ```r

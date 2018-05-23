@@ -1,10 +1,11 @@
 ---
-title: "featurecount-Unknown_B"
+title: "Empirial Cumulative Density Function (ECDF) Analysis on Sample Unknown_B"
 author: "Sehrish Kanwal"
 date: "`r format(Sys.time(), '%a %Y-%b-%d')`"
 output: 
   html_document: 
     toc: true
+    toc_depth: 3
     theme: united
     keep_md: yes
 editor_options: 
@@ -130,7 +131,6 @@ head(countdata)
 dim(countdata) 
 ```
 
-
 Add rownames i.e. GeneIDs to data
 
 ```{r}
@@ -206,7 +206,7 @@ abline(v = 0.15, h = 10, col=c("blue", "red"))
 
 ```
 
-## Distribution Plot
+### Distribution Plot
 
 Count data is not normally distributed, so if we want to examine the distributions of the raw counts we need to log the counts. Next we’ll use box plots to check the distribution of the read counts on the log2 scale. We can use the cpm function to get log2 counts per million, which are corrected for the different library sizes. The cpm function also adds a small offset to avoid taking log of zero.
 
@@ -238,7 +238,9 @@ abline(h=median(logcounts),col="blue")
 title("Boxplots of logCPMs (unnormalised)")
 ```
 
-## Plotting cumulative fraction VS gene log2 fold change using Empirical Cumulative Density Function (ecdf)
+## Plotting cumulative fraction VS gene log2 fold change 
+
+For this task, Empirical Cumulative Density Function (ecdf) is used.
 
 ```{r}
 df <- as.data.frame(logcounts)
@@ -255,7 +257,7 @@ p <- p + expand_limits(x = -5, y = 0)
 p
 ```
 
-## Adding Quartiles and MYC for kallisto bam
+### Adding Quartiles and MYC for kallisto bam
 
 ```{r}
 df <- as.data.frame(logcounts)
@@ -282,7 +284,7 @@ p <- p + expand_limits(x = -5, y = 0)
 p
 ```
 
-## Adding Quartiles information and MYC for star bam
+### Adding Quartiles information and MYC for star bam
 
 ```{r}
 #Preparing quartiles
