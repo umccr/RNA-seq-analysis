@@ -513,7 +513,7 @@ p
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
-## Testing Quartiles for kallisto first
+## Adding Quartiles and MYC for kallisto bam
 
 
 ```r
@@ -549,5 +549,36 @@ p
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
+## Adding Quartiles information and MYC for star bam
 
 
+```r
+#Preparing quartiles
+q1 <- quantile(df$star.bam)[2]
+q2 <- quantile(df$star.bam)[3]
+q3 <- quantile(df$star.bam)[4]
+
+# Plot stat_ecdf for kallisto 
+p <- ggplot(df, aes(df$star.bam)) + 
+  stat_ecdf(geom = "step") + scale_size_manual(values=c(1))+
+  geom_vline(xintercept = q1, linetype="dotted", color = "red") +
+  geom_text(aes(x=q1, label="Q1", y=0), family="Times", size = 3) +
+  geom_vline(xintercept = q2, linetype="dotted", color = "red") +
+  geom_text(aes(x=q2, label="Q2", y=0), family="Times", size = 3) +
+  geom_vline(xintercept = q3, linetype="dotted", color = "red") +
+  geom_text(aes(x=q3, label="Q3", y=0), family="Times", size = 3) +
+  geom_point(aes(x=df["ENSG00000136997", 2], y=0.99 , colour = "yellow"), show.legend = FALSE, label="MYC") +
+  geom_text(aes(x=9.4, label="MYC", y=0.96), family="Times", size = 3) +
+  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 fold change in star bam")
+```
+
+```
+## Warning: Ignoring unknown parameters: label
+```
+
+```r
+p <- p + expand_limits(x = -5, y = 0)
+p
+```
+
+![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
