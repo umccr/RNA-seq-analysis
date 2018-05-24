@@ -254,7 +254,7 @@ abline(h=median(logcounts),col="blue")
 title("Boxplots of logCPMs (unnormalised)")
 ```
 
-## Plotting cumulative fraction VS gene log2 fold change 
+## Plotting cumulative fraction VS gene log2 count value 
 
 For this task, Empirical Cumulative Density Function (ecdf) is used.
 
@@ -266,7 +266,7 @@ dff <- data.frame(x = c(df$kallisto.bam, df$star.bam), g = gl(2, 21514, labels =
 
 p <- ggplot(dff, aes(x, colour = g)) + 
   stat_ecdf(geom = "step") +
-  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 fold change in bams") +
+  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 count value in bams") +
   geom_vline(xintercept = 0, linetype="dotted", color = "blue")
 
 p <- p + expand_limits(x = -5, y = 0)
@@ -294,7 +294,7 @@ p <- ggplot(df, aes(df$kallisto.bam)) +
   geom_text(aes(x=q3, label="Q3", y=0), family="Times", size = 3) +
   geom_point(aes(x=df["ENSG00000136997", 1], y=0.99 , colour = "yellow"), show.legend = FALSE, label="MYC") +
   geom_text(aes(x=9.4, label="MYC", y=0.96), family="Times", size = 3) +
-  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 fold change in kallisto bam")
+  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 count value in kallisto bam")
 
 p <- p + expand_limits(x = -5, y = 0)
 p
@@ -319,7 +319,7 @@ p <- ggplot(df, aes(df$star.bam)) +
   geom_text(aes(x=q3, label="Q3", y=0), family="Times", size = 3) +
   geom_point(aes(x=df["ENSG00000136997", 2], y=0.99 , colour = "yellow"), show.legend = FALSE, label="MYC") +
   geom_text(aes(x=9.4, label="MYC", y=0.96), family="Times", size = 3) +
-  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 fold change in star bam")
+  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 count value in star bam")
 p <- p + expand_limits(x = -5, y = 0)
 p
 ```
