@@ -1,7 +1,7 @@
 ---
 title: "Empirial Cumulative Density Function (ECDF) Analysis on Sample Unknown_B"
 author: "Sehrish Kanwal"
-date: "Wed 2018-May-23"
+date: "Thu 2018-May-24"
 output: 
   html_document: 
     toc: true
@@ -13,6 +13,22 @@ editor_options:
 ---
 
 
+
+<!-- vim-markdown-toc GFM -->
+
+* [Required R packages](#required-R-packages)
+* [Installation](#installation)
+* [Result on both bams](#result-on-both-bams)
+    * [Console output](#console-output)
+    * [Summary of featurecounts command](#summary-of-featurecounts-command)
+* [Analysis](#analysis)
+    * [Filtering to remove lowly expressed genes](#filtering-to-remove-lowly-expressed-genes)
+    * [Distribution Plot](#istribution-plot)
+* [Plotting cumulative fraction VS gene log2 fold change](#plotting-cumulative-fraction-vs-gene-log2-fold-change)
+    * [Adding Quartiles information and MYC for kallisto bam](#adding-quartiles-information-and-myc-for-kallisto-bam)
+    * [Adding Quartiles information and MYC for star bam](#adding-quartiles-information-and-myc-for-star-bam)
+
+<!-- vim-markdown-toc -->
 
 ## Required R packages
 
@@ -462,7 +478,7 @@ p
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
-### Adding Quartiles and MYC for kallisto bam
+### Adding Quartiles information and MYC for kallisto bam
 
 
 ```r
