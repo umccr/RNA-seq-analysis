@@ -1,7 +1,7 @@
 ---
 title: "Empirial Cumulative Density Function (ECDF) Analysis on Sample Unknown_B"
 author: "Sehrish Kanwal"
-date: "Thu 2018-May-24"
+date: "Wed 2018-May-30"
 output: 
   html_document: 
     toc: true
@@ -480,6 +480,8 @@ p
 
 ### Adding Quartiles information and MYC for kallisto bam
 
+It can be clearly observed that MYC is highly expressed (log 2 count value = 9.345).
+
 
 ```r
 df <- as.data.frame(logcounts)
@@ -489,18 +491,18 @@ q1 <- quantile(df$kallisto.bam)[2]
 q2 <- quantile(df$kallisto.bam)[3]
 q3 <- quantile(df$kallisto.bam)[4]
 
+#Making a tibble from quartiles
+events <- data_frame(quartiles = c(q1,q2,q3),
+                     text = c('Q1','Q2','Q3'))
+
 # Plot stat_ecdf for kallisto 
 p <- ggplot(df, aes(df$kallisto.bam)) + 
   stat_ecdf(geom = "step", size = 0.25) +
-  geom_vline(xintercept = q1, linetype="dotted", color = "red") +
-  geom_text(aes(x=q1, label="Q1", y=0), family="Times", size = 3) +
-  geom_vline(xintercept = q2, linetype="dotted", color = "red") +
-  geom_text(aes(x=q2, label="Q2", y=0), family="Times", size = 3) +
-  geom_vline(xintercept = q3, linetype="dotted", color = "red") +
-  geom_text(aes(x=q3, label="Q3", y=0), family="Times", size = 3) +
+  geom_vline(data = events, aes(xintercept = events$quartiles), color = "red") +
+  geom_text(data = events, mapping = aes(label = events$text, y = 0, x = quartiles), family="Times", size = 3, hjust = 0) +
   geom_point(aes(x=df["ENSG00000136997", 1], y=0.99 , colour = "yellow"), show.legend = FALSE, label="MYC") +
   geom_text(aes(x=9.4, label="MYC", y=0.96), family="Times", size = 3) +
-  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 count value in kallisto bam")
+  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 count change in kallisto bam")
 ```
 
 ```
@@ -516,25 +518,29 @@ p
 
 ### Adding Quartiles information and MYC for star bam
 
+It can be clearly observed that MYC is highly expressed (log 2 count value = 9.484).
+
 
 ```r
+df <- as.data.frame(logcounts)
+
 #Preparing quartiles
 q1 <- quantile(df$star.bam)[2]
 q2 <- quantile(df$star.bam)[3]
 q3 <- quantile(df$star.bam)[4]
 
+#Making a tibble from quartiles
+events <- data_frame(quartiles = c(q1,q2,q3),
+                     text = c('Q1','Q2','Q3'))
+
 # Plot stat_ecdf for kallisto 
-p <- ggplot(df, aes(df$star.bam)) +
-  stat_ecdf(geom = "step", size = 0.25) + 
-  geom_vline(xintercept = q1, linetype="dotted", color = "red") +
-  geom_text(aes(x=q1, label="Q1", y=0), family="Times", size = 3) +
-  geom_vline(xintercept = q2, linetype="dotted", color = "red") +
-  geom_text(aes(x=q2, label="Q2", y=0), family="Times", size = 3) +
-  geom_vline(xintercept = q3, linetype="dotted", color = "red") +
-  geom_text(aes(x=q3, label="Q3", y=0), family="Times", size = 3) +
+p <- ggplot(df, aes(df$star.bam)) + 
+  stat_ecdf(geom = "step", size = 0.25) +
+  geom_vline(data = events, aes(xintercept = events$quartiles), color = "red") +
+  geom_text(data = events, mapping = aes(label = events$text, y = 0, x = quartiles), family="Times", size = 3, hjust = 0) +
   geom_point(aes(x=df["ENSG00000136997", 2], y=0.99 , colour = "yellow"), show.legend = FALSE, label="MYC") +
   geom_text(aes(x=9.4, label="MYC", y=0.96), family="Times", size = 3) +
-  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 count value in star bam")
+  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 count change in star bam")
 ```
 
 ```
