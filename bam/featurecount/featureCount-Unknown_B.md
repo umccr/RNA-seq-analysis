@@ -456,7 +456,9 @@ title("Boxplots of logCPMs (unnormalised)")
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
-## Plotting cumulative fraction VS gene log2 count value 
+## Plotting cumulative fraction VS gene log2 count values
+
+For the fold change, I'll need to have a comparison e-g. against a normal sample (which I am not doing currently). According to Olivers's comment on this "We won't be running a 'normal' RNA sample for the time being. That means following the POG / Illumina approach of using unrelated normals as reference -- we'll need to build up a small tissue atlas using TCGA (or selected in-house samples) where we have RNA from matching normal tissue. Log-fold changes are then relative to the overall reference data, or the subset we think best fits the bill. Count data will do for now until we get that data set."
 
 For this task, Empirical Cumulative Density Function (ecdf) is used.
 
