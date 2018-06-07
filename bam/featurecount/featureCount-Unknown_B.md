@@ -1,7 +1,7 @@
 ---
 title: "Empirial Cumulative Density Function (ECDF) Analysis on Sample Unknown_B"
 author: "Sehrish Kanwal"
-date: "Wed 2018-May-30"
+date: "Thu 2018-Jun-07"
 output: 
   html_document: 
     toc: true
@@ -230,7 +230,7 @@ head(countdata)
 ```
 
 
-### Filtering to remove lowly expressed genes
+### Filtering to remove low expressed genes
 
 Genes with very low counts across all libraries provide little evidence for differential expression and they interfere with some of the statistical approximations.
 
@@ -251,7 +251,7 @@ head(myCPM)
 ```
 
 ```r
-# Which values in myCPM are greater than 0.25?
+# Which values in myCPM are greater than 0.15?
 thresh <- myCPM > 0.15
 
 # This produces a logical matrix with TRUEs and FALSEs
@@ -555,3 +555,6 @@ p
 ```
 
 ![](featureCount-Unknown_B_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+
+
+

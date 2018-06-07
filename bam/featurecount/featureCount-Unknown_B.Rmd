@@ -164,7 +164,7 @@ head(countdata)
 ```
 
 
-### Filtering to remove lowly expressed genes
+### Filtering to remove low expressed genes
 
 Genes with very low counts across all libraries provide little evidence for differential expression and they interfere with some of the statistical approximations.
 
@@ -172,7 +172,7 @@ Genes with very low counts across all libraries provide little evidence for diff
 myCPM <- cpm(countdata)
 head(myCPM)
 
-# Which values in myCPM are greater than 0.25?
+# Which values in myCPM are greater than 0.15?
 thresh <- myCPM > 0.15
 
 # This produces a logical matrix with TRUEs and FALSEs
@@ -332,3 +332,6 @@ p <- ggplot(df, aes(df$star.bam)) +
 p <- p + expand_limits(x = -5, y = 0)
 p
 ```
+
+
+

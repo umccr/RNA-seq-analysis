@@ -1,0 +1,182 @@
+---
+title: "FC work with the recount2 pancreatic samples"
+author: "Sehrish Kanwal"
+date: "`r format(Sys.time(), '%a %Y-%b-%d')`"
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Required R packages
+
+```{r, message=FALSE}
+library(edgeR)
+library(limma)
+library(Glimma)
+library(gplots)
+library(ggplot2)
+library(dplyr)
+library(reshape)
+options(width = 140)
+library(ggrepel)
+```
+
+## Preparing Tumour Data
+
+```{r}
+seqdata_t <- read.delim("~/Documents/UMCCR/data/fpkm/featurecount_Unknown_B", stringsAsFactors = FALSE, comment.char = "#")
+dim(seqdata_t)
+
+# New object that contains just the counts
+countdata_t <- seqdata_t[,8, drop = FALSE]
+head(countdata_t)
+dim(countdata_t) 
+
+# Add rownames i.e. GeneIDs to data
+rownames(countdata_t) <- seqdata_t[,1]
+head(countdata_t)
+
+# Rename column heading for sample
+colnames(countdata_t) <- c("Tumour")
+head(countdata_t)
+
+# Filtering to remove low expressed genes. The cpm function also adds a small offset to avoid taking log of zero.
+myCPM <- cpm(countdata_t)
+head(myCPM)
+
+# Which values in myCPM are greater than 0.15?
+thresh <- myCPM > 0.15
+
+# This produces a logical matrix with TRUEs and FALSEs
+head(thresh)
+
+# Summary of how many TRUEs there are in each row.
+table(rowSums(thresh))
+
+# Would like to keep genes that have TRUE thresh value in each row of thresh
+keep <- thresh == TRUE
+
+# Subset the rows of countdata to keep the more highly expressed genes
+counts_keep_t <- countdata_t[keep, ,  drop = FALSE]
+
+# Converting row names to first coloumn
+# counts_keep_t <- tibble::rownames_to_column(counts_keep_t, "gene_id")
+
+# Taking a look at the subset data
+summary(keep)
+head(counts_keep_t)
+dim(counts_keep_t)
+str(counts_keep_t)
+
+# Convert counts to DGEList object. First, create a DGEList object. This is an object used by edgeR to store count data. It has a number of slots for storing various parameters about the data.
+y <- DGEList(counts_keep_t)
+
+# have a look at y
+y
+
+# See what slots are stored in y
+names(y)
+
+# Library size information is stored in the samples slot
+y$samples
+
+# Get log2 counts per million
+logcounts_t <- cpm(y,log=TRUE)
+
+# have a look at logcounts
+head(logcounts_t)
+dim(logcounts_t)
+```
+
+## Preparing Normal Data
+
+```{r}
+# Downloaded pancreatic data from https://jhubiostatistics.shinyapps.io/recount/. Read in the data.
+countdata <- read.delim("~/Documents/UMCCR/data/recount2/counts_gene_pan.tsv", stringsAsFactors = FALSE, comment.char = "#")
+dim(countdata)
+head(countdata)
+
+# Rearranging columns to have gene_id in a diff dataframe as that is not a numeric coloumn and the subsequent analysis assumes that the coloumns have numeric values. For now adding gene_ids as rownames.
+countdata_n <- countdata[, c(1, 2, 3, 4)]
+head(countdata_n)
+rownames(countdata_n) <- countdata[,5]
+
+# Filtering to remove low expressed genes. The cpm function also adds a small offset to avoid taking log of zero.
+myCPM <- cpm(countdata_n)
+
+# Which values in myCPM are greater than 0.15?
+thresh <- myCPM > 0.15
+
+# This produces a logical matrix with TRUEs and FALSEs
+head(thresh)
+
+# Summary of how many TRUEs there are in each row.
+table(rowSums(thresh))
+
+# Would like to keep genes that have that have at least 2 TRUES in each row of thresh
+keep <- rowSums(thresh) >= 2
+
+# Subset the rows of countdata to keep the more highly expressed genes
+counts_keep_n <- countdata_n[keep, ,  drop = FALSE]
+
+
+# Taking a look at the subset data
+summary(keep)
+head(counts_keep_n)
+dim(counts_keep_n)
+str(counts_keep_n)
+
+# Convert counts to DGEList object. First, create a DGEList object. This is an object used by edgeR to store count data. It has a number of slots for storing various parameters about the data.
+y <- DGEList(counts_keep_n)
+
+# have a look at y
+y
+
+# See what slots are stored in y
+names(y)
+
+# Library size information is stored in the samples slot
+y$samples
+
+# Get log2 counts per million
+logcounts_n <- cpm(y,log=TRUE)
+
+# have a look at logcounts
+head(logcounts_n)
+dim(logcounts_n)
+```
+
+## Comparing tumour sample VS panel of normals
+
+```{r}
+# Merging count data from tumour sample and normal samples. 
+counts_merged <- merge(logcounts_n, logcounts_t, by="row.names")
+dim(counts_merged)
+head(counts_merged)
+rownames(counts_merged)= counts_merged$Row.names
+counts_merged <- counts_merged[,2:6]
+
+# Starting the actual analysis. Creating a design matrix first.
+design <-  cbind(c(1,1,1,1,0), c(0,0,0,0,1))
+
+# Assigning rownames and column names
+rownames(design) <- c("C1", "C2", "C3", "C4", "T")
+colnames(design) <- c("WT", "Mu")
+
+fit <- lmFit(as.matrix(counts_merged), design)
+```
+
+
+
+
+
+
+
+
+
