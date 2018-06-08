@@ -13,7 +13,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Required R packages
+### Required R packages
 
 ```{r, message=FALSE}
 library(edgeR)
@@ -27,7 +27,7 @@ options(width = 140)
 library(ggrepel)
 ```
 
-## Preparing Tumour Data
+### Preparing Tumour Data
 
 ```{r}
 seqdata_t <- read.delim("~/Documents/UMCCR/data/fpkm/featurecount_Unknown_B", stringsAsFactors = FALSE, comment.char = "#")
@@ -94,7 +94,7 @@ head(logcounts_t)
 dim(logcounts_t)
 ```
 
-## Preparing Normal Data
+### Preparing Normal Data
 
 ```{r}
 # Downloaded pancreatic data from https://jhubiostatistics.shinyapps.io/recount/. Read in the data.
@@ -152,7 +152,7 @@ head(logcounts_n)
 dim(logcounts_n)
 ```
 
-## Comparing tumour sample VS panel of normals
+### Comparing tumour sample VS panel of normals
 
 ```{r}
 # Merging count data from tumour sample and normal samples. 
@@ -177,7 +177,7 @@ result <- topTable(fit2, adjust="BH", number = Inf)
 ```
 
 
-## Plotting result
+### Plotting result
 
 1. ecdf
 
@@ -203,7 +203,7 @@ p <- ggplot(result, aes(result$logFC)) +
 p
 ```
 
-## To do -> Fix mds plot and add z-transformation
+### To do -> Fix mds plot and add z-transformation
 
 2. mds
 

@@ -11,7 +11,7 @@ editor_options:
 
 
 
-## Required R packages
+### Required R packages
 
 
 ```r
@@ -26,7 +26,7 @@ options(width = 140)
 library(ggrepel)
 ```
 
-## Preparing Tumour Data
+### Preparing Tumour Data
 
 
 ```r
@@ -260,7 +260,7 @@ dim(logcounts_t)
 ## [1] 22799     1
 ```
 
-## Preparing Normal Data
+### Preparing Normal Data
 
 
 ```r
@@ -463,7 +463,7 @@ dim(logcounts_n)
 ## [1] 27289     4
 ```
 
-## Comparing tumour sample VS panel of normals
+### Comparing tumour sample VS panel of normals
 
 
 ```r
@@ -509,7 +509,7 @@ result <- topTable(fit2, adjust="BH", number = Inf)
 ```
 
 
-## Plotting result
+### Plotting result
 
 1. ecdf
 
@@ -545,23 +545,25 @@ p
 
 ![](TumourNormal_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
+### To do -> Fix mds plot and add z-transformation
+
 2. mds
 
 
-```
-## [1] "pancreatic" "tumour"
-```
+```r
+sampleinfo <- data.frame(c('ERR674422','ERR674425','ERR674419', 'ERR674424', 'Tumour'), c('pancreatic', 'pancreatic', 'pancreatic', 'pancreatic', 'tumour'), c('normal', 'normal', 'normal', 'normal', 'tumour'))
+colnames(sampleinfo) <-  c("SampleName", "CellType", "Status")
+levels(sampleinfo$CellType)
+col.cell <- c("purple","orange")[sampleinfo$CellType]
+data.frame(sampleinfo$CellType,col.cell)
 
+# Redo the MDS with cell type colouring
+plotMDS(y,col=col.cell)
+# Let's add a legend to the plot so we know which colours correspond to which cell type
+legend("topleft",fill=c("purple","orange"),legend=levels(sampleinfo$CellType))
+# Add a title
+title("Cell type")
 ```
-##   sampleinfo.CellType col.cell
-## 1          pancreatic   purple
-## 2          pancreatic   purple
-## 3          pancreatic   purple
-## 4          pancreatic   purple
-## 5              tumour   orange
-```
-
-![](TumourNormal_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
 
 
 
