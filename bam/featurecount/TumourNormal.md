@@ -1,7 +1,7 @@
 ---
 title: "FC work with the recount2 pancreatic samples"
 author: "Sehrish Kanwal"
-date: "Thu 2018-Jun-07"
+date: "Fri 2018-Jun-08"
 output: 
   html_document: 
     keep_md: yes
@@ -499,15 +499,69 @@ design <-  cbind(c(1,1,1,1,0), c(0,0,0,0,1))
 
 # Assigning rownames and column names
 rownames(design) <- c("C1", "C2", "C3", "C4", "T")
-colnames(design) <- c("WT", "Mu")
+colnames(design) <- c("WT", "MU")
 
-fit <- lmFit(as.matrix(counts_merged), design)
+fit <- lmFit(counts_merged, design)
+cont.matrix <- makeContrasts(MUvsWT=MU-WT, levels=design)
+fit2 <- contrasts.fit(fit, cont.matrix)
+fit2 <- eBayes(fit2)
+result <- topTable(fit2, adjust="BH", number = Inf)
 ```
 
 
+## Plotting result
+
+1. ecdf
 
 
+```r
+#Preparing quartiles
+q1 <- quantile(result$logFC)[2]
+q2 <- 0
+q3 <- quantile(result$logFC)[4]
 
+#Making a tibble from quartiles
+events <- data_frame(quartiles = c(q1,q2,q3),
+                     text = c('Q1','','Q3'))
+
+# Plot stat_ecdf for kallisto 
+p <- ggplot(result, aes(result$logFC)) + 
+  stat_ecdf(geom = "step", size = 0.25) + 
+  geom_vline(data = events, aes(xintercept = events$quartiles), color = "blue", linetype="dotted") +
+  geom_text(data = events, mapping = aes(label = events$text, y = 0, x = quartiles), family="Times", size = 3, hjust = 0) +
+  geom_point(aes(x=result["ENSG00000136997", 1], y=0.963 , colour = "yellow"), show.legend = FALSE, label="MYC") +
+  geom_text(aes(x=5.67, label="MYC", y=0.93), family="Times", size = 3) +
+  coord_cartesian(xlim = c(-5, 10)) +
+  labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 fold change", family="Times")
+```
+
+```
+## Warning: Ignoring unknown parameters: label
+```
+
+```r
+p
+```
+
+![](TumourNormal_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
+2. mds
+
+
+```
+## [1] "pancreatic" "tumour"
+```
+
+```
+##   sampleinfo.CellType col.cell
+## 1          pancreatic   purple
+## 2          pancreatic   purple
+## 3          pancreatic   purple
+## 4          pancreatic   purple
+## 5              tumour   orange
+```
+
+![](TumourNormal_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
 
 
 
