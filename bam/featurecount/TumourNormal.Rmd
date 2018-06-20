@@ -2,9 +2,18 @@
 title: "FC work with the recount2 pancreatic samples"
 author: "Sehrish Kanwal"
 date: "`r format(Sys.time(), '%a %Y-%b-%d')`"
+params:
+    dataDir: "/Users/jmarzec/data/RNA-seq_Sehrish"
+    outDir: "/Users/jmarzec/data/RNA-seq_Sehrish/TumourNormal_results"
+    TumourFile: "featurecount_Unknown_B"
+    NormalFile: "counts_gene_pan.tsv"
+    gene: "ENSG00000133703"
 output: 
   html_document: 
     keep_md: yes
+    code_folding: hide
+    toc: true
+    toc_float: true
 editor_options: 
   chunk_output_type: console
 ---
@@ -13,24 +22,43 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Required R packages
+#### Required R packages
 
 ```{r, message=FALSE}
-library(edgeR)
-library(limma)
-library(Glimma)
-library(gplots)
-library(ggplot2)
-library(dplyr)
-library(reshape)
+suppressMessages(library(edgeR))
+suppressMessages(library(limma))
+suppressMessages(library(Glimma))
+suppressMessages(library(gplots))
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+suppressMessages(library(reshape))
+suppressMessages(library(ggrepel))
 options(width = 140)
-library(ggrepel)
 ```
 
-### Preparing Tumour Data
+#### Laoding functions
 
-```{r}
-seqdata_t <- read.delim("~/Documents/UMCCR/data/fpkm/featurecount_Unknown_B", stringsAsFactors = FALSE, comment.char = "#")
+```{r load_function}
+##### Assign colours to analysed groups
+getTargetsColours <- function(targets) {
+
+    ##### Predefined selection of colours for groups
+    targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
+
+    f.targets <- factor(targets)
+    vec.targets <- targets.colours[1:length(levels(f.targets))]
+    targets.colour <- rep(0,length(f.targets))
+    for(i in 1:length(f.targets))
+    targets.colour[i] <- vec.targets[ f.targets[i]==levels(f.targets)]
+
+    return( list(vec.targets, targets.colour) )
+}
+```
+
+## Preparing Tumour Data
+
+```{r tumour_data_prep}
+seqdata_t <- read.delim(paste(params$dataDir, params$TumourFile, sep="/"), stringsAsFactors = FALSE, comment.char = "#")
 dim(seqdata_t)
 
 # New object that contains just the counts
@@ -94,11 +122,11 @@ head(logcounts_t)
 dim(logcounts_t)
 ```
 
-### Preparing Normal Data
+## Preparing Normal Data
 
-```{r}
+```{r normal_data_prep}
 # Downloaded pancreatic data from https://jhubiostatistics.shinyapps.io/recount/. Read in the data.
-countdata <- read.delim("~/Documents/UMCCR/data/recount2/counts_gene_pan.tsv", stringsAsFactors = FALSE, comment.char = "#")
+countdata <- read.delim(paste(params$dataDir, params$NormalFile, sep="/"), stringsAsFactors = FALSE, comment.char = "#")
 dim(countdata)
 head(countdata)
 
@@ -152,9 +180,9 @@ head(logcounts_n)
 dim(logcounts_n)
 ```
 
-### Comparing tumour sample VS panel of normals
+## Differential expression analysis
 
-```{r}
+```{r dea}
 # Merging count data from tumour sample and normal samples. 
 counts_merged <- merge(logcounts_n, logcounts_t, by="row.names")
 dim(counts_merged)
@@ -162,7 +190,7 @@ head(counts_merged)
 rownames(counts_merged)= counts_merged$Row.names
 counts_merged <- counts_merged[,2:6]
 
-# Starting the actual analysis. Creating a design matrix first.
+# Starting the DE analysis. Creating a design matrix first.
 design <-  cbind(c(1,1,1,1,0), c(0,0,0,0,1))
 
 # Assigning rownames and column names
@@ -176,18 +204,20 @@ fit2 <- eBayes(fit2)
 result <- topTable(fit2, adjust="BH", number = Inf)
 ```
 
+## Plotting results
 
-### Plotting result
+### ecdf plot
 
-1. ecdf
+```{r ecdf_plot, warning=FALSE}
 
-```{r}
+gene <- params$gene
+
 #Preparing quartiles
 q1 <- quantile(result$logFC)[2]
 q2 <- 0
 q3 <- quantile(result$logFC)[4]
 
-#Making a tibble from quartiles
+#Making a table from quartiles
 events <- data_frame(quartiles = c(q1,q2,q3),
                      text = c('Q1','','Q3'))
 
@@ -196,16 +226,420 @@ p <- ggplot(result, aes(result$logFC)) +
   stat_ecdf(geom = "step", size = 0.25) + 
   geom_vline(data = events, aes(xintercept = events$quartiles), color = "blue", linetype="dotted") +
   geom_text(data = events, mapping = aes(label = events$text, y = 0, x = quartiles), family="Times", size = 3, hjust = 0) +
-  geom_point(aes(x=result["ENSG00000136997", 1], y=0.963 , colour = "yellow"), show.legend = FALSE, label="MYC") +
-  geom_text(aes(x=5.67, label="MYC", y=0.93), family="Times", size = 3) +
+  geom_point(aes(x=result[gene, 1], y=0.963 , colour = "yellow"), show.legend = FALSE, label=gene) +
+  geom_text(aes(x=5.67, label=gene, y=0.93), family="Times", size = 3) +
   coord_cartesian(xlim = c(-5, 10)) +
   labs(title="Empirical Cumulative Density Function", y = "cumulative fraction", x="gene log2 fold change", family="Times")
+
 p
 ```
 
-### To do -> Fix mds plot and add z-transformation
+## Z-score transformation
 
-2. mds
+Covert expression values into Z-scores, also called standard scores, which indicate how many standard deviations an observation is above or below the mean. These scores are a useful way of putting data from different sources onto the same scale. **Note** that this will not correct for possible batch effects.
+
+```{r z_transform}
+counts_merged.z <- as.data.frame(scale(counts_merged))
+```
+
+## Comparing cpm and Z-transformed data
+
+### Overall {.tabset}
+
+```{r pca_plots, fig.width = 6, fig.height = 9}
+# Load plotly package
+suppressMessages(library(plotly))
+
+##### Create directory for output files
+pDir <- paste(params$outDir, "PCA", sep = "/")
+
+if ( !file.exists(pDir) ){
+  dir.create(pDir, recursive=TRUE)
+}
+
+# Assign colours according to defined sample annotation
+targets <- c(rep("WT", 4), rep("MU", 1))
+targets.colour <- getTargetsColours(targets)
+
+
+####################
+# cpm data
+####################
+
+# Perform principal components analysis
+expData_pca <- prcomp(t(counts_merged), scale=FALSE)
+
+# Get variance importance for all principal components
+importance_pca <- summary(expData_pca)$importance[2,]
+importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
+
+# Generate bar-plot
+# Prepare data frame
+expData_pca.df <- data.frame(paste0("PC ", c(1:length(expData_pca$sdev))), expData_pca$sdev)
+colnames(expData_pca.df) <- c("PC", "Variances")
+# The default order will be alphabetized unless specified as below
+expData_pca.df$PC <- factor(expData_pca.df$PC, levels = expData_pca.df[["PC"]])
+
+p.pca <- plot_ly(expData_pca.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  layout(title = "cpm", xaxis = list(title = "Variances captured by principal components"), yaxis = list(title = "% variance explained"), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = FALSE)
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.pca, file=paste0(pDir, "/pca.html"), selfcontained = TRUE)
+
+
+# Generate PCA 2D plot
+# Prepare data frame
+expData_pca.df <- data.frame(targets, expData_pca$x[,1], expData_pca$x[,2], expData_pca$x[,3])
+colnames(expData_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+rownames(expData_pca.df) <- colnames(counts_merged)
+
+p.pca_2d <- plot_ly(expData_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=rownames(expData_pca.df), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, symbol="circle"), width = 500, height = 400) %>%
+layout(title = "cpm", xaxis = list(title = paste("PC1 (",importance_pca[1],")",sep="")), yaxis = list(title = paste("PC2 (",importance_pca[2],")",sep="")), margin = list(l=50, r=50, b=50, t=50, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.pca_2d, file=paste0(pDir, "/pca_2d.htm"), selfcontained = TRUE)
+
+
+# Generate PCA 3D plot
+p.pca_3d <- plot_ly(expData_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=rownames(expData_pca.df), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=8, symbol="circle"), width = 400, height = 500) %>%
+  layout(title = "cpm", scene = list(xaxis = list(title = paste("PC1 (",importance_pca[1],")",sep="")), yaxis = list(title = paste("PC2 (",importance_pca[2],")",sep="")), zaxis = list(title = paste("PC3 (",importance_pca[3],")",sep="")) ), margin = list(l=50, r=50, b=50, t=50, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.pca_3d, file=paste0(pDir, "/pca_3d.htm"), selfcontained = TRUE)
+
+
+####################
+# Z-transformed data
+####################
+
+# Perform principal components analysis
+expData_pca <- prcomp(t(counts_merged.z), scale=FALSE)
+
+# Get variance importance for all principal components
+importance_pca <- summary(expData_pca)$importance[2,]
+importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
+
+# Generate bar-plot
+# Prepare data frame
+expData_pca.df <- data.frame(paste0("PC ", c(1:length(expData_pca$sdev))), expData_pca$sdev)
+colnames(expData_pca.df) <- c("PC", "Variances")
+# The default order will be alphabetized unless specified as below
+expData_pca.df$PC <- factor(expData_pca.df$PC, levels = expData_pca.df[["PC"]])
+
+p.pca.z <- plot_ly(expData_pca.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  layout(title = "Z-transformed", xaxis = list(title = "Variances captured by principal components"), yaxis = list(title = "% variance explained"), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = FALSE)
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.pca.z, file=paste0(pDir, "/pca_z.html"), selfcontained = TRUE)
+
+
+# Generate PCA 2D plot
+# Prepare data frame
+expData_pca.df <- data.frame(targets, expData_pca$x[,1], expData_pca$x[,2], expData_pca$x[,3])
+colnames(expData_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+rownames(expData_pca.df) <- colnames(counts_merged.z)
+
+p.pca_2d.z <- plot_ly(expData_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=rownames(expData_pca.df), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, symbol="circle"), width = 500, height = 400) %>%
+layout(title = "Z-transformed", xaxis = list(title = paste("PC1 (",importance_pca[1],")",sep="")), yaxis = list(title = paste("PC2 (",importance_pca[2],")",sep="")), margin = list(l=50, r=50, b=50, t=50, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.pca_2d.z, file=paste0(pDir, "/pca_2d_z.htm"), selfcontained = TRUE)
+
+
+# Generate PCA 3D plot
+p.pca_3d.z <- plot_ly(expData_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=rownames(expData_pca.df), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=8, symbol="circle"), width = 400, height = 500) %>%
+  layout(title = "Z-transformed", scene = list(xaxis = list(title = paste("PC1 (",importance_pca[1],")",sep="")), yaxis = list(title = paste("PC2 (",importance_pca[2],")",sep="")), zaxis = list(title = paste("PC3 (",importance_pca[3],")",sep="")) ), margin = list(l=50, r=50, b=50, t=50, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.pca_3d.z, file=paste0(pDir, "/pca_3d_z.htm"), selfcontained = TRUE)
+
+# Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+#### Variance plots
+
+```{r pca_plots_print, fig.width = 6, fig.height = 9}
+# Load plotly package
+suppressMessages(library(plotly))
+
+# The variances captured by principal components in cpm data
+p.pca
+# The variances captured by principal components in Z-transformed data
+p.pca.z
+
+```
+
+#### PCA plots (2D)
+
+```{r pca_2d_plots_print, fig.width = 6, fig.height = 9}
+# PCA 2D plot in cpm data
+p.pca_2d
+# PCA 2D plot in Z-transformed data
+p.pca_2d.z
+```
+
+#### PCA plots (3D)
+
+```{r pca_3d_plots_print, fig.width = 6, fig.height = 9}
+# "PCA 3D plot in cpm data
+p.pca_3d
+# cat("PCA 3D plot in Z-transformed data
+p.pca_3d.z
+
+# Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+#### Pair-wise comparison heatmaps
+
+```{r pairwise_heatmaps, warning=FALSE, fig.width = 6, fig.height = 9}
+# Load plotly packages
+suppressMessages(library(plotly))
+suppressMessages(library(heatmaply))
+
+##### Create directory for output files
+pDir <- paste(params$outDir, "Pairwise_heatmaps", sep = "/")
+
+if ( !file.exists(pDir) ){
+  dir.create(pDir, recursive=TRUE)
+}
+
+
+####################
+# cpm data
+####################
+
+# For overall pair-wise comparison keep 1000 genes with the highest expression variance across samples
+rsd<-apply(counts_merged,1,sd)
+sel<-order(rsd, decreasing=TRUE)[1:1000]
+counts_merged.var <-counts_merged[sel,]
+
+# Calculate the distnace matrix
+distance <- as.dist(dist(t(counts_merged.var), method="euclidean"))
+plot.top.matrix <- as.matrix(distance)
+hc <- hclust(distance, method="ward.D")
+
+# Generate heatmap including the top correlated genes
+p.h <- heatmaply(data.frame(plot.top.matrix), Rowv=as.dendrogram(hc), Colv=as.dendrogram(hc), scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "darkred", high = "darkblue", midpoint = mean(plot.top.matrix)), scale="none", trace="none", limits = c(min(plot.top.matrix),max(plot.top.matrix)), hide_colorbar = FALSE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(title = "cpm", autosize = TRUE, height = 500, width = 600, margin = list(l=50, r=50, b=50, t=50, pad=4), showlegend = FALSE)
+
+# Save the heatmap as html
+htmlwidgets::saveWidget(p.h, file=paste0(pDir, "/pairwise_heatmaps.html"), selfcontained = TRUE)
+
+
+####################
+# Z-transformed data
+####################
+
+# For data presentation in the form of heatmap keep 1000 genes with the highest expression variance across samples
+rsd<-apply(counts_merged.z,1,sd)
+sel<-order(rsd, decreasing=TRUE)[1:1000]
+counts_merged.z.var <-counts_merged.z[sel,]
+
+# Calculate the distnace matrix
+distance <- as.dist(dist(t(counts_merged.z.var), method="euclidean"))
+plot.top.matrix <- as.matrix(distance)
+hc <- hclust(distance, method="ward.D")
+
+# Generate heatmap including the top correlated genes
+p.h.z <- heatmaply(data.frame(plot.top.matrix), Rowv=as.dendrogram(hc), Colv=as.dendrogram(hc), scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "darkred", high = "darkblue", midpoint = mean(plot.top.matrix)), scale="none", trace="none", limits = c(min(plot.top.matrix),max(plot.top.matrix)), hide_colorbar = FALSE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(title = "Z-transformed", autosize = TRUE, height = 500, width = 600, margin = list(l=50, r=50, b=50, t=50, pad=4), showlegend = FALSE)
+
+# Save the heatmap as html
+htmlwidgets::saveWidget(p.h.z, file=paste0(pDir, "/pairwise_heatmaps_z.html"), selfcontained = TRUE)
+
+# Detach plotly packages. Otherwise it clashes with other graphics devices
+detach("package:heatmaply", unload=FALSE)
+detach("package:plotly", unload=FALSE)
+```
+
+```{r pairwise_heatmaps_print, warning=FALSE, fig.width = 6, fig.height = 9}
+# Load plotly packages
+suppressMessages(library(plotly))
+suppressMessages(library(heatmaply))
+
+# Pair-wise comparison heatmap for cpm data
+p.h
+# Pair-wise comparison heatmap for Z-transformed data
+p.h.z
+
+# Detach plotly packages. Otherwise it clashes with other graphics devices
+detach("package:heatmaply", unload=FALSE)
+detach("package:plotly", unload=FALSE)
+```
+
+### For selected gene {.tabset}
+
+```{r gene_plots, fig.width = 6, fig.height = 9}
+# Load plotly package
+suppressMessages(library(plotly))
+
+##### Create directory for output files
+pDir_box <- paste(params$outDir, "Boxplots", gene, sep = "/")
+pDir_bar <- paste(params$outDir, "Barplots", gene, sep = "/")
+
+if ( !file.exists(pDir_box) ){
+  dir.create(pDir_box, recursive=TRUE)
+}
+
+if ( !file.exists(pDir_bar) ){
+  dir.create(pDir_bar, recursive=TRUE)
+}
+
+####################
+# cpm
+####################
+
+# Extract data for selected gene
+counts_merged.gene <- counts_merged[gene, ]
+
+# Order samples accordingly to investigated groups
+dataByGroups <- NULL
+targetByGroups <- NULL
+colourByGroups <- NULL
+expr <- list()
+averegeExpr <- NULL
+
+for (i in 1:length(unique(targets))) {
+
+    # Separate samples accordingly to investigated groups
+    expr.tmp <- counts_merged.gene[ targets %in% unique(sort(targets))[i] ]
+    averegeExpr <- c(averegeExpr, rep(mean(as.numeric(expr.tmp)), length(expr.tmp)))
+    colour <- targets.colour[[2]][ targets %in% unique(sort(targets))[i] ]
+
+    # Order samples within each group based on the expression level
+    expr.tmp <- expr.tmp[order(expr.tmp)]
+    colour <- colour[order(expr.tmp)]
+
+    expr[[i]] <- as.numeric(expr.tmp)
+    names(expr)[[i]] <- unique(sort(targets))[i]
+    dataByGroups <- c(dataByGroups, expr.tmp)
+    targetByGroups <- c(targetByGroups, targets[ targets %in% unique(sort(targets))[i] ])
+    colourByGroups <- c(colourByGroups, colour)
+}
+
+dataByGroups <- unlist(dataByGroups)
+
+# Generate box-plot
+# Prepare data frame
+gene.expr.df <- data.frame(targets, as.numeric(counts_merged.gene))
+colnames(gene.expr.df) <- c("Group", "Expression")
+
+p.box <- plot_ly(gene.expr.df, y= ~Expression, color = ~Group, type = 'box', jitter = 0.3, pointpos = 0, boxpoints = 'all', colors = targets.colour[[1]], width = 400, height = 400) %>%
+layout(title = "cpm", yaxis = list( title = paste0(gene, "  expression")), margin = list(l=50, r=50, b=50, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.box, file=paste0(pDir_box, "/boxplot.html"), selfcontained = TRUE)
+
+
+# Generate bar-plot
+# Prepare data frame
+dataByGroups.df <- data.frame(targetByGroups, names(dataByGroups), as.numeric(dataByGroups))
+colnames(dataByGroups.df) <- c("Group","Sample", "Expression")
+
+##### The default order will be alphabetized unless specified as below
+dataByGroups.df$Sample <- factor(dataByGroups.df$Sample, levels = dataByGroups.df[["Sample"]])
+
+p.bar <- plot_ly(dataByGroups.df, x = ~Sample, y = ~Expression, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 600, height = 400) %>%
+layout(title = "cpm", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = paste0(gene, "  expression")), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+
+##### Save the bar-plot as html
+htmlwidgets::saveWidget(p.bar, file=paste0(pDir_bar, "/barplot.html"), selfcontained = TRUE)
+
+
+####################
+# Z-transformed data
+####################
+
+# Extract data for selected gene
+counts_merged.z.gene <- counts_merged.z[gene, ]
+
+# Order samples accordingly to investigated groups
+dataByGroups <- NULL
+targetByGroups <- NULL
+colourByGroups <- NULL
+expr <- list()
+averegeExpr <- NULL
+
+for (i in 1:length(unique(targets))) {
+
+    # Separate samples accordingly to investigated groups
+    expr.tmp <- counts_merged.z.gene[ targets %in% unique(sort(targets))[i] ]
+    averegeExpr <- c(averegeExpr, rep(mean(as.numeric(expr.tmp)), length(expr.tmp)))
+    colour <- targets.colour[[2]][ targets %in% unique(sort(targets))[i] ]
+
+    # Order samples within each group based on the expression level
+    expr.tmp <- expr.tmp[order(expr.tmp)]
+    colour <- colour[order(expr.tmp)]
+
+    expr[[i]] <- as.numeric(expr.tmp)
+    names(expr)[[i]] <- unique(sort(targets))[i]
+    dataByGroups <- c(dataByGroups, expr.tmp)
+    targetByGroups <- c(targetByGroups, targets[ targets %in% unique(sort(targets))[i] ])
+    colourByGroups <- c(colourByGroups, colour)
+}
+
+dataByGroups <- unlist(dataByGroups)
+
+
+# Generate box-plot
+# Prepare data frame
+gene.expr.df <- data.frame(targets, as.numeric(counts_merged.z.gene))
+colnames(gene.expr.df) <- c("Group", "Expression")
+
+p.box.z <- plot_ly(gene.expr.df, y= ~Expression, color = ~Group, type = 'box', jitter = 0.3, pointpos = 0, boxpoints = 'all', colors = targets.colour[[1]], width = 400, height = 400) %>%
+layout(title = "Z-transformed", yaxis = list( title = paste0(gene, "  expression (z-score)")), margin = list(l=50, r=50, b=50, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+
+# Save the box-plot as html
+htmlwidgets::saveWidget(p.box.z, file=paste0(pDir_box, "/boxplot_z.html"), selfcontained = TRUE)
+
+
+##### Generate bar-plot
+##### Prepare data frame
+dataByGroups.df <- data.frame(targetByGroups, names(dataByGroups), as.numeric(dataByGroups))
+colnames(dataByGroups.df) <- c("Group","Sample", "Expression")
+
+##### The default order will be alphabetized unless specified as below
+dataByGroups.df$Sample <- factor(dataByGroups.df$Sample, levels = dataByGroups.df[["Sample"]])
+
+p.bar.z <- plot_ly(dataByGroups.df, x = ~Sample, y = ~Expression, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 600, height = 400) %>%
+layout(title = "Z-transformed", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = paste0(gene, "  expression (z-score)")), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+
+##### Save the bar-plot as html (PLOTLY)
+htmlwidgets::saveWidget(p.bar.z, file=paste0(pDir_bar, "/barplot_z.html"), selfcontained = TRUE)
+
+# Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+#### Box-plots
+
+```{r gene_boxplots_print, fig.width = 6, fig.height = 9}
+# Load plotly package
+suppressMessages(library(plotly))
+
+# Box-plot using cpm data for selected gene
+p.box
+# Box-plot using Z-transformed data for selected gene
+p.box.z
+```
+
+#### Bar-plots
+
+```{r gene_barplots_print, fig.width = 6, fig.height = 9}
+# Box-plot using cpm data for selected gene
+p.bar
+# Box-plot using Z-transformed data for selected gene
+p.bar.z
+
+# Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+## To do list
+
+1. Fix mds plots
 
 ```{r, eval=FALSE}
 sampleinfo <- data.frame(c('ERR674422','ERR674425','ERR674419', 'ERR674424', 'Tumour'), c('pancreatic', 'pancreatic', 'pancreatic', 'pancreatic', 'tumour'), c('normal', 'normal', 'normal', 'normal', 'tumour'))
@@ -222,6 +656,21 @@ legend("topleft",fill=c("purple","orange"),legend=levels(sampleinfo$CellType))
 title("Cell type")
 ```
 
+2. Plot limma log2FC values and difference between groups' mean Z-scores + annotate pancreatic cancer-related genes (*KRAS*, *SMAD4*, *TP53*, *CKDN2A*, etc.)
 
+3. Plot Z-score discributions for investigated groups + annotate pancreatic cancer-related genes
 
+#### Parameters
 
+```{r params_info}
+for ( i in 1:length(params) ) {
+
+  cat(paste("Parameter: ", names(params)[i], "\nValue: ", paste(unlist(params[i]), collapse = ","), "\n\n", sep=""))
+}
+```
+
+#### Session info
+
+```{r session_info}
+sessionInfo()
+```
