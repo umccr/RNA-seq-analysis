@@ -660,6 +660,21 @@ title("Cell type")
 
 3. Plot Z-score discributions for investigated groups + annotate pancreatic cancer-related genes
 
+4. Convert Ensmebl gene IDs into Gene Symbols (biomaRt package)
+
+5. Convert Ensmebl gene IDs into Gene Symbols
+
+6. Allow multiple groups comparisons
+
+7. Try Glimma to link result plots and tables
+
+8. Allow perform analysis using multiple genes
+
+9. Generate interactive empiritcal cumulative density function (ecdf) plot
+
+10. Make sure the pipeline is generic
+
+
 #### Parameters
 
 ```{r params_info}
