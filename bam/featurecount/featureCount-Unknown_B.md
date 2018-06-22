@@ -1,7 +1,7 @@
 ---
 title: "Empirial Cumulative Density Function (ECDF) Analysis on Sample Unknown_B"
 author: "Sehrish Kanwal"
-date: "Thu 2018-Jun-07"
+date: "Fri 2018-Jun-22"
 output: 
   html_document: 
     toc: true
@@ -54,9 +54,7 @@ Conda installed subread on spartan. It is available under `/home/sehrishk/.minic
 The command used to run featurecounts is:
 
 ```
-/home/sehrishk/.miniconda3/envs/kall/bin/kallisto quant --genomebam --pseudobam --gtf /data/cephfs/punim0010/local/development/bcbio/genomes/Hsapi$
-ns/GRCh37/rnaseq/ref-transcripts.gtf -o /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/unknown_B_RNA -i /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/seqc-test/rna-seq/work/kallisto/index/GRCh37/GRCh37.idx /data/cephfs/puni
-m0010/projects/Hofmann_WTS/data/merged/Unknown_B_RNA_R1.fastq.gz /data/cephfs/punim0010/projects/Hofmann_WTS/data/merged/Unknown_B_RNA_R2.fastq.gz
+/data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/unknown_B_RNA $ /home/sehrishk/.miniconda3/envs/subread/bin/featureCounts -a /data/cephfs/punim0010/local/development/bcbio/genomes/Hsapiens/GRCh37/rnaseq/ref-transcripts.gtf -o ./featurecount/featurecount_Unknown_B /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/unknown_B_RNA/kallisto.bam /data/cephfs/punim0010/projects/Hofmann_WTS/Patients_WTS-merged/final/Unknown_B_RNA/Unknown_B_RNA-ready.bam
 ```
 ### Console output
 
