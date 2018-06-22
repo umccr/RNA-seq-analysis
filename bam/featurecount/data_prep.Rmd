@@ -1,0 +1,50 @@
+---
+title: "Practicing plots with ggplot"
+author: "Sehrish Kanwal"
+date: "`r format(Sys.time(), '%a %Y-%b-%d')`"
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Data
+
+1. /data/cephfs/punim0010/projects/Hofmann_RNA/Avner_WTS-merged/final/CCR170012_MH17T001P013/CCR170012_MH17T001P013-ready.counts
+
+2. /data/cephfs/punim0010/projects/Hofmann_RNA/Avner_WTS-merged/final/CCR170012_MH17T001P013/CCR170012_MH17T001P013-ready.counts
+
+3. /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/featurecount/unknown_A_RNA/featurecount_Unknown_A
+
+4. /data/cephfs/punim0010/projects/Kanwal_RNASeq_Testing/unknown_B_RNA/featurecount/featurecount_Unknown_B
+
+```{r}
+data_dir <- "/Users/kanwals/Documents/UMCCR/analysis/RNAseq/data"
+seqdata_unknown_A <- read.table(file.path(data_dir, "featurecount_Unknown_A-ready.counts"), 
+                                stringsAsFactors = FALSE, col.names = c("gene_id", "seqdata_unknown_A"))
+str(seqdata_unknown_A)
+
+
+seqdata_unknown_B <- read.table(file.path(data_dir, "featurecount_Unknown_B-ready.counts"), 
+                                stringsAsFactors = FALSE, col.names = c("gene_id", "seqdata_unknown_B"))
+str(seqdata_unknown_B)
+
+seqdata_CCR170012 <- read.table(file.path(data_dir, "CCR170012_MH17T001P013-ready.counts"), 
+                                stringsAsFactors = FALSE, col.names = c("gene_id", "seqdata_CCR170012"))
+str(seqdata_CCR170012)
+
+seqdata_CCR170093 <- read.table(file.path(data_dir, "CCR170093_RNA_WPT_013-ready.counts"), 
+                                stringsAsFactors = FALSE, col.names = c("gene_id", "seqdata_CCR170093"))
+str(seqdata_CCR170093)
+
+all(seqdata_CCR170093$gene_id == seqdata_unknown_B$gene_id) # all gene_ids are the same
+
+l <- list(seqdata_unknown_A, seqdata_unknown_B, seqdata_CCR170012, seqdata_CCR170093)
+seqdata_merged <- Reduce(function(dtf1,dtf2) dplyr::left_join(dtf1, dtf2, by = "gene_id"), l)
+# x <- cbind(seqdata_unknown_A, seqdata_unknown_B$seqdata_unknown_B, seqdata_CCR170012$seqdata_CCR170012, seqdata_CCR170093$seqdata_CCR170093)
+```
