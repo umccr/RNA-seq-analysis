@@ -3,11 +3,11 @@ title: "FC work with the recount2 pancreatic samples"
 author: "Sehrish Kanwal"
 date: "`r format(Sys.time(), '%a %Y-%b-%d')`"
 params:
-    dataDir: "/Users/jmarzec/data/RNA-seq_Sehrish"
-    outDir: "/Users/jmarzec/data/RNA-seq_Sehrish/TumourNormal_results"
-    TumourFile: "featurecount_Unknown_B"
-    NormalFile: "counts_gene_pan.tsv"
-    gene: "ENSG00000133703"
+    dataDir: 
+    TumourFile: 
+    NormalFile: 
+    gene: 
+    outDir: 
 output: 
   html_document: 
     keep_md: yes
