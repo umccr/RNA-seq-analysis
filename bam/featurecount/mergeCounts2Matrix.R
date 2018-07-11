@@ -12,7 +12,7 @@
 
 ################################################################################
 #
-#   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, samples's names for the merged matrix, samples's phenotype for downstream analyses and inictation of technical replicates. 
+#   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, sample names for the merged matrix, sample phenotypes for downstream analyses and inictation of technical replicates. 
 #
 #   Command line use example: Rscript mergeCounts2Matrix.R --target /TCGA-PAAD/TCGA_PAAD_Target.txt --inDir /TCGA-PAAD --outFile TCGA-PAAD.counts.matrix.txt
 #
