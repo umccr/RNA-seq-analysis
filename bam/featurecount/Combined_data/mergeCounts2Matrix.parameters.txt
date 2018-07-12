@@ -1,2 +1,0 @@
-projectDir	target	inDir	outFile	help
-/Combined_data	TCGA_PAAD_Target.txt	/TCGA-PAAD	TCGA-PAAD.counts.matrix.txt	FALSE
