@@ -44,7 +44,7 @@ Argument | Description
 --projectDir | Project directory. This is where the target file is expected and where the merged matrix will be saved
 --target | Name of the target file. It expects to have four columns: (1) Sample_name, (2) File_name, (3) Target and (4) Replicates
 --inDir | Directory containing per-sample expression files. Note that only files listed in the target file will be used to generate the merged matrix. No header is expected. The sample names in the merged matrix will be added based on the sample names in the target file
---outFile | Core name for the merged matrix, to which ".counts.matrix.txt" suffix wil be added 
+--outFile | Core name for the merged matrix output file, to which ".counts.matrix.txt" suffix wil be added 
 <br />
 
 **Command line use example**:
