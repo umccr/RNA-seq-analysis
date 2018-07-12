@@ -35,6 +35,8 @@ To merge multiple read count files use the *[mergeCounts2Matrix.R](https://githu
 To facilitate analyses and output files organisation the target file is expected to be in user-defined **project directory**. This is where all the resultant files will be saved.
 
 
+### Arguments
+
 **Script**: *[mergeCounts2Matrix.R](https://github.com/umccr/RNA-seq-analysis/blob/z_score/bam/featurecount/mergeCounts2Matrix.R)*
 
 Argument | Description
@@ -52,15 +54,32 @@ Rscript mergeCounts2Matrix.R --projectDir /Combined_data --target /TCGA_PAAD_Tar
 ```
 <br>
 
+### Output files
+
 This will read read count files listed in *TCGA_PAAD_Target.txt* target file and located in the */TCGA-PAAD* folder, and will generate the following output files in the *Combined_data* project directory:
 
 Output file | Description
 ------------ | -----------
 TCGA-PAAD.counts.matrix.txt | Merged matrix with read counts for individual genes (rows) across all per-sample (columns)
 TCGA-PAAD.mergeCounts2Matrix.parameters.txt | File reporting used parameters
-TCGA-PAAD.mergeCounts2Matrix.missing_files.txt | File listing read count files in the target file but absent in the folder with per-sample expression files
-TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt | File listing genes that were not present in all per-sample expression files and thus were not included in the merged matrix
+TCGA-PAAD.mergeCounts2Matrix.missing_files.txt | File created in case there are read count files listed in the *target file* but absent in the folder with per-sample expression files
+TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt | File created in case there are genes that were not present across all per-sample expression files and thus were not included in the *merged expression matrix*
 <br />
+
+The output files will be organised following the folder structure below
+
+```
+Combined_data
+|
+|____TCGA_PAAD_Target.txt
+|____TCGA-PAAD.counts.matrix
+|____mergeCounts2Matrix.parameters.txt
+|____TCGA-PAAD.mergeCounts2Matrix.missing_files.txt (optional)
+|____TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt (optional)
+
+```
+<br />
+
 
 
 ## Combine data from different datasets
