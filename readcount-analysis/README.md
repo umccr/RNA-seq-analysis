@@ -35,7 +35,9 @@ To facilitate analyses and output files organisation, the target file is expecte
 |
 |____R-script (mergeCounts2Matrix.R)
 |____User-defined-project-directory
-   |____ target_file
+| |
+| |____ target_file
+|
 |____Folder-containing-count-files
 ```
 
