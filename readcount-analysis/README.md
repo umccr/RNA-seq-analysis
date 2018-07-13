@@ -29,7 +29,15 @@ To merge multiple read count files use the *[mergeCounts2Matrix.R](https://githu
 3. "Target" - biological group/phenotypes that will be used to annotate samples and to perform downstream analyses, including differential expression analysis
 4. "Replicates" - indication of any technical replicates to take into account in differential expression analysis 
 
-To facilitate analyses and output files organisation, the target file is expected to be in user-defined **project directory**. This is where all the resultant files will be saved.
+To facilitate analyses and output files organisation, the target file is expected to be in user-defined **project directory**. This is where all the resultant files will be saved. The directory structure will be as follows:
+
+```
+|
+|____R-script (mergeCounts2Matrix.R)
+|____User-defined-project-directory
+   |____ target_file
+|____Folder-containing-count-files
+```
 
 ### Arguments
 
@@ -38,12 +46,12 @@ To facilitate analyses and output files organisation, the target file is expecte
 Argument | Description
 ------------ | ------------
 --projectDir | Project directory. This is where the target file is expected and where the merged matrix will be saved
---target | Name of the target file. It expects to have four columns: (1) Sample_name, (2) File_name, (3) Target and (4) Replicates
+--target | Name of the target file. It expects to have four columns: (1) Sample\_name, (2) File\_name, (3) Target and (4) Replicates
 --inDir | Directory containing per-sample expression files. Note that only files listed in the target file will be used to generate the merged matrix. No header is expected. The sample names in the merged matrix will be added based on the sample names in the target file
 --outFile | Core name for the merged matrix output file, to which ".counts.matrix.txt" suffix wil be added 
 <br />
 
-**Command line use example**:
+**Example command-line use example**:
 
 ```
 Rscript mergeCounts2Matrix.R --projectDir /Combined_data --target /TCGA_PAAD_Target.txt --inDir /TCGA-PAAD --outFile TCGA-PAAD
@@ -65,7 +73,7 @@ TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt | File created in case there are 
 The output files will be organised following the folder structure below
 
 ```
-Combined_data
+User-defined-project-directory
 |
 |____TCGA_PAAD_Target.txt
 |____TCGA-PAAD.counts.matrix
