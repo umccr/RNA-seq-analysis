@@ -45,6 +45,14 @@ prepare2write <- function (x) {
     return(x2write)
 }
 
+##### Prepare gene data matrix to write into a file
+geneMatrix2write <- function (x) {
+  
+  x2write <- cbind(rownames(x), x)
+  colnames(x2write) <- c("Gene",colnames(x))
+  return(x2write)
+}
+
 
 #===============================================================================
 #    Load libraries
@@ -82,6 +90,9 @@ outFile <- opt$outFile
 
 ##### Read in the target file
 targets <- read.table(paste(projectDir,targetFile, sep="/"), header=TRUE, sep="\t", row.names=1)
+
+##### Make syntactically valid names
+rownames(targets) <- make.names(rownames(targets))
 
 ##### Change to directory with per-sample expression files
 setwd(inFileDir)
@@ -133,6 +144,9 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
+##### Make syntactically valid names
+colnames(dataset) <- make.names(colnames(dataset))
+
 ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
 gene_list <- unique(gene_list)
 gene_list.missing <- gene_list[ gene_list %!in% rownames(dataset) ]
@@ -144,7 +158,7 @@ if ( length(gene_list.missing) > 0 ) {
 
 
 ##### Write merged matrix into a file
-write.table(prepare2write(dataset), file = paste0(projectDir, "/", outFile, ".counts.matrix.txt" ), sep="\t", quote=FALSE, row.names=FALSE)
+write.table(geneMatrix2write(dataset), file = paste0(projectDir, "/", outFile, ".counts.matrix.txt" ), sep="\t", quote=FALSE, row.names=FALSE)
 
 
 ##### Write used parameters into a file
