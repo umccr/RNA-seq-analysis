@@ -56,4 +56,4 @@ if ( is.na(opt$project_dir) || is.na(opt$datasets) ) {
 }
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combineExprData.Rmd", output_dir = opt$project_dir, params = list(projectDir = opt$project_dir, datasetsFile = opt$datasets))
+rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$datasets, ".combineExprData.html"), output_dir = opt$project_dir, params = list(projectDir = opt$project_dir, datasetsFile = opt$datasets))
