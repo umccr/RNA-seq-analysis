@@ -80,7 +80,7 @@ suppressMessages(library(edgeR))
 
 ## Read in annotation and data files
 
-Read in the ***dataset file*** containing inforamtion about the ***read count matrices*** to be combined along with the corresponding ***target*** and ***outliers*** files. Then merge the read count matrices based on the information in the *dataset file* Note that only genes intersection across all datasets expression matrices will be reported in the combined expression matrix. Genes not present across all datasets will be listed in *[datasets].missing_genes.txt* file.
+Read in the ***dataset file*** containing inforamtion about the ***read count matrices*** to be combined along with the corresponding ***target*** and ***outliers*** files. Then merge the read count matrices based on the information in the *dataset file* Note that only genes intersection across all datasets expression matrices will be reported in the combined expression matrix. Genes not present across all datasets will be listed in *`[datasets`].missing_genes.txt* file.
 
 ```{r load_data, message=FALSE, warning=FALSE}
 ##### Read file with datasets information
@@ -168,7 +168,7 @@ if ( length(gene_list.missing) > 0 ) {
 
 ## Remove outliers
 
-Remove user-defined outliers from individual datasets based on information in the outliers files.
+Remove user-defined outliers from individual datasets listed in outliers files.
 
 ```{r remove_outliers, comment = NA, message=FALSE, warning=FALSE}
 outlierList <- NULL
@@ -210,7 +210,9 @@ targetFile <- targetFile[ setdiff(rownames(targetFile) , outlierList) ,]
 
 ## Datasets library size {.tabset}
 
-### Colour by datasets
+### Datasets
+
+Bar plot illustrating library size for each sample (bar). The colours indicate datasets.
 
 ```{r library_size_plot_datasets, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 suppressMessages(library(plotly))
@@ -240,7 +242,9 @@ p
 htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_datasets.html"), selfcontained = TRUE)
 ```
 
-### Colour by targets
+### Targets
+
+Bar plot illustrating library size for each sample (bar). The colours indicate sample groups, as provided in *Target* column in the target files.
 
 ```{r library_size_plot_targets, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 ##### Generate bar-plot for library size
@@ -349,45 +353,14 @@ invisible(dev.off())
 
 During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effectss is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation by the method of *[trimmed mean of M-values](https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM)* is performed using the *calcNormFactors* function in *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html)*. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples.
 
-### Scaling factor (colour datasets)
+### Unnormalised vs normalised cpm data
 
-```{r data_normalisation_datasets_plot, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
-suppressMessages(library(plotly))
+Box plots of log-cpm for individual samples, coloured by dataset, before and after TMM normalisation.
 
+```{r data_normalisation_unnorm_vs_nomm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Adjust for RNA composition effect. Calculate scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
 y.norm <- calcNormFactors(y.filtered, method = "TMM")
 
-##### Plot the library sizes for individaul samples against corresponsing scaling factors
-p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "dataset")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(dataset), colors = RNAseq_datasets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
-  layout(title = "", xaxis = list(title = "Scaling factor"), yaxis = list(title = "Library size"), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = F, showlegend = TRUE)
-
-##### Print htmlwidget
-p
-
-##### Save the scatter-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_datasets.html"), selfcontained = TRUE)
-```
-
-### Scaling factor (colour targets)
-
-```{r data_normalisation_targets_plot, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
-##### Plot the library sizes for individaul samples against corresponsing scaling factors
-p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "group")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(group), colors = RNAseq_targets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
-  layout(title = "", xaxis = list(title = "Scaling factor"), yaxis = list(title = "Library size"), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = F, showlegend = TRUE)
-
-##### Print htmlwidget
-p
-
-##### Save the scatter-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_targets.html"), selfcontained = TRUE)
-
-##### Detach plotly package. Otherwise it clashes with other graphics devices
-detach("package:plotly", unload=FALSE)
-```
-
-### Unnormalised vs normalised cpm data
-
-```{r data_normalisation_unnorm_vs_nomm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Transformations from the raw-scale to CPM
 y.norm.cpm <- cpm(y.norm, normalized.lib.sizes=TRUE, log=TRUE, prior.count=0.25)
 
@@ -443,6 +416,95 @@ invisible(dev.off())
 # ##### Save the box-plot as html
 # htmlwidgets::saveWidget(as_widget(p), paste0(paste(datasetIDs, collapse="_"),"_normalisation.html"), selfcontained = TRUE)
 # #######################################################
+```
+
+### Mean-difference plot
+
+The performance of the *TMM* normalisation procedure can be examined using mean-difference
+(MD) plots. This visualizes the *library size-adjusted log-fold change* between two libraries (the
+difference) against the *average log-expression* across those libraries (the mean). Each MD
+plot is generated by comparing one sample against an artificial library constructed from the average
+of all other samples. Ideally, the bulk of genes should be centred at a log-fold change of zero. This indicates that
+any composition bias between libraries has been successfully removed. The MD plots for all samples are saved in the *`[datasets`] MD_plots* directory.
+
+```{r md_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
+##### Generate MD plot for the random 2 samples in each dataset (or 1 if 2 not available)
+par(mfrow=c(length(datasetIDs),2), mar=c(2, 5, 3, 2))
+
+for (dataset in datasetIDs ) {
+  
+  ##### Get sample names for each dataset
+  samples <- rownames(targetFile[ targetFile$Dataset == dataset, ])
+  
+  ##### Select random 2 samples (or 1 if 2 not available)
+  if ( length(samples) >= 2 ) {
+    samples <- samples[ sample(1:length(samples), 2, replace=FALSE) ]
+  } else {
+     samples <- samples[ sample(1:length(samples), length(samples), replace=FALSE) ]
+  }
+  
+  for ( sample in samples ) {
+  
+    plotMD(y.filtered.cpm, column=match(sample, colnames(y.filtered.cpm)))
+    abline(h=0, col="red", lty=2, lwd=2)
+  }
+
+}
+invisible(dev.off())
+
+
+##### Create directory for pdf files
+MDplotsDir <- paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"), "_MD_plots")
+
+if ( !file.exists(MDplotsDir) ){
+  dir.create(MDplotsDir, recursive=TRUE)
+}
+
+##### Save the plot as pdf file for each sample
+for ( sample in colnames(y.filtered.cpm) ) {
+
+  pdf(paste0(MDplotsDir, "/", sample, "_MDplot.pdf"), width=6, height=5)
+  plotMD(y.filtered.cpm, column=match(sample, colnames(y.filtered.cpm)), xlim=c(-10,15), ylim=c(-10,10))
+  abline(h=0, col="red", lty=2, lwd=2)
+  invisible(dev.off())
+}
+```
+
+### Scaling factor (datasets)
+
+Library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate datasets.
+
+```{r data_normalisation_datasets_plot, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
+suppressMessages(library(plotly))
+
+##### Plot the library sizes for individaul samples against corresponsing scaling factors
+p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "dataset")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(dataset), colors = RNAseq_datasets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
+  layout(title = "", xaxis = list(title = "Scaling factor"), yaxis = list(title = "Library size"), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = F, showlegend = TRUE)
+
+##### Print htmlwidget
+p
+
+##### Save the scatter-plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_datasets.html"), selfcontained = TRUE)
+```
+
+### Scaling factor (targets)
+
+Library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate sample groups, as provided in *Target* column in the target files.
+
+```{r data_normalisation_targets_plot, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
+##### Plot the library sizes for individaul samples against corresponsing scaling factors
+p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "group")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(group), colors = RNAseq_targets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
+  layout(title = "", xaxis = list(title = "Scaling factor"), yaxis = list(title = "Library size"), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = F, showlegend = TRUE)
+
+##### Print htmlwidget
+p
+
+##### Save the scatter-plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_targets.html"), selfcontained = TRUE)
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
 ```
 
 ## Adjust data for batch effects
