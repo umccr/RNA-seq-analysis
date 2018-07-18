@@ -88,7 +88,7 @@ DatasetInput=read.table(paste(params$projectDir,params$datasetsFile,sep="/"),sep
 
 ##### Extract info about target file for the first dataset
 fileInfo = strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
-targetFile <- read.table(paste(params$projectDir,DatasetInput[1,"Target_file"],sep="/"), sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+targetFile <- read.table(DatasetInput[1,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
 
 ##### Make sure that there are no duplciated samples in the target file
 targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
@@ -100,7 +100,7 @@ if ( nrow(DatasetInput) > 1 ) {
   for ( i in 2:nrow(DatasetInput) ) {
     
     ##### Create a temporary object to store info from the remaining target files
-    targetFileTmp <- read.table(paste(params$projectDir,DatasetInput[i,"Target_file"],sep="/"), sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+    targetFileTmp <- read.table(DatasetInput[i,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
     
     ##### Make sure that there are no duplciated samples in the target file
     targetFileTmp <- targetFileTmp[!duplicated(targetFileTmp[,"Sample_name"]),]
@@ -125,14 +125,14 @@ for (data_matrix in DatasetInput[ , "Expression_matrix" ] ) {
   
   ##### Create combined dataset variable if it doesn't exist yet
   if (!exists("datasets")) {
-    datasets <- as.data.frame( read.table(paste(params$projectDir,data_matrix,sep="/"), header=TRUE, sep="\t", row.names=NULL) )
+    datasets <- as.data.frame( read.table(data_matrix, header=TRUE, sep="\t", row.names=NULL) )
     
     ##### list genes present in individal files
     gene_list <- as.vector(datasets[,1])
     
     ##### Add data for the remaining samples   
   } else if (exists("datasets")) {
-    dataset <-as.data.frame( read.table(paste(params$projectDir,data_matrix,sep="/"), header=TRUE, sep="\t", row.names=NULL) )
+    dataset <-as.data.frame( read.table(data_matrix, header=TRUE, sep="\t", row.names=NULL) )
     
     ##### list genes present in individal files
     gene_list <- c( gene_list, as.vector(dataset[,1]) )
@@ -181,12 +181,12 @@ for ( i in 1:length(datasetIDs) ) {
   if ( !is.empty(DatasetInput[ i, "Outliers_file"]) ) {
     
     ##### Check if the outliers file is not empty
-    FileInfo = file.info(paste(params$projectDir,DatasetInput[ i, "Outliers_file"],sep="/"))
+    FileInfo = file.info(DatasetInput[ i, "Outliers_file"])
     
     ##### If non-empty then read it in
     if ( FileInfo$size != 0 ) {
       
-      outliersInfo = read.table( paste(params$projectDir,DatasetInput[ i, "Outliers_file"],sep="/"), sep="\t", as.is=TRUE, header=FALSE, row.names=NULL)
+      outliersInfo = read.table(DatasetInput[ i, "Outliers_file"], sep="\t", as.is=TRUE, header=FALSE, row.names=NULL)
       outliers=as.vector(unlist(outliersInfo))
       
       for (k in 1:length(outliers)) {

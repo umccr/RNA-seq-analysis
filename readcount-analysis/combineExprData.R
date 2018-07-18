@@ -12,11 +12,11 @@
 
 ################################################################################
 #
-#	 Description: Pipeline combining gene-by-sample expression matrices from different datasets. It requires manually prepared dataset file with four columns ("Dataset_name", "Expression_matrix", "Target_file" and "Outliers_file") to define names of the datasets to be merged, the correspoding expression matrices and target files, samples's names for the merged matrix, as well as the files listing outlier samples to be removed before combining the data. Note, only genes intersection across all datasets expression matrices will be reported in the combined expression matrix. The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
+#	 Description: Pipeline combining gene-by-sample expression matrices from different datasets. It requires manually prepared dataset file with four columns ("Dataset_name", "Expression_matrix", "Target_file" and "Outliers_file") to define names of the datasets to be merged, the location of the correspoding expression matrices and target files, samples's names for the merged matrix, as well as to the files listing outlier samples to be removed before combining the data. Note, only genes intersection across all datasets expression matrices will be reported in the combined expression matrix. The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
 #
 #	 Command line use example: Rscript  combineExprData.R --project_dir /Combined_data --datasets Datasets_list.txt
 #
-#   project_dir:  Project directory. This is where the datasets and target files are expected and where the combined expression matrix will be saved
+#   project_dir:  Project directory. This is where the datasets file is expeced and where combined expression matrix and accompanying file will be saved
 #   datasets:     Name of the datasets file listing info about datasets to combine. It expects to have four columns: (1) Dataset_name, (2) Expression_matrix, (3) Target_file and (4) Outliers_file
 #
 ################################################################################
