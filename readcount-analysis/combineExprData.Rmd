@@ -212,7 +212,7 @@ targetFile <- targetFile[ setdiff(rownames(targetFile) , outlierList) ,]
 
 ### Datasets
 
-Bar plot illustrating library size for each sample (bar). The colours indicate datasets.
+Bar-plot illustrating library size for each sample (bar). The colours indicate datasets.
 
 ```{r library_size_plot_datasets, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 suppressMessages(library(plotly))
@@ -244,7 +244,7 @@ htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datas
 
 ### Targets
 
-Bar plot illustrating library size for each sample (bar). The colours indicate sample groups, as provided in *Target* column in the target files.
+Bar-plot illustrating library size for each sample (bar). The colours indicate sample groups, as provided in *Target* column in the target files.
 
 ```{r library_size_plot_targets, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 ##### Generate bar-plot for library size
@@ -355,7 +355,7 @@ During the sample preparation or sequencing process, external factors that are n
 
 ### Unnormalised vs normalised cpm data
 
-Box plots of log-cpm for individual samples, coloured by dataset, before and after TMM normalisation.
+Box-plots of log-cpm for individual samples, coloured by dataset, before and after TMM normalisation.
 
 ```{r data_normalisation_unnorm_vs_nomm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Adjust for RNA composition effect. Calculate scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
