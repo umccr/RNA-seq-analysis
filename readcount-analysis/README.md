@@ -29,19 +29,7 @@ To merge multiple read count files use the *[mergeCounts2Matrix.R](https://githu
 3. "Target" - biological group/phenotypes that will be used to annotate samples and to perform downstream analyses, including differential expression analysis
 4. "Replicates" - indication of any technical replicates to take into account in differential expression analysis 
 
-To facilitate analyses and output files organisation, the target file is expected to be in user-defined **project directory**. This is where all the resultant files will be saved. The directory structure will be as follows:
-
-```
-|
-|____Project_directory (User-defined)
-|
-|____Count_data_folder
-  |____Count_file_s1
-  |____Count_file_s2
-  ...
-  |____Count_file_sn
-  |____Target_file
-```
+To facilitate downstream analyses and files organisation, the output files will be saved in user-defined **project directory** with user-defined prefix (core name).
 
 ### Arguments
 
@@ -52,7 +40,7 @@ Argument | Description
 --projectDir | Project directory. This is where the target file is expected and where the merged matrix will be saved
 --target | Name of the target file. It expects to have four columns: (1) Sample\_name, (2) File\_name, (3) Target and (4) Replicates
 --inDir | Directory containing per-sample expression files. Note that only files listed in the target file will be used to generate the merged matrix. No header is expected. The sample names in the merged matrix will be added based on the sample names in the target file
---outFile | Core name for the merged matrix output file, to which ".counts.matrix.txt" suffix wil be added 
+--outFile | Core name for the merged matrix output file, to which ".counts.matrix.txt" suffix will be added 
 <br/>
 
 **Example command-line use example**:
@@ -64,29 +52,34 @@ Rscript mergeCounts2Matrix.R --projectDir /Combined_data --target /TCGA_PAAD_Tar
 
 ### Output files
 
-This will read read count files listed in *TCGA_PAAD_Target.txt* target file and located in the */TCGA-PAAD* folder, and will generate the following output files in the *Combined_data* project directory:
+This will read count files listed in *TCGA_PAAD_Target.txt* target file and located in the */TCGA-PAAD* folder, and will generate the following output files in the *Combined_data* project directory:
 
 Output file | Description
 ------------ | -----------
-TCGA-PAAD.counts.matrix.txt | Merged matrix with read counts for individual genes (rows) across all per-sample (columns)
+TCGA-PAAD.counts.matrix.txt | Merged matrix with read counts for individual genes (rows) across all samples (columns)
 TCGA-PAAD.mergeCounts2Matrix.parameters.txt | File reporting used parameters
 TCGA-PAAD.mergeCounts2Matrix.missing_files.txt | File created in case there are read count files listed in the *target file* but absent in the folder with per-sample expression files
 TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt | File created in case there are genes that were not present across all per-sample expression files and thus were not included in the *merged expression matrix*
 <br/>
 
-The output files will be organised following the folder structure below
+The input and output files will be organised following the folder structure below
 
 ```
-Project-directory (User-defined)
 |
-|____TCGA-PAAD.counts.matrix
-|____mergeCounts2Matrix.parameters.txt
-|____TCGA-PAAD.mergeCounts2Matrix.missing_files.txt (optional)
-|____TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt (optional)
+|____Project-directory (User-defined)
+| |____TCGA-PAAD.counts.matrix
+| |____mergeCounts2Matrix.parameters.txt
+| |____TCGA-PAAD.mergeCounts2Matrix.missing_files.txt (optional)
+| |____TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt (optional)
+|
+|____Count_data_folder
+  |____Count_file_s1
+  |____Count_file_s2
+  ...
+  |____Count_file_sn
+  |____Target_file
 ```
-<br />
-
-
+<br/>
 
 ## Combine data from different datasets
 
@@ -106,8 +99,8 @@ To facilitate analyses and output files organisation, the datasets file is expec
 ```
 |
 |____Project_directory (User-defined)
-| |____Outliers_file_d1
-| |____Outliers_file_d2
+| |____Outliers_file_d1 (optional)
+| |____Outliers_file_d2 (optional)
 |
 |____Count_data_folder_dataset_1
 | |____Count_matrix_d1
@@ -135,12 +128,55 @@ Rscript combineExprData.R --projectDir /Combined_data --datasets Datasets_list.t
 ```
 <br>
 
-This will generate [Datasets_list.txt.combineExprData.html](https://rawgit.com/umccr/RNA-seq-analysis/master/readcount-analysis/Combined_data/Datasets_list.txt.combineExprData.html) and [Datasets_list.txt.combineExprData.md](https://github.com/umccr/RNA-seq-analysis/blob/master/readcount-analysis/Combined_data/Datasets_list.txt.combineExprData.md) reports with interactive summary plots. It will also create a folder with user-defined name with the following output tables and plots:
-
 ### Output files
 
+This will read count matrices, target and outliers files listed in *Datasets_list.txt* datasets file located within the *Combined_data* project folder. Based on the information about the input files the *[combineExprData.Rmd](https://github.com/umccr/RNA-seq-analysis/blob/master/readcount-analysis/combineExprData.Rmd)* script will generate [Datasets_list.txt.combineExprData.html](https://rawgit.com/umccr/RNA-seq-analysis/master/readcount-analysis/Combined_data/Datasets_list.txt.combineExprData.html) and [Datasets_list.txt.combineExprData.md](https://github.com/umccr/RNA-seq-analysis/blob/master/readcount-analysis/Combined_data/Datasets_list.txt.combineExprData.md) reports with interactive summary plots and the following output files in the *Combined_data* project directory:
 
-<br>
+Output file | Description
+------------ | -----------
+[Avner_TCGA-PAAD_TMM.txt](Combined_data/Avner_TCGA-PAAD_TMM.txt) | Combined and normalised [TMM](https://www.ncbi.nlm.nih.gov/pubmed/20196867) matrix with *log-cpm* values for individual genes (rows) across all samples (columns)
+[Avner_TCGA-PAAD.combineExprData.parameters.txt](Combined_data/Avner_TCGA-PAAD.combineExprData.parameters.txt) | File reporting used parameters
+[Avner_TCGA-PAAD.missing_genes.txt](Combined_data/Avner_TCGA-PAAD.missing_genes.txt) | File created in case there are genes that were not present across all per-dataset count matrices and thus were not included in the *combined expression matrix*
+[Avner_TCGA-PAAD_RNAseq_libSize_datasets.html](Combined_data/Avner_TCGA-PAAD_RNAseq_libSize_datasets.html) | Interactive bar-plot illustrating library size for each sample (bar). The colours indicate datasets
+[Avner_TCGA-PAAD_RNAseq_libSize_targets.html](Combined_data/Avner_TCGA-PAAD_RNAseq_libSize_targets.html) | Interactive bar-plot illustrating library size for each sample (bar). The colours indicate sample groups, as provided in the target files.
+[Avner_TCGA-PAAD_filtering.pdf](Combined_data/Avner_TCGA-PAAD_filtering.pdf) | Histograms with data distribution before and after low expressed genes filtering
+[Avner_TCGA-PAAD_normalisation.pdf](Combined_data/Avner_TCGA-PAAD_normalisation.pdf) | Box-plots of *log-cpm* for individual samples, coloured by dataset, before and after [TMM](https://www.ncbi.nlm.nih.gov/pubmed/20196867) normalisation
+[Avner_TCGA-PAAD_MD_plots](Combined_data/Avner_TCGA-PAAD_MD_plots) | Folder with [mean-difference (MD) plots](Combined_data/Avner_TCGA-PAAD_MD_plots/TCGA.2J.AAB4.01A.12R.A41B.07_MDplot.pdf) for all samples demonstrating the *library size-adjusted log-fold change* between two libraries (the difference) against the *average log-expression* across those libraries (the mean)
+[Avner_TCGA-PAAD_scaling_factor_datasets.html](Combined_data/Avner_TCGA-PAAD_scaling_factor_datasets.html) | Interactive scatter-plot with library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate datasets
+[Avner_TCGA-PAAD_scaling_factor_targets.html](Combined_data/Avner_TCGA-PAAD_scaling_factor_targets.html) | Interactive scatter-plot with library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate sample groups, as provided in the target files
+<br/>
+
+The input and output files will be organised following the folder structure below
+
+```
+|
+|____Project_directory (User-defined)
+| |____Outliers_file_d1 (optional)
+| |____Outliers_file_d2 (optional)
+| |____Avner_TCGA-PAAD_TMM.txt
+| |____Avner_TCGA-PAAD.combineExprData.parameters.txt
+| |____Avner_TCGA-PAAD.missing_genes.txt (optional)
+| |____Avner_TCGA-PAAD_RNAseq_libSize_datasets.html
+| |____Avner_TCGA-PAAD_RNAseq_libSize_targets.html
+| |____Avner_TCGA-PAAD_filtering.pdf
+| |____Avner_TCGA-PAAD_normalisation.pdf
+| |____Avner_TCGA-PAAD_scaling_factor_datasets.html
+| |____Avner_TCGA-PAAD_scaling_factor_targets.html
+| |____Avner_TCGA-PAAD_MD_plots
+|   |____TCGA.2J.AAB1.01A.11R.A41B.07_MDplot.pdf
+|   |____TCGA.2J.AAB4.01A.12R.A41B.07_MDplot.pdf
+|   ...
+|   |____TCGA.2J.AABO.01A.21R.A41B.07_MDplot.pdf
+|
+|____Count_data_folder_dataset_1
+| |____Count_matrix_d1
+| |____Target_file_d1
+|
+|____Count_data_folder_dataset_2
+  |____Count_matrix_d2
+  |____Target_file_d2
+```
+<br/>
 
 ## Batch effects assessment
 
