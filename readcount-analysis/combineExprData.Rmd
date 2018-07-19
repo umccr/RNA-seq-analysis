@@ -525,6 +525,10 @@ for ( i in 1:length(params) ) {
 
   cat(paste("Parameter: ", names(params)[i], "\nValue: ", paste(unlist(params[i]), collapse = ","), "\n\n", sep=""))
 }
+
+##### Write used parameters into a file
+write.table(params, file = paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),".combineExprData.parameters.txt"), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+
 ```
 
 ## Session info
