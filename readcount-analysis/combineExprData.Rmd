@@ -515,7 +515,7 @@ Neet to benchmark batch effects correction/modelling methods, including *[remove
 
 ```{r write_data, comment = NA, message=FALSE, warning=FALSE}
 cat("Writing TMM-normalised expression data to", paste0(paste(datasetIDs, collapse="_"),"_TMM.exp"), "\n\n")
-write.table(geneMatrix2write(y.norm.cpm), file=paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_TMM.exp"),sep="\t", row.names=FALSE)
+write.table(geneMatrix2write(y.norm.cpm), file=paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_TMM.txt"),sep="\t", row.names=FALSE)
 ```
 
 ## Parameters
