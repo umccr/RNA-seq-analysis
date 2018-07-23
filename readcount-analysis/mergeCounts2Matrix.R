@@ -83,10 +83,10 @@ outFile <- opt$outFile
 ##### Read in the target file
 targets <- read.table(paste(projectDir,targetFile, sep="/"), header=TRUE, sep="\t", row.names=1)
 
-##### Change to directory with per-sample expression files
+##### Change to directory with per-sample expression files.
 setwd(inFileDir)
 
-##### get the list of all files in the user-defined directory
+##### Get the list of all files in the user-defined directory
 file_list <- list.files()
 
 ##### Check if any of the files listed in target file are missing. Write them into a file
@@ -115,17 +115,17 @@ for (file in file_list){
       
     ##### Add data for the remaining samples   
     } else if (exists("dataset")) {
-        samsple <-as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
-        colnames(samsple) <- c( "Gene", rownames(targets)[targets$File_name == file] )
+        sample <-as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
+        colnames(sample) <- c( "Gene", rownames(targets)[targets$File_name == file] )
         
         ##### list genes present in individal files
-        gene_list <- c( gene_list, as.vector(samsple$Gene) )
+        gene_list <- c( gene_list, as.vector(sample$Gene) )
         
         ##### Merge the expression data and make sure that the genes order is the same
-        dataset <- merge( dataset, samsple, by="Gene", all = FALSE, sort= TRUE)
+        dataset <- merge( dataset, sample, by="Gene", all = FALSE, sort= TRUE)
         
         ##### Remove per-sample data for merged samples to free some memory
-        rm(samsple)
+        rm(sample)
     }
 }
 
@@ -133,7 +133,7 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
-##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
+##### Identify genes that were not present across all per-sample files and were ommited in the merged matrix
 gene_list <- unique(gene_list)
 gene_list.missing <- gene_list[ gene_list %!in% rownames(dataset) ]
 
