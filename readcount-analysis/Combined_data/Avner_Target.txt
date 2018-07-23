@@ -1,0 +1,3 @@
+Sample_name	File_name	Target	Replicates
+CCR170093_RNA_WPT_013	CCR170093_RNA_WPT_013-ready.counts	Organoid	
+CCR170012_MH17T001P013	CCR170012_MH17T001P013-ready.counts	PDAC	
