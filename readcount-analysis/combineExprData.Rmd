@@ -13,7 +13,14 @@ output:
 #    toc_float: true
 ---
 
-Script to combine gene-by-sample expression matrices from different datasets. It requires manually prepared dataset file with four columns (*Dataset_name*, *Expression_matrix*, *Target_file* and *Outliers_file*) to define names of the datasets to be merged, the correspoding expression matrices and target files, samples's names for the merged matrix, as well as the files listing outlier samples to be removed before combining the data. Note, only genes intersection across all datasets expression matrices will be reported in the combined expression matrix. The pipeline is based on recommendaitons from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html)* package.
+Script to combine gene-by-sample expression matrices from different datasets. It requires manually prepared dataset [file](./Combined_data/Datasets_list.txt) with four columns: 
+
+	1. *Dataset_name* - user defined names of datasets
+	2. *Expression_matrix* - corresponding expression/count matrices
+	3. *Target_file* -  defining the sample names for merged expression matrix 
+	4. *Outliers_file* - listing outlier samples to be removed before combining the data. 
+
+Note, only genes intersection across all datasets expression matrices will be reported in the combined expression matrix. The pipeline is based on recommendaitons from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html)* package.
 
 
 ### Define functions
