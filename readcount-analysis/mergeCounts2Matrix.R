@@ -91,14 +91,10 @@ outFile <- opt$outFile
 ##### Read in the target file
 targets <- read.table(paste(projectDir,targetFile, sep="/"), header=TRUE, sep="\t", row.names=1)
 
-<<<<<<< HEAD
-##### Change to directory with per-sample expression files.
-=======
 ##### Make syntactically valid names
 rownames(targets) <- make.names(rownames(targets))
 
 ##### Change to directory with per-sample expression files
->>>>>>> 03cbc3647b38581a08c5486f2eabb577d2157995
 setwd(inFileDir)
 
 ##### Get the list of all files in the user-defined directory
@@ -148,14 +144,10 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
-<<<<<<< HEAD
-##### Identify genes that were not present across all per-sample files and were ommited in the merged matrix
-=======
 ##### Make syntactically valid names
 colnames(dataset) <- make.names(colnames(dataset))
 
 ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
->>>>>>> 03cbc3647b38581a08c5486f2eabb577d2157995
 gene_list <- unique(gene_list)
 gene_list.missing <- gene_list[ gene_list %!in% rownames(dataset) ]
 
