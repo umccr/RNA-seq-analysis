@@ -142,8 +142,8 @@ Output file | Description
 [Avner_TCGA-PAAD_filtering.pdf](Combined_data/Avner_TCGA-PAAD_filtering.pdf) | Histograms with data distribution before and after low expressed genes filtering
 [Avner_TCGA-PAAD_normalisation.pdf](Combined_data/Avner_TCGA-PAAD_normalisation.pdf) | Box-plots of *log-cpm* for individual samples, coloured by dataset, before and after [TMM](https://www.ncbi.nlm.nih.gov/pubmed/20196867) normalisation
 [Avner_TCGA-PAAD_MD_plots](Combined_data/Avner_TCGA-PAAD_MD_plots) | Folder with [mean-difference (MD) plots](Combined_data/Avner_TCGA-PAAD_MD_plots/TCGA.2J.AAB4.01A.12R.A41B.07_MDplot.pdf) for all samples demonstrating the *library size-adjusted log-fold change* between two libraries (the difference) against the *average log-expression* across those libraries (the mean)
-[Avner_TCGA-PAAD_scaling_factor_datasets.html](Combined_data/Avner_TCGA-PAAD_scaling_factor_datasets.html) | Interactive scatter-plot with library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate datasets
-[Avner_TCGA-PAAD_scaling_factor_targets.html](Combined_data/Avner_TCGA-PAAD_scaling_factor_targets.html) | Interactive scatter-plot with library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate sample groups, as provided in the target files
+[Avner_TCGA-PAAD_scaling_factor_datasets.html](Combined_data/Avner_TCGA-PAAD_scaling_factor_datasets.html) | Interactive scatter-plot with library sizes of individual samples plotted against corresponsing scaling factors. The colours indicate datasets
+[Avner_TCGA-PAAD_scaling_factor_targets.html](Combined_data/Avner_TCGA-PAAD_scaling_factor_targets.html) | Interactive scatter-plot with library sizes of individual samples plotted against corresponsing scaling factors. The colours indicate sample groups, as provided in the target files
 <br/>
 
 The input and output files will be organised following the folder structure below
