@@ -14,7 +14,7 @@
 #
 #   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, samples's names for the merged matrix, samples's phenotype for downstream analyses and inictation of technical replicates. Note, only genes intersection across all per-sample files will be reported in the merged matrix. 
 #
-#   Command line use example: Rscript mergeCounts2Matrix.R --projectDir /Combined_data --target /TCGA_PAAD_Target.txt --inDir /TCGA-PAAD --outFile TCGA-PAAD
+#   Command line use example: Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA_PAAD/TCGA_PAAD_Target.txt --inDir ./TCGA-PAAD --outFile TCGA-PAAD
 #
 #   projectDir:   Project directory. This is where the target file is expected and where the merged matrix will be saved
 #   target:       Name of the target file. It expects to have four columns: (1) Sample_name, (2) File_name, (3) Target and (4) Replicates
@@ -89,7 +89,7 @@ outFile <- opt$outFile
 #===============================================================================
 
 ##### Read in the target file
-targets <- read.table(paste(projectDir,targetFile, sep="/"), header=TRUE, sep="\t", row.names=1)
+targets <- read.table(targetFile, header=TRUE, sep="\t", row.names=1)
 
 ##### Make syntactically valid names
 rownames(targets) <- make.names(rownames(targets))
