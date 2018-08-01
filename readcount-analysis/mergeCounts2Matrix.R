@@ -14,7 +14,7 @@
 #
 #   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, samples's names for the merged matrix, samples's phenotype for downstream analyses and inictation of technical replicates. Note, only genes intersection across all per-sample files will be reported in the merged matrix. 
 #
-#   Command line use example: Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA_PAAD/TCGA_PAAD_Target.txt --inDir ./TCGA-PAAD --outFile TCGA-PAAD
+#   Command line use example: Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA-PAAD/TCGA_PAAD_Target.txt --inDir ./TCGA-PAAD --outFile TCGA-PAAD
 #
 #   projectDir:   Project directory. This is where the target file is expected and where the merged matrix will be saved
 #   target:       Name of the target file. It expects to have four columns: (1) Sample_name, (2) File_name, (3) Target and (4) Replicates
@@ -94,7 +94,8 @@ targets <- read.table(targetFile, header=TRUE, sep="\t", row.names=1)
 ##### Make syntactically valid names
 rownames(targets) <- make.names(rownames(targets))
 
-##### Change to directory with per-sample expression files
+##### Record the current directory and change to directory with per-sample expression files
+currDir <- getwd()
 setwd(inFileDir)
 
 ##### Get the list of all files in the user-defined directory
@@ -150,6 +151,9 @@ colnames(dataset) <- make.names(colnames(dataset))
 ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
 gene_list <- unique(gene_list)
 gene_list.missing <- gene_list[ gene_list %!in% rownames(dataset) ]
+
+##### Go back to the original directory in case user refers the input or output directories using relative path
+setwd(currDir)
 
 ##### Write list of missing genes into a file
 if ( length(gene_list.missing) > 0 ) {
