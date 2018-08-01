@@ -38,7 +38,7 @@ To facilitate downstream analyses and files organisation, the output files will 
 Argument | Description
 ------------ | ------------
 --projectDir | Project directory. This is where the merged matrix will be saved
---target | Name and location of the target file. The target file expects to have four columns: (1) Sample\_name, (2) File\_name, (3) Target and (4) Replicates
+--target | Name and location of the target file. The target file is expected to have four columns: (1) Sample\_name, (2) File\_name, (3) Target and (4) Replicates
 --inDir | Directory containing per-sample expression files. Note that only files listed in the target file will be used to generate the merged matrix. No header is expected. The sample names in the merged matrix will be added based on the sample names in the target file
 --outFile | Core name for the merged matrix output file, to which ".counts.matrix.txt" suffix will be added 
 <br/>
@@ -61,10 +61,10 @@ The input and output files will be organised following the folder structure belo
 | |____[core_name].mergeCounts2Matrix.missing_genes.txt (optional)
 |
 |____Count_data_folder
-  |____Count_file_s1
-  |____Count_file_s2
+  |____Count_file_sample_1
+  |____Count_file_sample_2
   ...
-  |____Count_file_sn
+  |____Count_file_sample_n
   |____Target_file
 ```
 <br/>
@@ -99,16 +99,16 @@ To facilitate analyses and output files organisation, the **datasets file** is e
 ```
 |
 |____Project_directory (User-defined)
-| |____Outliers_file_d1 (optional)
-| |____Outliers_file_d2 (optional)
+| |____Outliers_file_dataset_1 (optional)
+| |____Outliers_file_dataset_2 (optional)
 |
 |____Count_data_folder_dataset_1
-| |____Count_matrix_d1
-| |____Target_file_d1
+| |____Count_matrix_dataset_1
+| |____Target_file_dataset_1
 |
 |____Count_data_folder_dataset_2
-  |____Count_matrix_d2
-  |____Target_file_d2
+  |____Count_matrix_dataset_2
+  |____Target_file_dataset_2
 ```
 
 ### Arguments
@@ -133,8 +133,8 @@ The input and output files will be organised following the folder structure belo
 ```
 |
 |____Project_directory (User-defined)
-| |____Outliers_file_d1 (optional)
-| |____Outliers_file_d2 (optional)
+| |____Outliers_file_dataset_1 (optional)
+| |____Outliers_file_dataset_2 (optional)
 | |____[datasets_names]_TMM.txt
 | |____[datasets_names].combineExprData.parameters.txt
 | |____[datasets_names].missing_genes.txt (optional)
@@ -151,12 +151,12 @@ The input and output files will be organised following the folder structure belo
 |   |____[sample_n]_MDplot.pdf
 |
 |____Count_data_folder_dataset_1
-| |____Count_matrix_d1
-| |____Target_file_d1
+| |____Count_matrix_dataset_1
+| |____Target_file_dataset_d1
 |
 |____Count_data_folder_dataset_2
-  |____Count_matrix_d2
-  |____Target_file_d2
+  |____Count_matrix_dataset_2
+  |____Target_file_dataset_2
 ```
 <br/>
 
