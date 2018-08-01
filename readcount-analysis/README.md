@@ -46,7 +46,7 @@ Argument | Description
 **Example command-line use example**:
 
 ```
-Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA_PAAD/TCGA_PAAD_Target.txt --inDir ./TCGA-PAAD --outFile TCGA-PAAD
+Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA-PAAD/TCGA_PAAD_Target.txt --inDir ./TCGA-PAAD --outFile TCGA-PAAD
 ```
 <br>
 
