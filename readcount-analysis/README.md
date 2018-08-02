@@ -50,6 +50,13 @@ Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA-PAAD/T
 ```
 <br>
 
+Example data files are located on [Spartan](https://dashboard.hpc.unimelb.edu.au/) in the following directory:
+
+``
+/data/cephfs/punim0010/projects/Jacek_RNA_seq_combination/RNA-seq-analysis/readcount-analysis
+``
+<br><br>
+
 The input and output files will be organised following the folder structure below
 
 ```
@@ -123,10 +130,18 @@ Argument | Description
 
 **Example command-line use example**:
 
+
 ```
 Rscript combineExprData.R --projectDir ./Combined_data --datasets Datasets_list.txt
 ```
 <br>
+
+Example data files are located on [Spartan](https://dashboard.hpc.unimelb.edu.au/) in the following directory:
+
+``
+/data/cephfs/punim0010/projects/Jacek_RNA_seq_combination/RNA-seq-analysis/readcount-analysis
+``
+<br><br>
 
 The input and output files will be organised following the folder structure below
 
