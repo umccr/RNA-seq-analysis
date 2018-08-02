@@ -246,7 +246,7 @@ p <- plot_ly(datasets.df, x = ~Sample, y = ~Library_size, color = ~Dataset, type
 p
 
 ##### Save the bar-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_datasets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_datasets.html"), selfcontained = TRUE)
 ```
 
 ### Targets
@@ -269,7 +269,7 @@ p <- plot_ly(datasets.df, x = ~Sample, y = ~Library_size, color = ~Group, type =
 p
 
 ##### Save the bar-plot as html (PLOTLY)
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_targets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_targets.html"), selfcontained = TRUE)
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -329,7 +329,7 @@ legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bt
 invisible(dev.off())
 
 ##### Save the plot as pdf file
-pdf(paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_filtering.pdf"), width=8, height=5)
+pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_filtering.pdf"), width=8, height=5)
 par(mfrow=c(1,2))
 
 ##### Before filtering
@@ -386,7 +386,7 @@ invisible(dev.off())
 
 
 ##### Save the plot as pdf file
-pdf(paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_normalisation.pdf"), width=8, height=8)
+pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_normalisation.pdf"), width=8, height=8)
 par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
 
 ##### Unnormalised cpm data
@@ -461,7 +461,7 @@ invisible(dev.off())
 
 
 ##### Create directory for pdf files
-MDplotsDir <- paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"), "_MD_plots")
+MDplotsDir <- paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"), "_MD_plots")
 
 if ( !file.exists(MDplotsDir) ){
   dir.create(MDplotsDir, recursive=TRUE)
@@ -492,7 +492,7 @@ p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "dataset")], x = ~no
 p
 
 ##### Save the scatter-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_datasets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scaling_factor_datasets.html"), selfcontained = TRUE)
 ```
 
 ### Scaling factor (targets)
@@ -508,7 +508,7 @@ p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "group")], x = ~norm
 p
 
 ##### Save the scatter-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_targets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scaling_factor_targets.html"), selfcontained = TRUE)
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -522,7 +522,7 @@ Neet to benchmark batch effects correction/modelling methods, including *[remove
 
 ```{r write_data, comment = NA, message=FALSE, warning=FALSE}
 cat("Writing TMM-normalised expression data to", paste0(paste(datasetIDs, collapse="_"),"_TMM.exp"), "\n\n")
-write.table(geneMatrix2write(y.norm.cpm), file=paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_TMM.txt"),sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+write.table(geneMatrix2write(y.norm.cpm), file=paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_TMM.txt"),sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 ```
 
 ## Parameters
@@ -534,7 +534,7 @@ for ( i in 1:length(params) ) {
 }
 
 ##### Write used parameters into a file
-write.table(params, file = paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),".combineExprData.parameters.txt"), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+write.table(params, file = paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),".combineExprData.parameters.txt"), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 
 ```
 
