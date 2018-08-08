@@ -145,6 +145,11 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
+####
+dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
+dds <- DESeq(dds)
+
+
 ##### Make syntactically valid names
 colnames(dataset) <- make.names(colnames(dataset))
 
