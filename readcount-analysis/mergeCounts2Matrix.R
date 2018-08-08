@@ -12,7 +12,7 @@
 
 ################################################################################
 #
-#   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, samples's names for the merged matrix, samples's phenotype for downstream analyses and inictation of technical replicates. Note, only genes intersection across all per-sample files will be reported in the merged matrix. 
+#   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, samples's names for the merged matrix, samples's phenotype for downstream analyses and inictation of technical replicates. Note, only genes intersection across all per-sample files will be reported in the merged matrix.
 #
 #   Command line use example: Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA-PAAD/TCGA_PAAD_Target.txt --inDir ./TCGA-PAAD --outFile TCGA-PAAD
 #
@@ -47,7 +47,7 @@ prepare2write <- function (x) {
 
 ##### Prepare gene data matrix to write into a file
 geneMatrix2write <- function (x) {
-  
+
   x2write <- cbind(rownames(x), x)
   colnames(x2write) <- c("Gene",colnames(x))
   return(x2write)
@@ -59,7 +59,7 @@ geneMatrix2write <- function (x) {
 #===============================================================================
 
 suppressMessages(library(optparse))
-
+suppressMessages(library(DESeq2))
 
 #===============================================================================
 #    Catching the arguments
@@ -121,21 +121,21 @@ for (file in file_list){
     if (!exists("dataset")){
         dataset <- as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
         colnames(dataset) <- c( "Gene", rownames(targets)[targets$File_name == file] )
-        
+
         ##### list genes present in individal files
         gene_list <- as.vector(dataset$Gene)
-      
-    ##### Add data for the remaining samples   
+
+    ##### Add data for the remaining samples
     } else if (exists("dataset")) {
         sample <-as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
         colnames(sample) <- c( "Gene", rownames(targets)[targets$File_name == file] )
-        
+
         ##### list genes present in individal files
         gene_list <- c( gene_list, as.vector(sample$Gene) )
-        
+
         ##### Merge the expression data and make sure that the genes order is the same
         dataset <- merge( dataset, sample, by="Gene", all = FALSE, sort= TRUE)
-        
+
         ##### Remove per-sample data for merged samples to free some memory
         rm(sample)
     }
