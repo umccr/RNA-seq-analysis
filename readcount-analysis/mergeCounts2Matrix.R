@@ -148,8 +148,11 @@ dataset <- dataset[, -1]
 ##### Make syntactically valid names
 colnames(dataset) <- make.names(colnames(dataset))
 
-##### Make sure that the samples order in the data matrix is the same in the target file 
-dataset <- dataset[ , targets$Target ]
+##### Make sure that the target file contains info only about samples present in the data matrix
+targets <- targets[ rownames(targets) %in% colnames(dataset),  ]
+
+##### Make sure that the samples order in the data matrix is the same as in the target file 
+dataset <- dataset[ , rownames(targets) ]
 
 ####
 dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
