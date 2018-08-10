@@ -145,6 +145,12 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
+##### Make syntactically valid names
+colnames(dataset) <- make.names(colnames(dataset))
+
+##### Make sure that the samples order in the data matrix is the same in the target file 
+dataset <- dataset[ , targets$Target ]
+
 ####
 dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
 dds <- DESeq(dds)
