@@ -159,8 +159,6 @@ dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
 dds <- DESeq(dds)
 
 
-##### Make syntactically valid names
-colnames(dataset) <- make.names(colnames(dataset))
 
 ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
 gene_list <- unique(gene_list)
