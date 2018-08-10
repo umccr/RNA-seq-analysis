@@ -145,21 +145,18 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
-#### Batch-effect correction using DESeq2
-dds <- DESeqDataSetFromMatrix(countData = dataset, colData = targets, design = ~Target)
-
 ##### Make syntactically valid names
 colnames(dataset) <- make.names(colnames(dataset))
 
 ##### Make sure that the target file contains info only about samples present in the data matrix
 targets <- targets[ rownames(targets) %in% colnames(dataset),  ]
 
-##### Make sure that the samples order in the data matrix is the same as in the target file 
+##### Make sure that the samples order in the data matrix is the same as in the target file
 dataset <- dataset[ , rownames(targets) ]
 
-####
-dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
-
+#### Batch-effect correction using DESeq2
+# It will be useful to later look at https://rdrr.io/bioc/DESeq2/f/vignettes/DESeq2.Rmd to further analyse dds object
+dds <- DESeqDataSetFromMatrix(countData = dataset, colData = targets, design = ~Target)
 dds <- DESeq(dds)
 
 
