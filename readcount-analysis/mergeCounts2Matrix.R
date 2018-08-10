@@ -145,10 +145,10 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
-####
-dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
+#### Batch-effect correction using DESeq2
+dds <- DESeqDataSetFromMatrix(countData = dataset, colData = targets, design = ~Target)
 dds <- DESeq(dds)
-
+head(dds)
 
 ##### Make syntactically valid names
 colnames(dataset) <- make.names(colnames(dataset))
