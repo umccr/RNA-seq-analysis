@@ -145,10 +145,9 @@ for (file in file_list){
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
-<<<<<<< HEAD
 #### Batch-effect correction using DESeq2
 dds <- DESeqDataSetFromMatrix(countData = dataset, colData = targets, design = ~Target)
-=======
+
 ##### Make syntactically valid names
 colnames(dataset) <- make.names(colnames(dataset))
 
@@ -160,9 +159,8 @@ dataset <- dataset[ , rownames(targets) ]
 
 ####
 dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
->>>>>>> fac9db8b286275ad6eb40aa05c2e3c7f723d19d5
+
 dds <- DESeq(dds)
-head(dds)
 
 
 ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
