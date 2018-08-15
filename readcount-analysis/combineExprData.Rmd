@@ -48,8 +48,8 @@ geneMatrix2write <- function (x) {
 ##### Assign colours to different groups
 getTargetsColours <- function(targets) {
   
-  ##### Predefined selection of colours for groups
-  targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
+##### Predefined selection of colours for groups
+targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
   
   f.targets <- factor(targets)
   vec.targets <- targets.colours[1:length(levels(f.targets))]
@@ -64,7 +64,7 @@ getTargetsColours <- function(targets) {
 getDatasetsColours <- function(datasets) {
   
   ##### Predefined selection of colours for datasets
-  datasets.colours <- c("bisque","orange","firebrick","lightslategrey","darkseagreen","darkcyan","dodgerblue")
+  datasets.colours <- c("dodgerblue","firebrick","lightslategrey","darkseagreen","orange","darkcyan","bisque")
   
   f.datasets <- factor(datasets)
   vec.datasets <- datasets.colours[1:length(levels(f.datasets))]
@@ -74,6 +74,22 @@ getDatasetsColours <- function(datasets) {
   
   return( list(vec.datasets, datasets.colour) )
 }
+
+##### Assign symbols to different datasets (for scatterplots)
+getDatasetsSymbols <- function(datasets) {
+  
+  ##### Predefined selection of symbols for datasets
+  datasets.symbols <- c("circle","square","diamond","cross","circle-open","square-open","diamond-open")
+  
+  f.datasets <- factor(datasets)
+  vec.datasets <- datasets.symbols[1:length(levels(f.datasets))]
+  datasets.symbols <- rep(0,length(f.datasets))
+  for(i in 1:length(f.datasets))
+    datasets.symbols[i] <- vec.datasets[ f.datasets[i]==levels(f.datasets)]
+  
+  return( list(vec.datasets, datasets.symbols) )
+}
+
 ```
 
 ### Load libraries
@@ -81,8 +97,14 @@ getDatasetsColours <- function(datasets) {
 ```{r load_libraries}
 suppressMessages(library(preprocessCore))
 suppressMessages(library(rapportools))
+suppressMessages(library(sva))
+suppressMessages(library(RUVSeq))
+suppressMessages(library(FactoMineR))
 suppressMessages(library(plotly))
 suppressMessages(library(edgeR))
+suppressMessages(library(corrplot))
+suppressMessages(library(RSkittleBrewer))
+trop <- RSkittleBrewer("tropical")
 ```
 
 ## Read in annotation and data files
@@ -159,6 +181,12 @@ datasets <- datasets[, -1]
 ##### Make syntactically valid names
 colnames(datasets) <- make.names(colnames(datasets))
 
+##### Make sure that the target file contains info only about samples present in the data matrix
+targetFile <- targetFile[ rownames(targetFile) %in% colnames(datasets),  ]
+
+##### Make sure that the samples order in the data matrix is the same as in the target file 
+datasets <- datasets[ , rownames(targetFile) ]
+
 ##### Save datasets names
 datasetIDs <- rownames(DatasetInput)
 
@@ -224,29 +252,29 @@ Bar-plot illustrating library size for each sample (bar). The colours indicate d
 ```{r library_size_plot_datasets, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 suppressMessages(library(plotly))
 
-##### Summarise datasets
-RNAseq_targets <- targetFile$Target
-RNAseq_datasets <- targetFile$Dataset
-RNAseq_datasets_No <- max(as.numeric(factor(RNAseq_datasets)))
-RNAseq_targets.colour <- getTargetsColours(RNAseq_targets)
-RNAseq_datasets.colour <- getDatasetsColours(RNAseq_datasets)
+##### Assigne colours to targets and datasets
+targets.colour <- getTargetsColours(targetFile$Target)
+datasets.colour <- getDatasetsColours(targetFile$Dataset)
+
+##### Assign symbopls according to defined datasets
+datasets.symbols <- getDatasetsSymbols(targetFile$Dataset)
 
 ##### Generate bar-plot for library size
 ##### Prepare data frame
-datasets.df <- data.frame(RNAseq_datasets, colnames(datasets), as.numeric(colSums(datasets)*1e-6))
+datasets.df <- data.frame(targetFile$Dataset, colnames(datasets), as.numeric(colSums(datasets)*1e-6))
 colnames(datasets.df) <- c("Dataset","Sample", "Library_size")
 
 ##### The default order will be alphabetized unless specified as below
 datasets.df$Sample <- factor(datasets.df$Sample, levels = datasets.df[["Sample"]])
 
-p <- plot_ly(datasets.df, x = ~Sample, y = ~Library_size, color = ~Dataset, type = 'bar', colors = RNAseq_datasets.colour[[1]], width = 1000, height = 400) %>%
+p <- plot_ly(datasets.df, x = ~Sample, y = ~Library_size, color = ~Dataset, type = 'bar', colors = datasets.colour[[1]], width = 1000, height = 400) %>%
   layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
 
 ##### Print htmlwidget
 p
 
 ##### Save the bar-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_datasets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_datasets.html"), selfcontained = TRUE)
 ```
 
 ### Targets
@@ -256,20 +284,20 @@ Bar-plot illustrating library size for each sample (bar). The colours indicate s
 ```{r library_size_plot_targets, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 ##### Generate bar-plot for library size
 ##### Prepare data frame
-datasets.df <- data.frame(RNAseq_targets, colnames(datasets), as.numeric(colSums(datasets)*1e-6))
+datasets.df <- data.frame(targetFile$Target, colnames(datasets), as.numeric(colSums(datasets)*1e-6))
 colnames(datasets.df) <- c("Group","Sample", "Library_size")
 
 ##### The default order will be alphabetized unless specified as below
 datasets.df$Sample <- factor(datasets.df$Sample, levels = datasets.df[["Sample"]])
 
-p <- plot_ly(datasets.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = RNAseq_targets.colour[[1]], width = 1000, height = 400) %>%
+p <- plot_ly(datasets.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 1000, height = 400) %>%
   layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
 
 ##### Print htmlwidget
 p
 
 ##### Save the bar-plot as html (PLOTLY)
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_targets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_targets.html"), selfcontained = TRUE)
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -281,10 +309,10 @@ For differential expression and related analyses, gene expression is rarely cons
 
 ```{r data_transformation, comment = NA, message=FALSE, warning=FALSE}
 ##### Create EdgeR DGEList object
-y <- DGEList(counts=datasets,  group=RNAseq_targets)
+y <- DGEList(counts=datasets,  group=targetFile$Target)
 
 ##### Add datasets name for each sample
-y$samples$dataset <- RNAseq_datasets
+y$samples$dataset <- targetFile$Dataset
 
 ##### Filtering to remove low expressed genes. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. Here we keep only genes that have CPM of 1
 cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(datasets)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(datasets)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
@@ -306,53 +334,53 @@ Show the data distribution before and after low expressed genes filtering.
 par(mfrow=c(1,2))
 
 ##### Before filtering
-plot(density(y.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+plot(density(y.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=datasets.colour[[2]][1])
 title(main="Raw data", xlab="Log-cpm")
 abline(v=0, lty=3)
 
 for (i in 2:ncol(y.cpm)){
   den <- density(y.cpm[,i])
-  lines(den$x, den$y, lwd=2, col=RNAseq_datasets.colour[[2]][i])
+  lines(den$x, den$y, lwd=2, col=datasets.colour[[2]][i])
 }
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bty="n")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], bty="n")
 
 ##### After filtering
-plot(density(y.filtered.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+plot(density(y.filtered.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=datasets.colour[[2]][1])
 title(main="Filtered data", xlab="Log-cpm")
 abline(v=0, lty=3)
 
 for (i in 2:ncol(y.filtered.cpm)){
   den <- density(y.filtered.cpm[,i])
-  lines(den$x, den$y, lwd=2, col=RNAseq_datasets.colour[[2]][i])
+  lines(den$x, den$y, lwd=2, col=datasets.colour[[2]][i])
 }
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bty="n")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], bty="n")
 invisible(dev.off())
 
 ##### Save the plot as pdf file
-pdf(paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_filtering.pdf"), width=8, height=5)
+pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_filtering.pdf"), width=8, height=5)
 par(mfrow=c(1,2))
 
 ##### Before filtering
-plot(density(y.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+plot(density(y.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=datasets.colour[[2]][1])
 title(main="Raw data", xlab="Log-cpm")
 abline(v=0, lty=3)
 
 for (i in 2:ncol(y.cpm)){
   den <- density(y.cpm[,i])
-  lines(den$x, den$y, lwd=2, col=RNAseq_datasets.colour[[2]][i])
+  lines(den$x, den$y, lwd=2, col=datasets.colour[[2]][i])
 }
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bty="n")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], bty="n")
 
 ##### After filtering
-plot(density(y.filtered.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+plot(density(y.filtered.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=datasets.colour[[2]][1])
 title(main="Filtered data", xlab="Log-cpm")
 abline(v=0, lty=3)
 
 for (i in 2:ncol(y.filtered.cpm)){
   den <- density(y.filtered.cpm[,i])
-  lines(den$x, den$y, lwd=2, col=RNAseq_datasets.colour[[2]][i])
+  lines(den$x, den$y, lwd=2, col=datasets.colour[[2]][i])
 }
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bty="n")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], bty="n")
 invisible(dev.off())
 ```
 
@@ -374,30 +402,30 @@ y.norm.cpm <- cpm(y.norm, normalized.lib.sizes=TRUE, log=TRUE, prior.count=0.25)
 ##### Plot expression distribution of samples for unnormalised and normalised data
 par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
 ##### Unnormalised cpm data
-boxplot(y.filtered.cpm, las=2, col=RNAseq_datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
+boxplot(y.filtered.cpm, las=2, col=datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
 title(main="Unnormalised data", ylab="Log-cpm")
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
 
 ##### Normalised cpm data
-boxplot(y.norm.cpm, las=2, col=RNAseq_datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
+boxplot(y.norm.cpm, las=2, col=datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
 title(main="Normalised data (TMM)", ylab="Log-cpm")
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
 invisible(dev.off())
 
 
 ##### Save the plot as pdf file
-pdf(paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_normalisation.pdf"), width=8, height=8)
+pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_normalisation.pdf"), width=8, height=8)
 par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
 
 ##### Unnormalised cpm data
-boxplot(y.filtered.cpm, las=2, col=RNAseq_datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
+boxplot(y.filtered.cpm, las=2, col=datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
 title(main="Unnormalised data", ylab="Log-cpm")
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
 
 ##### Normalised cpm data
-boxplot(y.norm.cpm, las=2, col=RNAseq_datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
+boxplot(y.norm.cpm, las=2, col=datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
 title(main="Normalised data (TMM)", ylab="Log-cpm")
-legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
+legend("topright", levels(targetFile$Dataset), fill=datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
 invisible(dev.off())
 
 # #######################################################
@@ -461,7 +489,7 @@ invisible(dev.off())
 
 
 ##### Create directory for pdf files
-MDplotsDir <- paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"), "_MD_plots")
+MDplotsDir <- paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"), "_MD_plots")
 
 if ( !file.exists(MDplotsDir) ){
   dir.create(MDplotsDir, recursive=TRUE)
@@ -485,14 +513,14 @@ Library sizes of individaul samples plotted against corresponsing scaling factor
 suppressMessages(library(plotly))
 
 ##### Plot the library sizes for individaul samples against corresponsing scaling factors
-p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "dataset")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(dataset), colors = RNAseq_datasets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
+p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "dataset")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(dataset), colors = datasets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
   layout(title = "", xaxis = list(title = "Scaling factor"), yaxis = list(title = "Library size"), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = F, showlegend = TRUE)
 
 ##### Print htmlwidget
 p
 
 ##### Save the scatter-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_datasets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scaling_factor_datasets.html"), selfcontained = TRUE)
 ```
 
 ### Scaling factor (targets)
@@ -501,16 +529,145 @@ Library sizes of individaul samples plotted against corresponsing scaling factor
 
 ```{r data_normalisation_targets_plot, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 ##### Plot the library sizes for individaul samples against corresponsing scaling factors
-p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "group")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(group), colors = RNAseq_targets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
+p <- plot_ly(y.norm$samples[, c("norm.factors", "lib.size", "group")], x = ~norm.factors, y = ~lib.size, text= ~rownames(y$samples), type='scatter', color = ~factor(group), colors = targets.colour[[1]], mode = "markers", marker = list(size=6, symbol="circle"), width = 600, height = 400) %>%
   layout(title = "", xaxis = list(title = "Scaling factor"), yaxis = list(title = "Library size"), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = F, showlegend = TRUE)
 
 ##### Print htmlwidget
 p
 
 ##### Save the scatter-plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_scaling_factor_targets.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scaling_factor_targets.html"), selfcontained = TRUE)
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+
+## Exploratory data analysis {.tabset}
+
+Before principal component analysis, we can perform some exploratory data analysis such as relative log expression (RLE) plot, correlation matrix and scatter plot matrix. This procedure follows [this tutorial](http://www.sthda.com/english/wiki/print.php?id=202) and implements fucntions from the [inSilicoMerging](http://www.bioconductor.org/packages//2.10/bioc/vignettes/inSilicoMerging/inst/doc/inSilicoMerging.pdf) package.
+
+### PCA plot
+
+```{r PCA_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+suppressMessages(library(plotly))
+##### Keep only genes with variance > 0 across all samples
+rsd <- apply(y.norm.cpm,1,sd)
+y.norm.cpm.subset <- y.norm.cpm[rsd>0,]
+
+##### Perform PCA
+y.norm.cpm.subset_pca <- prcomp(t(y.norm.cpm.subset), scale=FALSE)
+
+##### Generate scree plot
+##### Prepare data frame
+y.norm.cpm.subset_pca.df <- data.frame(paste0("PC ", c(1:length(y.norm.cpm.subset_pca$sdev))), y.norm.cpm.subset_pca$sdev)
+colnames(y.norm.cpm.subset_pca.df) <- c("PC", "Variances")
+
+##### The default order will be alphabetized unless specified as below
+y.norm.cpm.subset_pca.df$PC <- factor(y.norm.cpm.subset_pca.df$PC, levels = y.norm.cpm.subset_pca.df[["PC"]])
+
+##### Generate scree plot
+p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC, y = ~Variances, type = 'bar', width = 800, height = 600) %>%
+  layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+
+p
+
+##### Save scree plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scree_plot.html"), selfcontained = TRUE)
+
+
+##### Get variance importance for all principal components
+importance_pca <- summary(y.norm.cpm.subset_pca)$importance[2,]
+importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
+names(importance_pca) <- names(summary(y.norm.cpm.subset_pca)$importance[2,])
+  
+##### Prepare data frame
+y.norm.cpm.subset_pca.df <- data.frame(targetFile$Target, y.norm.cpm.subset_pca$x[,"PC1"], y.norm.cpm.subset_pca$x[,"PC2"], y.norm.cpm.subset_pca$x[,"PC3"])
+colnames(y.norm.cpm.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+
+##### Generate PCA 2-D plot
+p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=rownames(y.norm.cpm.subset_pca.df), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Target)]), width = 800, height = 600) %>%
+layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+p
+
+##### Save PCA plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_2d.html"), selfcontained = TRUE)
+
+##### Generate PCA 3-D plot
+p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=rownames(y.norm.cpm.subset_pca.df), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=8, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Target)]), width = 800, height = 800) %>%
+layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep="")) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+p
+
+##### Save PCA plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_3d.html"), selfcontained = TRUE)
+
+##### Plot all combinations between the first 5 PCs (colour by datasets)
+##### Preapre colours for plot exis
+axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
+
+p <- as.data.frame(y.norm.cpm.subset_pca$x[,1:5]) %>%
+  plot_ly(width = 800, height = 800) %>%
+  add_trace( type = 'splom', dimensions = list(
+      list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+    ),
+  text=rownames(y.norm.cpm.subset_pca$x),
+    marker = list( color = datasets.colour[[2]], size = 7, opacity = 0.7
+    )
+  ) %>%
+  layout(
+    title= "",
+    hovermode="closest",
+    plot_bgcolor="rgba(240,240,240, 0.95)",
+    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis
+)
+
+p
+
+##### Save pairwise PCA plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_datasets.html"), selfcontained = TRUE)
+
+##### Plot all combinations between the first 5 PCs (colour by targets)
+p <- as.data.frame(y.norm.cpm.subset_pca$x[,1:5]) %>%
+  plot_ly(width = 800, height = 800) %>%
+  add_trace( type = 'splom', dimensions = list(
+      list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+    ),
+  text=rownames(y.norm.cpm.subset_pca$x),
+    marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
+    )
+  ) %>%
+  layout(
+    title= "",
+    hovermode="closest",
+    plot_bgcolor="rgba(240,240,240, 0.95)",
+    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis
+)
+
+p
+
+##### Save pairwise PCA plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_targets.html"), selfcontained = TRUE)
+
+##### Plot all combinations between the first 5 PCs (colour by datasets)
+#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=datasets.colour[[2]])
+
+##### Plot all combinations between the first 5 PCs (colour by targets)
+#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+
+##### Save the plot as pdf file
+#pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_datasets.pdf"), width=10, height=10)
+#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=datasets.colour[[2]])
+#invisible(dev.off())
+
+#pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_targets.pdf"), width=10, height=10)
+#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+#invisible(dev.off())
 detach("package:plotly", unload=FALSE)
 ```
 
@@ -522,7 +679,7 @@ Neet to benchmark batch effects correction/modelling methods, including *[remove
 
 ```{r write_data, comment = NA, message=FALSE, warning=FALSE}
 cat("Writing TMM-normalised expression data to", paste0(paste(datasetIDs, collapse="_"),"_TMM.exp"), "\n\n")
-write.table(geneMatrix2write(y.norm.cpm), file=paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),"_TMM.txt"),sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+write.table(geneMatrix2write(y.norm.cpm), file=paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_TMM.txt"),sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 ```
 
 ## Parameters
@@ -534,7 +691,7 @@ for ( i in 1:length(params) ) {
 }
 
 ##### Write used parameters into a file
-write.table(params, file = paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),".combineExprData.parameters.txt"), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+write.table(params, file = paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),".combineExprData.parameters.txt"), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 
 ```
 
