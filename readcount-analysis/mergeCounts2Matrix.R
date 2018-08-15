@@ -59,7 +59,6 @@ geneMatrix2write <- function (x) {
 #===============================================================================
 
 suppressMessages(library(optparse))
-suppressMessages(library(DESeq2))
 
 #===============================================================================
 #    Catching the arguments
@@ -154,12 +153,6 @@ targets <- targets[ rownames(targets) %in% colnames(dataset),  ]
 ##### Make sure that the samples order in the data matrix is the same as in the target file
 dataset <- dataset[ , rownames(targets) ]
 
-#### Batch-effect correction using DESeq2
-# It will be useful to later look at https://rdrr.io/bioc/DESeq2/f/vignettes/DESeq2.Rmd to further analyse dds object
-dds <- DESeqDataSetFromMatrix(countData = dataset, colData = targets, design = ~Target)
-dds <- DESeq(dds)
-
-
 ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
 gene_list <- unique(gene_list)
 gene_list.missing <- gene_list[ gene_list %!in% rownames(dataset) ]
@@ -171,7 +164,6 @@ setwd(currDir)
 if ( length(gene_list.missing) > 0 ) {
   write.table(prepare2write(gene_list.missing), file = paste0(projectDir, "/", outFile, ".mergeCounts2Matrix.missing_genes.txt" ), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
-
 
 ##### Write merged matrix into a file
 write.table(geneMatrix2write(dataset), file = paste0(projectDir, "/", outFile, ".counts.matrix.txt" ), sep="\t", quote=FALSE, row.names=FALSE)
