@@ -83,6 +83,8 @@ suppressMessages(library(preprocessCore))
 suppressMessages(library(rapportools))
 suppressMessages(library(plotly))
 suppressMessages(library(edgeR))
+suppressMessages(library(DESeq2))
+suppressMessages(library(RUVSeq))
 ```
 
 ## Read in annotation and data files
@@ -517,6 +519,16 @@ detach("package:plotly", unload=FALSE)
 ## Adjust data for batch effects
 
 Neet to benchmark batch effects correction/modelling methods, including *[removeBatchEffect](http://web.mit.edu/~r/current/arch/i386_linux26/lib/R/library/limma/html/removeBatchEffect.html)*, *[RUVSeq](https://bioconductor.org/packages/release/bioc/html/RUVSeq.html)*, *[MBatch/EB++](http://bioinformatics.mdanderson.org/main/TCGABatchEffectsV2:MBatch)*, *[DESeq2](https://support.bioconductor.org/p/76099/)*, *[sva](https://bioconductor.org/packages/release/bioc/html/sva.html)* after realising that *[Combat](https://bioconductor.org/packages/release/bioc/html/sva.html)* sucks (check [this](https://academic.oup.com/biostatistics/article/17/1/29/1744261) and [that](https://www.biostars.org/p/266507/))
+
+```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE}
+#### Batch-effect correction using DESeq2. It will be useful to later look at https://rdrr.io/bioc/DESeq2/f/vignettes/DESeq2.Rmd to further analyse dds object
+dds <- DESeqDataSetFromMatrix(countData = dataset, colData = targets, design = ~Target)
+dds <- DESeq(dds)
+
+#### Batch effect correction using RUVSeq
+
+
+```
 
 ## Save combined data into a file
 
