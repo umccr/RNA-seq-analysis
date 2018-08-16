@@ -99,6 +99,7 @@ suppressMessages(library(preprocessCore))
 suppressMessages(library(rapportools))
 suppressMessages(library(sva))
 suppressMessages(library(RUVSeq))
+suppressMessages(library(sneer))
 suppressMessages(library(FactoMineR))
 suppressMessages(library(plotly))
 suppressMessages(library(edgeR))
@@ -525,7 +526,7 @@ htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "
 
 ### Scaling factor (targets)
 
-Library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate sample groups, as provided in *Target* column in the target files.
+Library sizes of individaul samples plotted against corresponsing scaling factors. The colours indicate sample groups (e.g. biological groups), as provided in *Target* column in the target files.
 
 ```{r data_normalisation_targets_plot, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 ##### Plot the library sizes for individaul samples against corresponsing scaling factors
@@ -545,11 +546,13 @@ detach("package:plotly", unload=FALSE)
 
 ## Exploratory data analysis {.tabset}
 
-Before principal component analysis, we can perform some exploratory data analysis such as relative log expression (RLE) plot, correlation matrix and scatter plot matrix. This procedure follows [this tutorial](http://www.sthda.com/english/wiki/print.php?id=202) and implements fucntions from the [inSilicoMerging](http://www.bioconductor.org/packages//2.10/bioc/vignettes/inSilicoMerging/inst/doc/inSilicoMerging.pdf) package.
+Before principal component analysis, we perform some exploratory data analysis such as PCA, relative log expression (RLE) plot, correlation matrix and scatter plot matrix. This procedure follows [this tutorial](http://www.sthda.com/english/wiki/print.php?id=202) and implements fucntions from the [inSilicoMerging](http://www.bioconductor.org/packages//2.10/bioc/vignettes/inSilicoMerging/inst/doc/inSilicoMerging.pdf) package.
 
-### PCA plot
+### PCA plot (datasets)
 
-```{r PCA_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+Principal component analysis (PCA) reduces the dimensionality of data while retaining most of the variation in the dataset, making it possible to visually assess similarities and differences between samples and determine whether samples can be grouped. This exploratory analysis facilitates identification of the key factors affecting the variability in the  expression data. Different colours represent datasets.
+
+```{r PCA_plots_datasets, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 suppressMessages(library(plotly))
 ##### Keep only genes with variance > 0 across all samples
 rsd <- apply(y.norm.cpm,1,sd)
@@ -558,52 +561,40 @@ y.norm.cpm.subset <- y.norm.cpm[rsd>0,]
 ##### Perform PCA
 y.norm.cpm.subset_pca <- prcomp(t(y.norm.cpm.subset), scale=FALSE)
 
-##### Generate scree plot
-##### Prepare data frame
-y.norm.cpm.subset_pca.df <- data.frame(paste0("PC ", c(1:length(y.norm.cpm.subset_pca$sdev))), y.norm.cpm.subset_pca$sdev)
-colnames(y.norm.cpm.subset_pca.df) <- c("PC", "Variances")
-
-##### The default order will be alphabetized unless specified as below
-y.norm.cpm.subset_pca.df$PC <- factor(y.norm.cpm.subset_pca.df$PC, levels = y.norm.cpm.subset_pca.df[["PC"]])
-
-##### Generate scree plot
-p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC, y = ~Variances, type = 'bar', width = 800, height = 600) %>%
-  layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
-
-p
-
-##### Save scree plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scree_plot.html"), selfcontained = TRUE)
-
-
 ##### Get variance importance for all principal components
 importance_pca <- summary(y.norm.cpm.subset_pca)$importance[2,]
 importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
 names(importance_pca) <- names(summary(y.norm.cpm.subset_pca)$importance[2,])
   
 ##### Prepare data frame
-y.norm.cpm.subset_pca.df <- data.frame(targetFile$Target, y.norm.cpm.subset_pca$x[,"PC1"], y.norm.cpm.subset_pca$x[,"PC2"], y.norm.cpm.subset_pca$x[,"PC3"])
-colnames(y.norm.cpm.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+y.norm.cpm.subset_pca.df <- data.frame(targetFile$Target,targetFile$Dataset, y.norm.cpm.subset_pca$x[,"PC1"], y.norm.cpm.subset_pca$x[,"PC2"], y.norm.cpm.subset_pca$x[,"PC3"])
+colnames(y.norm.cpm.subset_pca.df) <- c("Target", "Dataset", "PC1", "PC2", "PC3")
 
 ##### Generate PCA 2-D plot
-p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=rownames(y.norm.cpm.subset_pca.df), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Target)]), width = 800, height = 600) %>%
+p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Dataset, text=paste(targetFile$Dataset, rownames(y.norm.cpm.subset_pca.df), sep=": "), colors = datasets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Dataset)]), width = 600, height = 400) %>%
 layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
 
 p
 
 ##### Save PCA plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_2d.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_2d_datasets.html"), selfcontained = TRUE)
 
 ##### Generate PCA 3-D plot
-p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=rownames(y.norm.cpm.subset_pca.df), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=8, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Target)]), width = 800, height = 800) %>%
+p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Dataset, text=paste(targetFile$Dataset, rownames(y.norm.cpm.subset_pca.df), sep=": "), colors = datasets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=8, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Dataset)]), width = 600, height = 600) %>%
 layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep="")) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
 
 p
 
 ##### Save PCA plot as html
-htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_3d.html"), selfcontained = TRUE)
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_3d_datasets.html"), selfcontained = TRUE)
 
-##### Plot all combinations between the first 5 PCs (colour by datasets)
+```
+
+
+Below we plot all combinations between the first 5 principal components (PCs), which may help in identifying which PCs explain the biological and/or batch effects.
+
+```{r PCA_pairwise_plot_datasets, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Plot all combinations between the first 5 PCs
 ##### Preapre colours for plot exis
 axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
 
@@ -612,7 +603,7 @@ p <- as.data.frame(y.norm.cpm.subset_pca$x[,1:5]) %>%
   add_trace( type = 'splom', dimensions = list(
       list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
     ),
-  text=rownames(y.norm.cpm.subset_pca$x),
+  text=paste(targetFile$Dataset, rownames(y.norm.cpm.subset_pca$x), sep=": "),
     marker = list( color = datasets.colour[[2]], size = 7, opacity = 0.7
     )
   ) %>%
@@ -630,13 +621,77 @@ p
 ##### Save pairwise PCA plot as html
 htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_datasets.html"), selfcontained = TRUE)
 
-##### Plot all combinations between the first 5 PCs (colour by targets)
+
+##### Plot all combinations between the first 5 PCs
+#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=datasets.colour[[2]])
+
+##### Save the plot as pdf file
+#pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_datasets.pdf"), width=10, height=10)
+#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=datasets.colour[[2]])
+#invisible(dev.off())
+```
+
+
+The global variability of the data can also be assessed from the scree plot. Here, you can identify the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance. 
+
+```{r Scree_plot_datasets, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Generate scree plot
+##### Prepare data frame
+y.norm.cpm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(y.norm.cpm.subset_pca$sdev))), y.norm.cpm.subset_pca$sdev)
+colnames(y.norm.cpm.subset_scree.df) <- c("PC", "Variances")
+
+##### The default order will be alphabetized unless specified as below
+y.norm.cpm.subset_scree.df$PC <- factor(y.norm.cpm.subset_scree.df$PC, levels = y.norm.cpm.subset_scree.df[["PC"]])
+
+##### Generate scree plot
+p <- plot_ly(y.norm.cpm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+
+p
+
+##### Save scree plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scree_plot.html"), selfcontained = TRUE)
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+```
+
+### PCA plot (targets)
+
+Principal component analysis (PCA) reduces the dimensionality of data while retaining most of the variation in the dataset, making it possible to visually assess similarities and differences between samples and determine whether samples can be grouped. This exploratory analysis facilitates identification of the key factors affecting the variability in the  expression data. The colours indicate sample groups (e.g. biological groups), as provided in *Target* column in the target files.
+
+```{r PCA_plot_targets, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Generate PCA 2-D plot
+p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Dataset, rownames(y.norm.cpm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Target)]), width = 600, height = 400) %>%
+layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+p
+
+##### Save PCA plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_2d_targets.html"), selfcontained = TRUE)
+
+##### Generate PCA 3-D plot
+p <- plot_ly(y.norm.cpm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Dataset, rownames(y.norm.cpm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=8, opacity = 0.7, symbol=datasets.symbols[[2]][order(targetFile$Target)]), width = 600, height = 600) %>%
+layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep="")) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+p
+
+##### Save PCA plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_3d_targets.html"), selfcontained = TRUE)
+
+```
+
+
+
+Below we plot all combinations between the first 5 principal components (PCs), which may help in identifying which PCs explain the biological and/or batch effects.
+
+```{r PCA_pairwise_plot_targets, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Plot all combinations between the first 5 PCs
 p <- as.data.frame(y.norm.cpm.subset_pca$x[,1:5]) %>%
   plot_ly(width = 800, height = 800) %>%
   add_trace( type = 'splom', dimensions = list(
       list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
     ),
-  text=rownames(y.norm.cpm.subset_pca$x),
+  text=paste(targetFile$Target, rownames(y.norm.cpm.subset_pca$x), sep=": "),
     marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
     )
   ) %>%
@@ -646,7 +701,7 @@ p <- as.data.frame(y.norm.cpm.subset_pca$x[,1:5]) %>%
     plot_bgcolor="rgba(240,240,240, 0.95)",
     xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
     yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
-    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis
+    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
 )
 
 p
@@ -654,20 +709,30 @@ p
 ##### Save pairwise PCA plot as html
 htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_targets.html"), selfcontained = TRUE)
 
-##### Plot all combinations between the first 5 PCs (colour by datasets)
-#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=datasets.colour[[2]])
-
-##### Plot all combinations between the first 5 PCs (colour by targets)
+##### Plot all combinations between the first 5 PCs
 #pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
 
 ##### Save the plot as pdf file
-#pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_datasets.pdf"), width=10, height=10)
-#pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=datasets.colour[[2]])
-#invisible(dev.off())
-
 #pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_PCA_pairwise_targets.pdf"), width=10, height=10)
 #pairs(y.norm.cpm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
 #invisible(dev.off())
+```
+
+
+
+The global variability of the data can also be assessed from the scree plot. Here, you can identify the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance. 
+
+```{r Scree_plot_targets, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Generate scree plot
+p <- plot_ly(y.norm.cpm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+
+p
+
+##### Save scree plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scree_plot.html"), selfcontained = TRUE)
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
 ```
 
