@@ -527,7 +527,7 @@ dds <- DESeq(dds)
 
 #### Batch effect correction using RUVSeq
 
-##### Identifying control genes
+##### Identifying control genes. To estimate the factors of unwanted variation, we need a set of negative control genes, i.e., genes that can be assumed not to be influenced by the covariates of interest (in the case of the zebrafish dataset, the Gallein treatment). In many cases, such a set can be identified, e.g., housekeeping genes or spike-in controls. If a good set of negative controls is not readily available, one can define a set of “in-silico empirical” controls, as follows.
 ##### First, estimate the number of latent factors. num.sv function calculates the number of surrogate variables to estimate in a model
 ##### NOTE: we use "be" method since the "leek" methods outputs very high number that later throws an error when used in the empirical.controls function.
 
