@@ -528,8 +528,10 @@ dds <- DESeq(dds)
 #### Batch effect correction using RUVSeq
 
 ##### Identifying control genes
-##### First, estimate the number of latent factors
-##### NOTE: we use "be" method since the "leek" methods outputs very high number that later throws an error when used in the empirical.controls function
+##### First, estimate the number of latent factors. num.sv function calculates the number of surrogate variables to estimate in a model
+##### NOTE: we use "be" method since the "leek" methods outputs very high number that later throws an error when used in the empirical.controls function.
+
+mod1 = model.matrix(~as.factor(Target), data = targets)
 n.sv = num.sv(y.norm$counts, mod1, method="be")
 
 ##### Then, estimate the probability that each gene is an empirical control
