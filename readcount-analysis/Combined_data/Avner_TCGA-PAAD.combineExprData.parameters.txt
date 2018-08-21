@@ -1,2 +1,0 @@
-projectDir	datasetsFile
-/Combined_data	Datasets_list.txt
