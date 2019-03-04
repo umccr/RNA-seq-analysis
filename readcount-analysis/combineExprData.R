@@ -12,12 +12,17 @@
 
 ################################################################################
 #
-#	 Description: Pipeline combining gene-by-sample expression matrices from different datasets. It requires manually prepared dataset file with four columns ("Dataset_name", "Expression_matrix", "Target_file" and "Outliers_file") to define names of the datasets to be merged, the location of the correspoding expression matrices and target files, samples's names for the merged matrix, as well as to the files listing outlier samples to be removed before combining the data. Note, only genes intersection across all datasets expression matrices will be reported in the combined expression matrix. The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
+#	 Description: Pipeline transforming and normalising expression matrix from multiple samples. It requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk). The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
 #
-#	 Command line use example: Rscript  combineExprData.R --projectDir /Combined_data --datasets Datasets_list.txt
+#	 Command line use example: Rscript  combineExprData.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm quantile --filter TRUE --log TRUE
 #
-#   projectDir:   Project directory. This is where the datasets file is expeced and where combined expression matrix and accompanying file will be saved
-#   datasets:     Name of the datasets file listing info about datasets to combine. It expects to have four columns: (1) Dataset_name, (2) Expression_matrix, (3) Target_file and (4) Outliers_file
+#   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
+#   exprFile:     File with expression data (read counts)
+#   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk)
+#   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (defualt) and "TPM"
+#   norm:         Normalisation method. Currently, "TMM" is used for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data
+#   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
+#   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
 #
 ################################################################################
 
@@ -38,22 +43,49 @@ suppressMessages(library(optparse))
 #===============================================================================
 
 option_list = list(
-  make_option(c("-p", "--projectDir"), action="store", default=NA, type='character',
-              help="Project directory"),
-  make_option(c("-d", "--datasets"), action="store", default=NA, type='character',
-              help="Name of the datasets file listing info about datasets to combine")
+  make_option(c("-d", "--exprDir"), action="store", default=NA, type='character',
+              help="Directory with expression data"),
+  make_option(c("-e", "--exprFile"), action="store", default=NA, type='character',
+              help="File with expression data (read counts)"),
+  make_option(c("-a", "--annotFile"), action="store", default=NA, type='character',
+              help="Samples annotation file"),
+  make_option(c("-t", "--transform"), action="store", default=NA, type='character',
+              help="Transformation method to be used when converting read counts"),
+  make_option(c("-f", "--filter"), action="store", default=NA, type='character',
+              help="Normalisation method"),
+  make_option(c("-n", "--norm"), action="store", default=NA, type='character',
+              help="Filtering out low expressed genes"),
+  make_option(c("-l", "--log"), action="store", default=NA, type='character',
+              help="Log (base 2) transform data before normalisation")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
 
+opt$filter <- as.logical(opt$filter)
+opt$log <- as.logical(opt$log)
+
 ##### Read in argument from command line and check if all were provide by the user
-if ( is.na(opt$projectDir) || is.na(opt$datasets) ) {
+if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$filter) || is.na(opt$log) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\ncombineExprData.R --projectDir /Combined_data --datasets Datasets_list.txt\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm quantile --filter TRUE --log TRUE\n\n")
   
   q()
 }
 
+##### Make sure that TMM normalisation is used for CPM-tansformed data and quantile normalisation is used for TPM-tansformed data
+if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
+  
+  cat(paste0("\nTMM normalisation is available only for CPM-tansformed data! Quantile normalisation will be performed instead for ", opt$transform, "-tansformed data.\n\n"))
+  
+  opt$norm <- "quantile"
+  
+} else if ( opt$transform == "CPM" && opt$norm == "quantile" ) {
+  
+  cat(paste0("\nQuantile normalisation is available only for TPM-tansformed data! TMM normalisation will be performed instead for ", opt$transform, "-tansformed data.\n\n"))
+  
+  opt$norm <- "TMM"
+}
+
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$datasets, ".combineExprData.html"), output_dir = opt$projectDir, params = list(projectDir = opt$projectDir, datasetsFile = opt$datasets))
+rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$exprFile, "_", opt$transform, "_", opt$norm, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, filter = opt$filter, norm = opt$norm, log = opt$log))
