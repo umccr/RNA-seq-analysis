@@ -14,7 +14,7 @@
 #
 #	 Description: Pipeline transforming and normalising expression matrix from multiple samples. It requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk). The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
 #
-#	 Command line use example: Rscript  combineExprData.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm quantile --filter TRUE --log TRUE
+#	 Command line use example: Rscript  combineExprData.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --filter TRUE --log TRUE
 #
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)
@@ -68,7 +68,7 @@ opt$log <- as.logical(opt$log)
 if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$filter) || is.na(opt$log) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm quantile --filter TRUE --log TRUE\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --filter TRUE --log TRUE\n\n")
   
   q()
 }
