@@ -331,13 +331,13 @@ if ( params$transform == "CPM" ) {
   if ( params$filter ) {
     
     y$noNorm <-edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y$filtered.transformed <- edgeR::calcNormFactors(y$filtered, method = "TMM")
+    y$filtered.transformed <- edgeR::calcNormFactors(y$filtered, method = params$norm)
     y$norm <- edgeR::cpm(y$filtered.transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   
   } else {
     
     y$noNorm <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y$transformed <- edgeR::calcNormFactors(y, method = "TMM")
+    y$transformed <- edgeR::calcNormFactors(y, method = params$norm)
     y$norm <- edgeR::cpm(y$transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   }
   

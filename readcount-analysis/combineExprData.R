@@ -20,7 +20,7 @@
 #   exprFile:     File with expression data (read counts)
 #   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk)
 #   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (defualt) and "TPM"
-#   norm:         Normalisation method. Currently, "TMM" is used for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data
+#   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
 #   results_name: Desired core name for the results folder
@@ -76,18 +76,24 @@ if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(
   q()
 }
 
-##### Make sure that TMM normalisation is used for CPM-tansformed data and quantile normalisation is used for TPM-tansformed data
+##### Make sure that TMM, TMMwzp, RLE or upperquartile normalisation is used for CPM-tansformed data and quantile normalisation is used for TPM-tansformed data
 if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
   
-  cat(paste0("\nTMM normalisation is available only for CPM-tansformed data! Quantile normalisation will be performed instead for ", opt$transform, "-tansformed data.\n\n"))
+  cat(paste0("\nOnly TPM normalisation is not available for TPM-tansformed data!\n\nQuantile normalisation will be performed for ", opt$transform, "-tansformed data.\n\n"))
   
   opt$norm <- "quantile"
   
 } else if ( opt$transform == "CPM" && opt$norm == "quantile" ) {
   
-  cat(paste0("\nQuantile normalisation is available only for TPM-tansformed data! TMM normalisation will be performed instead for ", opt$transform, "-tansformed data.\n\n"))
+  cat(paste0("\nQuantile normalisation is available only for TPM-tansformed data! \"TMM\", \"TMMwzp\", \"RLE\" and \"upperquartile\" methods are available for ", opt$transform, "-tansformed data.\n\n"))
   
-  opt$norm <- "TMM"
+  q()
+  
+} else if ( opt$transform == "CPM" &&  opt$norm != "TMM" && opt$norm != "TMMwzp" && opt$norm != "RLE" && opt$norm != "upperquartile" ) {
+ 
+  cat(paste0("\nWrong normalisation method was selected! \"TMM\", \"TMMwzp\", \"RLE\" and \"upperquartile\" methods are available for ", opt$transform, "-tansformed data.\n\n"))
+  
+  q()
 }
 
 ##### Check if the named of the results folder is defined
