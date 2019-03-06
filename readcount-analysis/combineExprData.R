@@ -14,7 +14,11 @@
 #
 #	 Description: Pipeline transforming and normalising expression matrix from multiple samples. It requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk). The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
 #
+<<<<<<< HEAD
 #	 Command line use example: Rscript  combineExprData.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --filter TRUE --log TRUE --results_name CUP
+=======
+#	 Command line use example: Rscript  combineExprData.R --projectDir ./Combined_data --datasets Datasets_list.txt
+>>>>>>> master
 #
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)

@@ -46,9 +46,15 @@ geneMatrix2write <- function (x) {
 ##### Assign colours to different groups
 getTargetsColours <- function(targets) {
   
+<<<<<<< HEAD
 ##### Predefined selection of colours for groups
 targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
 
+=======
+  ##### Predefined selection of colours for groups
+targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
+  
+>>>>>>> master
   f.targets <- factor(targets)
   vec.targets <- targets.colours[1:length(levels(f.targets))]
   targets.colour <- rep(0,length(f.targets))
@@ -105,6 +111,19 @@ suppressMessages(library(plotly))
 ##### Assigne colours to targets and datasets
 targets.colour <- getTargetsColours(targetFile$Target)
 
+<<<<<<< HEAD
+=======
+##### Save the bar-plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_datasets.html"), selfcontained = TRUE)
+```
+
+### Targets
+
+Bar-plot illustrating library size for each sample (bar). The colours indicate sample groups, as provided in *Target* column in the target files.
+
+```{r library_size_plot_targets, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
+##### Generate bar-plot for library size
+>>>>>>> master
 ##### Prepare data frame
 data.df <- data.frame(targetFile$Target, colnames(data), as.numeric(colSums(data)*1e-6))
 colnames(data.df) <- c("Group","Sample", "Library_size")
@@ -119,7 +138,11 @@ p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'ba
 p
 
 ##### Save the bar-plot as html (PLOTLY)
+<<<<<<< HEAD
 #htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_RNAseq_libSize.html")), selfcontained = TRUE)
+=======
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_RNAseq_libSize_targets.html"), selfcontained = TRUE)
+>>>>>>> master
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -234,6 +257,7 @@ if ( params$filter && params$transform == "CPM" ) {
 ```
 
 ```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+<<<<<<< HEAD
 if ( params$filter ) {
   
   par(mfrow=c(1,2))
@@ -302,6 +326,52 @@ if ( params$filter ) {
   
   ##### Save the plot as pdf file
   pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
+=======
+par(mfrow=c(1,2))
+
+##### Before filtering
+plot(density(y.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+title(main="Raw data", xlab="Log-cpm")
+abline(v=0, lty=3)
+
+for (i in 2:ncol(y.cpm)){
+  den <- density(y.cpm[,i])
+  lines(den$x, den$y, lwd=2, col=RNAseq_datasets.colour[[2]][i])
+}
+legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bty="n")
+
+##### After filtering
+plot(density(y.filtered.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+title(main="Filtered data", xlab="Log-cpm")
+abline(v=0, lty=3)
+
+for (i in 2:ncol(y.filtered.cpm)){
+  den <- density(y.filtered.cpm[,i])
+  lines(den$x, den$y, lwd=2, col=RNAseq_datasets.colour[[2]][i])
+}
+legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bty="n")
+invisible(dev.off())
+
+##### Save the plot as pdf file
+pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_filtering.pdf"), width=8, height=5)
+par(mfrow=c(1,2))
+
+##### Before filtering
+plot(density(y.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+title(main="Raw data", xlab="Log-cpm")
+abline(v=0, lty=3)
+
+for (i in 2:ncol(y.cpm)){
+  den <- density(y.cpm[,i])
+  lines(den$x, den$y, lwd=2, col=RNAseq_datasets.colour[[2]][i])
+}
+legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], bty="n")
+
+##### After filtering
+plot(density(y.filtered.cpm[,1]), lwd=2, ylim=c(0,0.25), las=2, main="", xlab="", col=RNAseq_datasets.colour[[2]][1])
+title(main="Filtered data", xlab="Log-cpm")
+abline(v=0, lty=3)
+>>>>>>> master
 
   ##### Without filtering
   plot(density(y$transformed[,1]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=targets.colour[[2]][1])
@@ -377,6 +447,7 @@ title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Save the plot as pdf file
+<<<<<<< HEAD
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.pdf")), width=8, height=14)
 par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
@@ -389,6 +460,20 @@ legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour
 boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
 title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+=======
+pdf(paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_normalisation.pdf"), width=8, height=8)
+par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
+
+##### Unnormalised cpm data
+boxplot(y.filtered.cpm, las=2, col=RNAseq_datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
+title(main="Unnormalised data", ylab="Log-cpm")
+legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
+
+##### Normalised cpm data
+boxplot(y.norm.cpm, las=2, col=RNAseq_datasets.colour[[2]], main="", pch=".", las=3, xaxt="n")
+title(main="Normalised data (TMM)", ylab="Log-cpm")
+legend("topright", levels(RNAseq_datasets), fill=RNAseq_datasets.colour[[1]], horiz=TRUE, bg="white", box.col="transparent")
+>>>>>>> master
 invisible(dev.off())
   
 # #######################################################
@@ -431,8 +516,13 @@ suppressMessages(library(plotly))
 rsd <- apply(y$norm,1,sd)
 y$norm.subset <- y$norm[rsd>0,]
 
+<<<<<<< HEAD
 ##### Perform PCA
 y$norm.subset_pca <- prcomp(t(y$norm.subset), scale=FALSE)
+=======
+##### Create directory for pdf files
+MDplotsDir <- paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"), "_MD_plots")
+>>>>>>> master
 
 ##### Get variance importance for all principal components
 importance_pca <- summary(y$norm.subset_pca)$importance[2,]
@@ -493,6 +583,7 @@ p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
 
 p
 
+<<<<<<< HEAD
 ##### Save pairwise PCA plot as html
 #htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.html")), selfcontained = TRUE)
 
@@ -503,6 +594,10 @@ p
 #pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
 #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
 #invisible(dev.off())
+=======
+##### Save the scatter-plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scaling_factor_datasets.html"), selfcontained = TRUE)
+>>>>>>> master
 ```
 
 ***
@@ -525,8 +620,13 @@ p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', widt
 
 p
 
+<<<<<<< HEAD
 ##### Save scree plot as html
 #htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_scree_plot.html")), selfcontained = TRUE)
+=======
+##### Save the scatter-plot as html
+htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_scaling_factor_targets.html"), selfcontained = TRUE)
+>>>>>>> master
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -537,6 +637,7 @@ detach("package:plotly", unload=FALSE)
 ##
 
 ```{r write_data, comment = NA, message=FALSE, warning=FALSE}
+<<<<<<< HEAD
 ##### Define the name base on input parameters
 if ( params$filter ) {
   
@@ -554,6 +655,10 @@ if ( params$log ) {
 
 ##### Save combined data into a file
 write.table(geneMatrix2write(y$norm), file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+=======
+cat("Writing TMM-normalised expression data to", paste0(paste(datasetIDs, collapse="_"),"_TMM.exp"), "\n\n")
+write.table(geneMatrix2write(y.norm.cpm), file=paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),"_TMM.txt"),sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+>>>>>>> master
 ```
 
 The combined `r params$transform` expression data were saved in `r paste0(params$results_name, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")`.
@@ -571,6 +676,13 @@ for ( i in 1:length(params) ) {
 
   cat(paste("Parameter: ", names(params)[i], "\nValue: ", paste(unlist(params[i]), collapse = ","), "\n\n", sep=""))
 }
+<<<<<<< HEAD
+=======
+
+##### Write used parameters into a file
+write.table(params, file = paste0(normalizePath(params$projectDir), "/", paste(datasetIDs, collapse="_"),".combineExprData.parameters.txt"), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+
+>>>>>>> master
 ```
 
 </font>

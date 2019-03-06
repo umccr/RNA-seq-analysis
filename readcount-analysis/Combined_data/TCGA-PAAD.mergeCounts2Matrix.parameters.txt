@@ -1,2 +1,2 @@
-projectDir	target	inDir	outFile
-/Combined_data	TCGA_PAAD_Target.txt	/TCGA-PAAD	TCGA-PAAD
+projectDir	target	inDir	outFile	help
+./Combined_data	./TCGA-PAAD/TCGA_PAAD_Target.txt	./TCGA-PAAD	TCGA-PAAD	FALSE
