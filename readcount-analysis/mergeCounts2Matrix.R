@@ -102,7 +102,7 @@ setwd(inFileDir)
 file_list <- list.files()
 
 ##### Check if any of the files listed in target file are missing. Write them into a file
-file_list.missing <- file_list[ targets$File_name %!in% file_list ]
+file_list.missing <- targets$File_name[ targets$File_name %!in% file_list ]
 
 if ( length(file_list.missing) > 0 ) {
   write.table(prepare2write(file_list.missing), file = paste0(projectDir, "/", outFile, ".mergeCounts2Matrix.missing_files.txt" ), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )

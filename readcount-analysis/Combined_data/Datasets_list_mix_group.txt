@@ -1,0 +1,8 @@
+Dataset_name	Expression_matrix	Target_file	Outliers_file
+TCGA-PAAD	./Combined_data/ref_cohorts/TCGA_PAAD_Counts.exp	./Combined_data/ref_cohorts/TCGA_PAAD_Target.txt	
+TCGA-LAML	./Combined_data/ref_cohorts/TCGA_LAML_Counts.exp	./Combined_data/ref_cohorts/TCGA_LAML_Target.txt	
+TCGA-LUSC	./Combined_data/ref_cohorts/TCGA_LUSC_Counts.exp	./Combined_data/ref_cohorts/TCGA_LUSC_Target.txt	
+TCGA-GBM	./Combined_data/ref_cohorts/TCGA_GBM_Counts.exp	./Combined_data/ref_cohorts/TCGA_GBM_Target.txt	
+TCGA-LGG	./Combined_data/ref_cohorts/TCGA_LGG_Counts.exp	./Combined_data/ref_cohorts/TCGA_LGG_Target.txt	
+TCGA-BRCA	./Combined_data/ref_cohorts/TCGA_BRCA_Counts.exp	./Combined_data/ref_cohorts/TCGA_BRCA_Target.txt	
+GTEx	./Combined_data/ref_cohorts/GTEx_normal_pancreas_Counts.exp	./Combined_data/ref_cohorts/GTEx_normal_pancreas_Target.txt	
