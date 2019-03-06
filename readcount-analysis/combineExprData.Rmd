@@ -3,13 +3,14 @@ title: "Combined expression data from mutliple samples"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '/Users/jmarzec/data/Cohort_analyses/expression/CUP/Combined_data'
-  exprFile: 'CUP.counts.matrix.txt'
-  annotFile: 'CUP_Target.txt'
+  exprDir: 
+  exprFile: 
+  annotFile: 
   transform: 'CPM'
   filter: TRUE
   norm: 'TMM'
   log: TRUE
+  results_name: 
   ensembl_version: 86
 output:
   html_document:
@@ -46,8 +47,8 @@ geneMatrix2write <- function (x) {
 getTargetsColours <- function(targets) {
   
 ##### Predefined selection of colours for groups
-targets.colours <- c("blue", "red","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
-  
+targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
+
   f.targets <- factor(targets)
   vec.targets <- targets.colours[1:length(levels(f.targets))]
   targets.colour <- rep(0,length(f.targets))
@@ -118,7 +119,7 @@ p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'ba
 p
 
 ##### Save the bar-plot as html (PLOTLY)
-#htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_RNAseq_libSize.html")), selfcontained = TRUE)
+#htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_RNAseq_libSize.html")), selfcontained = TRUE)
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -246,7 +247,7 @@ if ( params$filter ) {
     den <- density(y$transformed[,i])
     lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
   }
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### After filtering
   plot(density(y$filtered.transformed[,1]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=targets.colour[[2]][1])
@@ -257,10 +258,10 @@ if ( params$filter ) {
     den <- density(y$filtered.transformed[,i])
     lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
   }
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
   par(mfrow=c(1,2))
   
   ##### Before filtering
@@ -272,7 +273,7 @@ if ( params$filter ) {
     den <- density(y$transformed[,i])
     lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
   }
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### After filtering
   plot(density(y$filtered.transformed[,1]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=targets.colour[[2]][1])
@@ -283,7 +284,7 @@ if ( params$filter ) {
     den <- density(y$filtered.transformed[,i])
     lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
   }
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   invisible(dev.off())
   
 } else if ( !params$filter ) {
@@ -297,10 +298,10 @@ if ( params$filter ) {
     den <- density(y$transformed[,i])
     lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
   }
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
 
   ##### Without filtering
   plot(density(y$transformed[,1]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=targets.colour[[2]][1])
@@ -311,7 +312,7 @@ if ( params$filter ) {
     den <- density(y$transformed[,i])
     lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
   }
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   invisible(dev.off())
 }
 ```
@@ -322,20 +323,22 @@ During the sample preparation or sequencing process, external factors that are n
 
 Box-plots below present `r params$transform` data for individual samples, coloured by sample groups, before and after `r params$norm` normalisation.
 
-```{r data_normalisation_unnorm_vs_norm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12}
+```{r data_normalisation_unnorm_vs_norm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
 if ( params$transform == "CPM" ) {
   
   ##### Transformations from the raw-scale to CPM and normalisation using TMM method
   if ( params$filter ) {
     
-    y$noNorm <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
-    y$norm <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25, method = "TMM")
+    y$noNorm <-edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+    y$filtered.transformed <- edgeR::calcNormFactors(y$filtered, method = "TMM")
+    y$norm <- edgeR::cpm(y$filtered.transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   
   } else {
     
-    y$noNorm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25, method = "TMM")
-    y$norm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25, method = "TMM")
+    y$noNorm <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+    y$transformed <- edgeR::calcNormFactors(y, method = "TMM")
+    y$norm <- edgeR::cpm(y$transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   }
   
 ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
@@ -360,57 +363,57 @@ if ( params$transform == "CPM" ) {
   }
 }
   
-  ##### Plot expression distribution of samples for unnormalised and normalised data
-  par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
+##### Plot expression distribution of samples for unnormalised and normalised data
+par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
-  ##### Unnormalised data
-  boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt="n")
-  title(main="Unnormalised data", ylab=params$transform)
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+##### Unnormalised data
+boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+title(main="Unnormalised data", ylab=params$transform)
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
-  ##### Normalised data
-  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt="n")
-  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+##### Normalised data
+boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
-  ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_", params$transform, "_", params$norm, "_normalisation.pdf")), width=8, height=8)
-  par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
+##### Save the plot as pdf file
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.pdf")), width=8, height=14)
+par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
-  ##### Unnormalised data
-  boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt="n")
-  title(main="Unnormalised data", ylab=params$transform)
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+##### Unnormalised data
+boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+title(main="Unnormalised data", ylab=params$transform)
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
-  ##### Normalised data
-  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt="n")
-  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
-  legend("topright", legend=unique(targetFile$Target), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-  invisible(dev.off())
+##### Normalised data
+boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+invisible(dev.off())
   
-  # #######################################################
-  # ##### Prepare expression data frame for plotting in plotly by adding samples annotation and converting the matrix into two column data frame
-  # ##### Un-normalised cpm data
-  # y$transformed.df <- as.data.frame(cbind(rep(rownames(y$transformed), ncol(y$transformed)), rep(colnames(y$transformed), each=nrow(y$transformed)), rep(as.vector(y$filtered$samples$group), each=nrow(y$transformed)), as.numeric(y$transformed)))
-  # colnames(y$transformed.df) <- c("Gene", "Sample", "Group", "cpm")
-  # 
-  # ##### Normalised cpm data
-  # y$norm.transformed.df <- as.data.frame(cbind(rep(rownames(y$norm.transformed), ncol(y$norm.transformed)), rep(colnames(y$norm.transformed), each=nrow(y$norm.transformed)), rep(as.vector(y$norm$samples$group), each=nrow(y$norm.transformed)), as.numeric(y$norm.transformed)))
-  # colnames(y$norm.transformed.df) <- c("Gene", "Sample", "Group", "cpm")
-  # 
-  # 
-  # p <- plot_ly(width = 800, height = 600) 
-  # 
-  # for ( i in 1:12 ) {
-  #  p <- add_trace(p, y = y$transformed[,i], type = 'box', name = colnames(y$transformed)[i], jitter = 0.3, pointpos = 0, boxpoints = 'outliers',
-  #         marker = list(color = 'rgb(9,56,125)'),
-  #         line = list(color = 'rgb(9,56,125)'),
-  #         showlegend=FALSE)
-  #   }
-  # 
-  # ##### Save the box-plot as html
-  # htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_", params$transform, "_", params$norm, "_normalisation.html")), selfcontained = TRUE)
-  # #######################################################
+# #######################################################
+# ##### Prepare expression data frame for plotting in plotly by adding samples annotation and converting the matrix into two column data frame
+# ##### Un-normalised cpm data
+# y$transformed.df <- as.data.frame(cbind(rep(rownames(y$transformed), ncol(y$transformed)), rep(colnames(y$transformed), each=nrow(y$transformed)), rep(as.vector(y$filtered$samples$group), each=nrow(y$transformed)), as.numeric(y$transformed)))
+# colnames(y$transformed.df) <- c("Gene", "Sample", "Group", "cpm")
+# 
+# ##### Normalised cpm data
+# y$norm.transformed.df <- as.data.frame(cbind(rep(rownames(y$norm.transformed), ncol(y$norm.transformed)), rep(colnames(y$norm.transformed), each=nrow(y$norm.transformed)), rep(as.vector(y$norm$samples$group), each=nrow(y$norm.transformed)), as.numeric(y$norm.transformed)))
+# colnames(y$norm.transformed.df) <- c("Gene", "Sample", "Group", "cpm")
+# 
+# 
+# p <- plot_ly(width = 800, height = 600) 
+# 
+# for ( i in 1:12 ) {
+#  p <- add_trace(p, y = y$transformed[,i], type = 'box', name = colnames(y$transformed)[i], jitter = 0.3, pointpos = 0, boxpoints = 'outliers',
+#         marker = list(color = 'rgb(9,56,125)'),
+#         line = list(color = 'rgb(9,56,125)'),
+#         showlegend=FALSE)
+#   }
+# 
+# ##### Save the box-plot as html
+# htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.html")), selfcontained = TRUE)
+########################################################
 ```
 
 ## Exploratory data analysis{.tabset .tabset-fade}
@@ -447,7 +450,7 @@ layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"]
 p
 
 ##### Save PCA plot as html
-#htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_PCA_2d.html")), selfcontained = TRUE)
+#htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_2d.html")), selfcontained = TRUE)
 
 ##### Generate PCA 3-D plot
 #p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=8, opacity = 0.7), width = 600, height = 600) %>%
@@ -456,7 +459,7 @@ p
 #p
 
 ##### Save PCA plot as html
-#htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_PCA_3d.html")), selfcontained = TRUE)
+#htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_3d.html")), selfcontained = TRUE)
 ```
 
 ***
@@ -491,13 +494,13 @@ p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
 p
 
 ##### Save pairwise PCA plot as html
-#htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_PCA_pairwise.html")), selfcontained = TRUE)
+#htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.html")), selfcontained = TRUE)
 
 ##### Plot all combinations between the first 5 PCs
 #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
 
 ##### Save the plot as pdf file
-#pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_PCA_pairwise.pdf")), width=10, height=10)
+#pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
 #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
 #invisible(dev.off())
 ```
@@ -523,7 +526,7 @@ p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', widt
 p
 
 ##### Save scree plot as html
-#htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_scree_plot.html")), selfcontained = TRUE)
+#htmlwidgets::saveWidget(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_scree_plot.html")), selfcontained = TRUE)
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -550,10 +553,10 @@ if ( params$log ) {
 }
 
 ##### Save combined data into a file
-write.table(geneMatrix2write(y$norm), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+write.table(geneMatrix2write(y$norm), file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 ```
 
-The combined `r params$transform` expression data were saved in `r paste0(params$exprFile, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")`.
+The combined `r params$transform` expression data were saved in `r paste0(params$results_name, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")`.
 
 ***
 

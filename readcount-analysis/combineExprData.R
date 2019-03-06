@@ -14,7 +14,7 @@
 #
 #	 Description: Pipeline transforming and normalising expression matrix from multiple samples. It requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk). The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
 #
-#	 Command line use example: Rscript  combineExprData.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --filter TRUE --log TRUE
+#	 Command line use example: Rscript  combineExprData.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --filter TRUE --log TRUE --results_name CUP
 #
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)
@@ -23,6 +23,7 @@
 #   norm:         Normalisation method. Currently, "TMM" is used for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
+#   results_name: Desired core name for the results folder
 #
 ################################################################################
 
@@ -56,6 +57,8 @@ option_list = list(
   make_option(c("-n", "--norm"), action="store", default=NA, type='character',
               help="Filtering out low expressed genes"),
   make_option(c("-l", "--log"), action="store", default=NA, type='character',
+              help="Log (base 2) transform data before normalisation"),
+  make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
               help="Log (base 2) transform data before normalisation")
 )
 
@@ -87,5 +90,15 @@ if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
   opt$norm <- "TMM"
 }
 
+##### Check if the named of the results folder is defined
+if ( !is.na(opt$results_name) ) {
+  
+  opt$results_name <- paste0(opt$results_name, "_", opt$transform, "_", opt$norm, ".html")
+  
+} else {
+  opt$results_name <- paste0(opt$exprFile, "_", opt$transform, "_", opt$norm, ".html")
+}
+
+
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$exprFile, "_", opt$transform, "_", opt$norm, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, filter = opt$filter, norm = opt$norm, log = opt$log))
+rmarkdown::render(input = "combineExprData.Rmd", output_file = opt$results_name, output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, filter = opt$filter, norm = opt$norm, log = opt$log, results_name = opt$results_name))
