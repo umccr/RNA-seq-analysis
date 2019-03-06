@@ -1,0 +1,2 @@
+projectDir	datasetsFile
+/Users/jmarzec/Documents/GitHub/UMCCR/RNA-seq-analysis/readcount-analysis/Combined_data	Datasets_list_pancreas.txt

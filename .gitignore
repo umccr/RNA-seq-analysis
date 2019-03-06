@@ -1,7 +1,25 @@
-.DS_Store
-.Rproj.user
-bam/.DS_Store
-bam/featurecount/.Rhistory
+######################
+# Generic .gitignore #
+######################
+
+# OS generated files #
+######################
+*.DS_Store
+
+
+# R generated files #
+######################
+*.Rhistory
+
+
+# Big data files #
+######################
+data/*
+readcount-analysis/Combined_data/ref_cohorts/*
+
+
+# Intermediate/redundant files #
+######################
+readcount-analysis/Combined_data/Avner_TCGA-PAAD_MD_plots/*.pdf
+bam/featurecount/.Rproj*
 bam/featurecount/featurecount.Rproj
-bam/.DS_Store
-bam/.DS_Store
