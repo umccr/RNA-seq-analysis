@@ -112,6 +112,7 @@ detach("package:plotly", unload=FALSE)
 ## Data transformation and filtering
 
 The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
+
 ```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
@@ -291,6 +292,7 @@ if ( params$filter ) {
   invisible(dev.off())
 }
 ```
+
 ## Data normalisation
 During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using **`r params$norm`** method.
 
