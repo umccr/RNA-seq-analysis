@@ -12,9 +12,9 @@
 
 ################################################################################
 #
-#   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, samples's names for the merged matrix, samples's phenotype for downstream analyses and inictation of technical replicates. Note, only genes intersection across all per-sample files will be reported in the merged matrix.
+#   Description: Script merging multiple per-sample expression files in user-defined directory into a matrix. It requires manually prepared target file with four columns (1 = Sample_name, 2 = File_name, 3 = Target and 4 = Replicates) to indicate the files to be merged, samples's names for the merged matrix, samples's phenotype for downstream analyses and inictation of technical replicates. Note, only genes intersection across all per-sample files will be reported in the merged matrix. 
 #
-#   Command line use example: Rscript mergeCounts2Matrix.R --projectDir ./Combined_data --target ./TCGA-PAAD/TCGA_PAAD_Target.txt --inDir ./TCGA-PAAD --outFile TCGA-PAAD
+#   Command line use example: Rscript mergeCounts2Matrix.R --projectDir /Combined_data --target /TCGA_PAAD_Target.txt --inDir /TCGA-PAAD --outFile TCGA-PAAD
 #
 #   projectDir:   Project directory. This is where the target file is expected and where the merged matrix will be saved
 #   target:       Name of the target file. It expects to have four columns: (1) Sample_name, (2) File_name, (3) Target and (4) Replicates
@@ -39,15 +39,15 @@ graphics.off()
 
 ##### Prepare object to write into a file
 prepare2write <- function (x) {
-
-    x2write <- cbind(rownames(x), x)
-    colnames(x2write) <- c("",colnames(x))
-    return(x2write)
+  
+  x2write <- cbind(rownames(x), x)
+  colnames(x2write) <- c("",colnames(x))
+  return(x2write)
 }
 
 ##### Prepare gene data matrix to write into a file
 geneMatrix2write <- function (x) {
-
+  
   x2write <- cbind(rownames(x), x)
   colnames(x2write) <- c("Gene",colnames(x))
   return(x2write)
@@ -59,7 +59,7 @@ geneMatrix2write <- function (x) {
 #===============================================================================
 
 suppressMessages(library(optparse))
-suppressMessages(library(DESeq2))
+
 
 #===============================================================================
 #    Catching the arguments
@@ -89,20 +89,19 @@ outFile <- opt$outFile
 #===============================================================================
 
 ##### Read in the target file
-targets <- read.table(targetFile, header=TRUE, sep="\t", row.names=1)
+targets <- read.table(paste(projectDir,targetFile, sep="/"), header=TRUE, sep="\t", row.names=1)
 
 ##### Make syntactically valid names
 rownames(targets) <- make.names(rownames(targets))
 
-##### Record the current directory and change to directory with per-sample expression files
-currDir <- getwd()
+##### Change to directory with per-sample expression files
 setwd(inFileDir)
 
 ##### Get the list of all files in the user-defined directory
 file_list <- list.files()
 
 ##### Check if any of the files listed in target file are missing. Write them into a file
-file_list.missing <- file_list[ targets$File_name %!in% file_list ]
+file_list.missing <- targets$File_name[ targets$File_name %!in% file_list ]
 
 if ( length(file_list.missing) > 0 ) {
   write.table(prepare2write(file_list.missing), file = paste0(projectDir, "/", outFile, ".mergeCounts2Matrix.missing_files.txt" ), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
@@ -116,59 +115,41 @@ gene_list <- NULL
 
 ##### Loop through the per-sample expression files and merge them into a matrix
 for (file in file_list){
-
-    ##### Create merged dataset variable if it doesn't exist yet
-    if (!exists("dataset")){
-        dataset <- as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
-        colnames(dataset) <- c( "Gene", rownames(targets)[targets$File_name == file] )
-
-        ##### list genes present in individal files
-        gene_list <- as.vector(dataset$Gene)
-
-    ##### Add data for the remaining samples
-    } else if (exists("dataset")) {
-        sample <-as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
-        colnames(sample) <- c( "Gene", rownames(targets)[targets$File_name == file] )
-
-        ##### list genes present in individal files
-        gene_list <- c( gene_list, as.vector(sample$Gene) )
-
-        ##### Merge the expression data and make sure that the genes order is the same
-        dataset <- merge( dataset, sample, by="Gene", all = FALSE, sort= TRUE)
-
-        ##### Remove per-sample data for merged samples to free some memory
-        rm(sample)
-    }
+  
+  ##### Create merged dataset variable if it doesn't exist yet
+  if (!exists("dataset")){
+    dataset <- as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
+    colnames(dataset) <- c( "Gene", rownames(targets)[targets$File_name == file] )
+    
+    ##### list genes present in individal files
+    gene_list <- as.vector(dataset$Gene)
+    
+    ##### Add data for the remaining samples   
+  } else if (exists("dataset")) {
+    sample <-as.data.frame( read.table(file, header=FALSE, sep="\t", row.names=NULL) )
+    colnames(sample) <- c( "Gene", rownames(targets)[targets$File_name == file] )
+    
+    ##### list genes present in individal files
+    gene_list <- c( gene_list, as.vector(sample$Gene) )
+    
+    ##### Merge the expression data and make sure that the genes order is the same
+    dataset <- merge( dataset, sample, by="Gene", all = FALSE, sort= TRUE)
+    
+    ##### Remove per-sample data for merged samples to free some memory
+    rm(sample)
+  }
 }
 
 ##### Use gene IDs as rownames
 rownames(dataset) <- dataset$Gene
 dataset <- dataset[, -1]
 
-#### Batch-effect correction using DESeq2
-dds <- DESeqDataSetFromMatrix(countData = dataset, colData = targets, design = ~Target)
-
 ##### Make syntactically valid names
 colnames(dataset) <- make.names(colnames(dataset))
-
-##### Make sure that the target file contains info only about samples present in the data matrix
-targets <- targets[ rownames(targets) %in% colnames(dataset),  ]
-
-##### Make sure that the samples order in the data matrix is the same as in the target file 
-dataset <- dataset[ , rownames(targets) ]
-
-####
-dds <- DESeqDataSet(countData = dataset, coldata = targets, design = ~Target)
-
-dds <- DESeq(dds)
-
 
 ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
 gene_list <- unique(gene_list)
 gene_list.missing <- gene_list[ gene_list %!in% rownames(dataset) ]
-
-##### Go back to the original directory in case user refers the input or output directories using relative path
-setwd(currDir)
 
 ##### Write list of missing genes into a file
 if ( length(gene_list.missing) > 0 ) {
