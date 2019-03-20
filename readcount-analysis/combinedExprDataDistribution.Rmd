@@ -10,7 +10,7 @@ params:
   filter: TRUE
   norm: 'TMM'
   log: TRUE
-  genes: 'All'
+  genes: 
   results_name: 
   ensembl_version: 86
 output:
@@ -21,7 +21,7 @@ output:
 #    toc_float: true
 ---
 
-The aim of this report is investigate the expression data distribution patters of all or user-defined genes in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm` method). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is investigate the expression data distribution patters of all or user-defined genes in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
@@ -249,6 +249,7 @@ if ( params$filter && params$transform == "CPM" ) {
   }
 }
 ```
+
 ```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
 if ( params$filter ) {
   
@@ -334,9 +335,9 @@ if ( params$filter ) {
 
 ## Data normalisation
 
-During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using **`r params$norm`** method.
+`r if ( params$norm == "None" || params$norm == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
 
-Box-plots below present `r params$transform` data for individual samples, coloured by sample groups, before and after `r params$norm` normalisation.
+`r if ( params$norm != "None" && params$norm != "none" ) { c(paste0("Box-plots below present ", params$transform, " data for individual samples, coloured by sample groups, before and after ", params$norm, " normalisation.")) }`
 
 ```{r data_normalisation_unnorm_vs_norm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
@@ -364,46 +365,68 @@ if ( params$transform == "CPM" ) {
     
     y$noNorm <- y$filtered.transformed
     y$filtered.transformed <- data.matrix(y$filtered.transformed) 
-    y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
-    colnames(y$norm) <- colnames(y$filtered.transformed)
-    rownames(y$norm) <- rownames(y$filtered.transformed)
+    
+    if ( params$norm != "None" && params$norm != "none" ) {
+      
+      y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
+      colnames(y$norm) <- colnames(y$filtered.transformed)
+      rownames(y$norm) <- rownames(y$filtered.transformed)
+      
+    } else {
+      
+      y$norm  <- y$filtered.transformed
+    }
   
   } else {
     
     y$noNorm <- y$transformed
-    y$transformed <- data.matrix(y$transformed) 
-    y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
-    colnames(y$norm) <- colnames(y$transformed)
-    rownames(y$norm) <- rownames(y$transformed)
+    y$transformed <- data.matrix(y$transformed)
+    
+    if ( params$norm != "None" && params$norm != "none" ) {
+      
+      y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
+      colnames(y$norm) <- colnames(y$transformed)
+      rownames(y$norm) <- rownames(y$transformed)
+      
+    } else {
+      
+      y$norm  <- y$transformed
+    }
   }
 }
-  
+
 ##### Plot expression distribution of samples for unnormalised and normalised data
 par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
-  
+
 ##### Unnormalised data
 boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
 title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-  
+
 ##### Normalised data
-boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
-legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+if ( params$norm != "None" && params$norm != "none" ) {
   
+  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+}
+
 ##### Save the plot as pdf file
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.pdf")), width=8, height=14)
 par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
-  
+
 ##### Unnormalised data
 boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
 title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Normalised data
-boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
-legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+if ( params$norm != "None" && params$norm != "none" ) {
+  
+  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+}
 invisible(dev.off())
   
 # #######################################################

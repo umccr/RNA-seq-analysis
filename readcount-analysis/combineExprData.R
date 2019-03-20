@@ -20,7 +20,7 @@
 #   exprFile:     File with expression data (read counts)
 #   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk)
 #   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (defualt) and "TPM"
-#   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data
+#   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data. "None" (default) is available for both transformation methods
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
 #   results_name: Desired core name for the results folder
@@ -89,9 +89,9 @@ if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
   
   q()
   
-} else if ( opt$transform == "CPM" &&  opt$norm != "TMM" && opt$norm != "TMMwzp" && opt$norm != "RLE" && opt$norm != "upperquartile" ) {
+} else if ( opt$transform == "CPM" &&  opt$norm != "TMM" && opt$norm != "TMMwzp" && opt$norm != "RLE" && opt$norm != "upperquartile" && opt$norm != "None" && opt$norm != "none" ) {
   
-  cat(paste0("\nWrong normalisation method was selected! \"TMM\", \"TMMwzp\", \"RLE\" and \"upperquartile\" methods are available for ", opt$transform, "-tansformed data.\n\n"))
+  cat(paste0("\nWrong normalisation method was selected! \"TMM\", \"TMMwzp\", \"RLE\", \"upperquartile\" and \"none\" methods are available for ", opt$transform, "-tansformed data.\n\n"))
   
   q()
 }
