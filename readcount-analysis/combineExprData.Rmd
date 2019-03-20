@@ -71,16 +71,26 @@ suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_versi
 ##### Read in expression data and associated sample annotation files
 data <- read.table(paste(params$exprDir, params$exprFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE, row.names = 1)
 targetFile <- read.table(paste(params$exprDir, params$annotFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+
 ##### Make sure that there are no duplciated samples in the target file
 targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
 rownames(targetFile) <- targetFile[,"Sample_name"]
+
 ##### Make syntactically valid names
 colnames(data) <- make.names(colnames(data))
 rownames(targetFile) <- make.names(rownames(targetFile))
+
 ##### Make sure that the target file contains info only about samples present in the data matrix
 targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
-##### Make sure that the samples order in the data matrix is the same as in the target file 
-data <- data[ , rownames(targetFile) ]
+
+##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
+if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
+  
+  data <- data[ , rownames(targetFile) ]
+
+  ##### Save data subset into a file
+  write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+}
 ```
 
 ***
@@ -294,6 +304,7 @@ if ( params$filter ) {
 ```
 
 ## Data normalisation
+
 During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using **`r params$norm`** method.
 
 Box-plots below present `r params$transform` data for individual samples, coloured by sample groups, before and after `r params$norm` normalisation.
