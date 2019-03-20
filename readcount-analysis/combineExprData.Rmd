@@ -402,7 +402,7 @@ invisible(dev.off())
 ########################################################
 ```
 
-## Exploratory data analysis{.tabset .tabset-fade}
+## Exploratory data analysis {.tabset .tabset-fade}
 
 Principal component analysis (PCA) was performed to reduce the dimensionality of data to visually assess similarities and differences between samples. This exploratory analysis facilitates identification of the key factors affecting the variability in the expression data. The colours indicate sample groups.
 
