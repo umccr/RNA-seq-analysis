@@ -93,7 +93,7 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
   write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 }
 
-##### Subset data to include on user-defined genes
+##### Subset data to include only user-defined genes
 if ( params$genes != "All" || params$genes != "all"  ) {
   
   genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
@@ -456,8 +456,9 @@ invisible(dev.off())
 
 ## Expression data distribution patterns
 
+```{r expression_data_distribution, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
 
-HERE INCLUDE CHUNKS TO INVESTIGATE EXPRESSION DATA DISTRIBUTION PATTERNS FOR SELECTED GENES
+```
 
 
 ***
