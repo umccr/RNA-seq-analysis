@@ -112,7 +112,7 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
   write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 }
 
-##### Subset data to include on user-defined genes
+##### Subset data to include only user-defined genes
 if ( tolower(params$genes) != ("all")  ) {
   
   genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
@@ -135,7 +135,7 @@ if ( length(genes) > 0 ) {
 }
 
 ##### Write list of missing genes into a file
-if ( length(genes.missing) > 0 ) {
+if ( exists("genes.missing") && length(genes.missing) > 0 ) {
   
   write.table(prepare2write(genes.missing), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
