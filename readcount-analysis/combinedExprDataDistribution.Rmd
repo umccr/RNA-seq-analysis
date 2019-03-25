@@ -93,7 +93,11 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
   write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 }
 
+<<<<<<< HEAD
 ##### Subset data to include only user-defined genes
+=======
+##### Subset data to include on user-defined genes
+>>>>>>> cb4794086accd9f24f0f6f8cb0da62140ec9cbe3
 if ( tolower(params$genes) != ("all")  ) {
   
   genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
