@@ -3,11 +3,11 @@ title: "Investigate expression data distribution for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
-  transform: 'CPM'
-  norm: 'TMM'
+  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
+  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  transform: 'TPM'
+  norm: 'None'
   log: TRUE
   genes: 'ENSG00000148773,ENSG00000133703,ENSG00000141646,ENSG00000147889,ENSG00000141510'
   results_name: 
@@ -285,7 +285,7 @@ if ( params$transform == "CPM" ) {
   y$noNorm <- y$transformed
   y$transformed <- data.matrix(y$transformed)
       
-  if ( tolower(params$norm != "none") ) {
+  if ( tolower(params$norm) != "none" ) {
         
     y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
     colnames(y$norm) <- colnames(y$transformed)
@@ -298,7 +298,7 @@ if ( params$transform == "CPM" ) {
 }
 
 ##### Set height scaling factor for plots containing normalised data plots
-if ( tolower(params$norm != "none") ) {
+if ( tolower(params$norm) != "none" ) {
   
   norm.height = 2
 } else {
@@ -318,7 +318,7 @@ boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
     
 ##### Normalised data
-if ( tolower(params$norm != "none") ) {
+if ( tolower(params$norm) != "none" ) {
       
   boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
@@ -355,7 +355,7 @@ Plot presenting `r params$transform` data distribution for selected gene(s).
 ##### Assigne colours to genes
 genes.colour <- getGenesColours(genes)
 
-##### Collect the most extreme density values for set the x-axis and y-axis boundaries
+##### Collect the most extreme density values for setting the x-axis and y-axis boundaries
 den.x <- density(y$transformed[1,])$x
 den.y <- density(y$transformed[1,])$y
 
@@ -368,7 +368,7 @@ for (i in 2:nrow(y$transformed)) {
 
 par(mfrow=c(norm.height,1))
 
-##### Transformed data
+##### Transformed data for html report
 plot(density(y$transformed[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
 title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
@@ -398,7 +398,7 @@ if ( tolower(params$norm) != "none" ) {
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_expr_distributions.pdf")), width=8, height=5*norm.height)
 par(mfrow=c(norm.height,1))
 
-##### Transformed data
+##### Transformed data for PDF
 plot(density(y$transformed[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
 title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
