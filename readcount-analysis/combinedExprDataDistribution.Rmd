@@ -9,7 +9,7 @@ params:
   transform: 'CPM'
   norm: 'TMM'
   log: TRUE
-  genes: 'all'
+  genes: 'ENSG00000148773,ENSG00000133703,ENSG00000141646,ENSG00000147889,ENSG00000141510'
   results_name: 
   ensembl_version: 86
 output:
@@ -20,7 +20,7 @@ output:
 #    toc_float: true
 ---
 
-The aim of this report is investigate the expression data distribution patters of all or user-defined genes in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is investigate the expression data distribution patters of all or user-defined genes in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
@@ -111,34 +111,6 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
   ##### Save data subset into a file
   write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 }
-
-##### Subset data to include only user-defined genes
-if ( tolower(params$genes) != ("all")  ) {
-  
-  genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
-  
-  ##### Identify user-defined genes that were not present in the expression matrix
-  genes.missing <- genes[ genes %!in% rownames(data) ]
-
-  genes <- genes[ genes %in% rownames(data)  ]
-  
-  data <- data[ genes,  ]
-  
-} else {
-  
-  genes <- rownames(data)
-}
-
-##### Write list of missing genes into a file
-if ( length(genes) > 0 ) {
-    write.table(prepare2write(genes), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, ".genes.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
-}
-
-##### Write list of missing genes into a file
-if ( exists("genes.missing") && length(genes.missing) > 0 ) {
-  
-  write.table(prepare2write(genes.missing), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
-}
 ```
 
 ***
@@ -160,7 +132,6 @@ colnames(data.df) <- c("Group","Sample", "Library_size")
 
 ##### The default order will be alphabetized unless specified as below
 data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
-
 p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 1000, height = 400) %>%
   layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
 
@@ -177,7 +148,41 @@ detach("package:plotly", unload=FALSE)
 
 The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
 
-```{r data_transformation, comment = NA, message=FALSE, warning=FALSE}
+```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
+##### Subset data to include only user-defined genes
+if ( tolower(params$genes) != ("all")  ) {
+  
+  genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
+  
+  ##### Identify user-defined genes that were not present in the expression matrix
+  genes.missing <- genes[ genes %!in% rownames(data) ]
+
+  genes <- genes[ genes %in% rownames(data)  ]
+  
+  data <- data[ genes,  ]
+  
+} else {
+  
+  genes <- rownames(data)
+}
+
+##### Write list of missing genes into a file
+if ( length(genes) > 0 ) {
+    write.table(prepare2write(genes), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, ".genes.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+  
+  runChunk <- TRUE
+} else {
+  runChunk <- FALSE
+}
+
+##### Write list of missing genes into a file
+if ( exists("genes.missing") && length(genes.missing) > 0 ) {
+  
+  write.table(prepare2write(genes.missing), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+}
+```
+
+```{r data_transformation, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million.
 
 ##### CPM transformation
@@ -221,10 +226,21 @@ if ( params$transform == "CPM" ) {
 }
 ```
 
-```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = runChunk}
+##### Collect the most extreme density values for set the x-axis and y-axis boundaries
+den.x <- density(y$transformed[,1])$x
+den.y <- density(y$transformed[,1])$y
+
+for (i in 2:ncol(y$transformed)) {
+  
+  den <- density(y$transformed[,i])
+  den.x <- sort(c(den.x, den$x))
+  den.y <- sort(c(den.y, den$y))
+}
+
 ##### Transformed data distribution
-plot(density(y$transformed[,1]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=targets.colour[[2]][1])
-title(main="Transformed data (unfiltered)", xlab=params$transform)
+plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
   
 for (i in 2:ncol(y$transformed)){
@@ -234,9 +250,9 @@ for (i in 2:ncol(y$transformed)){
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
 ##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_transformation.pdf")), width=8, height=5)
 
-plot(density(y$transformed[,1]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=targets.colour[[2]][1])
+plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
 title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
   
@@ -250,68 +266,80 @@ invisible(dev.off())
 
 ## Data normalisation
 
-`r if ( params$norm == "None" || params$norm == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
+`r if ( tolower(params$norm) == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
 
-`r if ( params$norm != "None" && params$norm != "none" ) { c(paste0("Box-plots below present ", params$transform, " data for individual samples, coloured by sample groups, before and after ", params$norm, " normalisation.")) }`
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Box-plots below present ", params$transform, " data for individual samples, coloured by sample groups, before and after ", params$norm, " normalisation.")) }`
 
-```{r data_normalisation_unnorm_vs_norm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
+```{r data_normalisation, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16, eval = runChunk}
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
 if ( params$transform == "CPM" ) {
-  
+    
   y$noNorm <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
   y <- edgeR::calcNormFactors(y, method = params$norm)
   y$norm <- edgeR::cpm(y$transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
-  
+    
 ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
 } else if ( params$transform == "TPM" ) {
-  
+    
   ##### Normalisation using quantile method
   y$noNorm <- y$transformed
   y$transformed <- data.matrix(y$transformed)
-    
-  if ( params$norm != "None" && params$norm != "none" ) {
       
+  if ( tolower(params$norm != "none") ) {
+        
     y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
     colnames(y$norm) <- colnames(y$transformed)
     rownames(y$norm) <- rownames(y$transformed)
-      
+        
   } else {
-      
+        
       y$norm  <- y$transformed
   }
 }
 
-##### Plot expression distribution of samples for unnormalised and normalised data
-par(mfrow=c(2,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
-
-##### Unnormalised data
-boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-title(main="Unnormalised data", ylab=params$transform)
-legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-
-##### Normalised data
-if ( params$norm != "None" && params$norm != "none" ) {
+##### Set height scaling factor for plots containing normalised data plots
+if ( tolower(params$norm != "none") ) {
   
-  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-  title(main=paste0("Normalised data (", tolower(params$norm), ")"), ylab=params$transform)
-  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  norm.height = 2
+} else {
+  norm.height = 1
 }
+```
 
-##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.pdf")), width=8, height=14)
-par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
+```{r data_normalisation_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8*norm.height, eval = runChunk}
 
+
+##### Plot expression distribution of samples for unnormalised and normalised data
+par(mfrow=c(norm.height,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
+    
 ##### Unnormalised data
 boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-title(main="Unnormalised data", ylab=params$transform)
+  title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-  
+    
 ##### Normalised data
-if ( params$norm != "None" && params$norm != "none" ) {
-  
+if ( tolower(params$norm != "none") ) {
+      
   boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+}
+    
+##### Save the plot as pdf file
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
+par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
+    
+##### Unnormalised data
+boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+title(main="Unnormalised data", ylab=params$transform)
+    legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+      
+##### Normalised data
+if ( tolower(params$norm) != "none" ) {
+      
+  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+    legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent",box.col="transparent")
 }
 invisible(dev.off())
 ```
@@ -322,23 +350,30 @@ invisible(dev.off())
 
 Plot presenting `r params$transform` data distribution for selected gene(s).
 
-```{r expr_distribution_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*norm.height, eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 ##### Assigne colours to genes
 genes.colour <- getGenesColours(genes)
 
-if ( tolower(params$norm) != "none" ) {
-  par(mfrow=c(1,2))
-} else {
-  par(mfrow=c(1,1))
-}
+##### Collect the most extreme density values for set the x-axis and y-axis boundaries
+den.x <- density(y$transformed[1,])$x
+den.y <- density(y$transformed[1,])$y
+
+for (i in 2:nrow(y$transformed)) {
   
+  den <- density(y$transformed[i,])
+  den.x <- sort(c(den.x, den$x))
+  den.y <- sort(c(den.y, den$y))
+}
+
+par(mfrow=c(norm.height,1))
+
 ##### Transformed data
-plot(density(y$transformed[1,]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=genes.colour[1])
+plot(density(y$transformed[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
 title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
-    
-for (i in 2:nrow(y$transformed)){
+
+for (i in 2:nrow(y$transformed)) {
   den <- density(y$transformed[i,])
   lines(den$x, den$y, lwd=2, col=genes.colour[i])
 }
@@ -348,27 +383,23 @@ legend("topright", legend=levels(factor(rownames(y$transformed))), fill=genes.co
 if ( tolower(params$norm) != "none" ) {
   
   ##### Normalised data
-  plot(density(y$norm[1,]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=genes.colour[1])
-  title(main="Transformed data", xlab=params$transform)
+  plot(density(y$norm[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
+  title(main="Normalised data", xlab=params$transform)
   abline(v=0, lty=3)
-      
-  for (i in 2:nrow(y$norm)){
+  
+  for (i in 2:nrow(y$norm)) {
     den <- density(y$norm[i,])
     lines(den$x, den$y, lwd=2, col=genes.colour[i])
   }
   legend("topright", legend=levels(factor(rownames(y$norm))), fill=genes.colour, bty="n", bg = "transparent")
-}  
+}
 
 ##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_expr_distributions.pdf")), width=8, height=5)
-if ( tolower(params$norm) != "none" ) {
-  par(mfrow=c(1,2))
-} else {
-  par(mfrow=c(1,1))
-}
-  
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_expr_distributions.pdf")), width=8, height=5*norm.height)
+par(mfrow=c(norm.height,1))
+
 ##### Transformed data
-plot(density(y$transformed[1,]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=genes.colour[1])
+plot(density(y$transformed[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
 title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
   
@@ -382,11 +413,11 @@ legend("topright", legend=levels(factor(rownames(y$transformed))), fill=genes.co
 if ( tolower(params$norm) != "none" ) {
   
   ##### Normalised data
-  plot(density(y$norm[1,]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=genes.colour[1])
+  plot(density(y$norm[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
   title(main="Normalised data", xlab=params$transform)
   abline(v=0, lty=3)
       
-  for (i in 2:nrow(y$norm)){
+  for (i in 2:nrow(y$norm)) {
     den <- density(y$norm[i,])
     lines(den$x, den$y, lwd=2, col=genes.colour[i])
   }
@@ -399,17 +430,37 @@ invisible(dev.off())
 
 Table with `r params$transform` data values for each sample for selected genes.
 
-```{r expr_distribution_table, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+**Transformed data**
+
+```{r expr_dist_table_trans, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Generate a table with expression values for selected genes
-if ( nrow(data) < 1000 ) {
+if ( nrow(y$transformed) < 25 ) {
   
-  DT::datatable( data = t(data), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
-    DT::formatStyle( columns = names(t(data)), `font-size` = '12px', 'text-align' = 'center' )
+  DT::datatable( data = round(t(y$transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::formatStyle( columns = names(t(y$transformed)), `font-size` = '12px', 'text-align' = 'center' )
   
 } else {
-  cat(paste0(nrow(data), " genes were selected. The tables is available only if less than 1000 genes are selected!"))
+  cat(paste0(nrow(y$transformed), " genes were selected. The tables is available only if less than 25 genes are selected!"))
 }
 ```
+
+**`r if ( tolower(params$norm) != "none" ) { c("Normalised data") }`**
+
+```{r expr_dist_table_normalised, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = runChunk}
+##### Generate a table with expression values for selected genes
+if ( tolower(params$norm) != "none" ) {
+  
+  if ( nrow(y$norm) < 25 ) {
+    
+    DT::datatable( data = round(t(y$norm), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+      DT::formatStyle( columns = names(t(y$norm)), `font-size` = '12px', 'text-align' = 'center' )
+    
+  } else {
+    cat(paste0(nrow(y$norm), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+  }
+}
+```
+
 
 ***
 
