@@ -20,7 +20,7 @@ output:
 #    toc_float: true
 ---
 
-Results from combining expression data (**`r params$exprFile`**) from different samples. This includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`) The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+Results from combining expression data (**`r params$exprFile`**) from different samples. This includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
@@ -102,17 +102,22 @@ Bar-plot illustrating library size for each sample.
 ```{r library_size_plot, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 suppressMessages(library(plotly))
 ##### Generate bar-plot for library size. The colours indicate sample groups, as provided in *Target* column in the sample annotation file
+
 ##### Assigne colours to targets and datasets
 targets.colour <- getTargetsColours(targetFile$Target)
+
 ##### Prepare data frame
 data.df <- data.frame(targetFile$Target, colnames(data), as.numeric(colSums(data)*1e-6))
 colnames(data.df) <- c("Group","Sample", "Library_size")
+
 ##### The default order will be alphabetized unless specified as below
 data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
 p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 1000, height = 400) %>%
   layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+
 ##### Print htmlwidget
 p
+
 ##### Save the bar-plot as html (PLOTLY)
 #htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_RNAseq_libSize.html")), selfcontained = TRUE)
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
