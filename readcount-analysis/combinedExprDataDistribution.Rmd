@@ -94,7 +94,7 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
 }
 
 ##### Subset data to include on user-defined genes
-if ( params$genes != "All" || params$genes != "all"  ) {
+if ( tolower(params$genes) != ("all")  ) {
   
   genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
   
