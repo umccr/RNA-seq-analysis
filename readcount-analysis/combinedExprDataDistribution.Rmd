@@ -3,15 +3,15 @@ title: "Investigate expression data distribution for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
-  transform: 'CPM'
+  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData' 
+  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt' 
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  transform: 'TPM'
   filter: TRUE
-  norm: 'TMM'
+  norm: 'None'
   log: TRUE
-  genes: 
-  results_name: 
+  genes: 'All'
+  results_name: 'test'
   ensembl_version: 86
 output:
   html_document:
@@ -94,7 +94,7 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
 }
 
 ##### Subset data to include only user-defined genes
-if ( params$genes != "All" || params$genes != "all"  ) {
+if ( tolower(params$genes) != ("all")  ) {
   
   genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
   
@@ -116,7 +116,7 @@ if ( length(genes) > 0 ) {
 }
 
 ##### Write list of missing genes into a file
-if ( length(genes.missing) > 0 ) {
+if ( exists("genes.missing") && length(genes.missing) > 0 ) {
   
   write.table(prepare2write(genes.missing), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
@@ -156,6 +156,7 @@ The read count data is converted into **`r params$transform`**s using *[edgeR](h
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
 ##### CPM transformation and filtering
+
 if ( params$filter && params$transform == "CPM" ) {
   
   ##### Create EdgeR DGEList object
