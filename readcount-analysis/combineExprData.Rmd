@@ -143,7 +143,7 @@ if ( params$filter && tolower(params$transform) == "cpm" ) {
   ##### Calculate normalization factors and transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
   y <- edgeR::calcNormFactors(y)
   y$transformed <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
-  y$filtered <- edgeR::calcNormFactors(y$filtered)
+  y <- edgeR::calcNormFactors(y$filtered)
   y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
 ##### CPM transformation without filtering
 } else if ( !params$filter && tolower(params$transform) == "cpm" ) {
@@ -318,13 +318,13 @@ if ( tolower(params$transform) == "cpm" ) {
   if ( params$filter ) {
     
     y$noNorm <-edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y$filtered.transformed <- edgeR::calcNormFactors(y$filtered, method = tolower(params$norm))
+    y <- edgeR::calcNormFactors(y$filtered, method = tolower(params$norm))
     y$norm <- edgeR::cpm(y$filtered.transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   
   } else {
     
     y$noNorm <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y$transformed <- edgeR::calcNormFactors(y, method = params$norm)
+    y <- edgeR::calcNormFactors(y, method = params$norm)
     y$norm <- edgeR::cpm(y$transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   }
   
