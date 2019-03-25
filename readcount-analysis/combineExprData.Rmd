@@ -127,7 +127,7 @@ The read count data is converted into **`r params$transform`**s using *[edgeR](h
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
 ##### CPM transformation and filtering
-if ( params$filter && params$transform == "CPM" ) {
+if ( params$filter && tolower(params$transform) == "cpm" ) {
   
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
@@ -146,7 +146,7 @@ if ( params$filter && params$transform == "CPM" ) {
   y$filtered <- edgeR::calcNormFactors(y$filtered)
   y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
 ##### CPM transformation without filtering
-} else if ( !params$filter && params$transform == "CPM" ) {
+} else if ( !params$filter && tolower(params$transform) == "cpm" ) {
   
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
@@ -156,7 +156,7 @@ if ( params$filter && params$transform == "CPM" ) {
   
 ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
 ##### TPM transformation with filtering
-} else if ( params$filter && params$transform == "TPM" ) {
+} else if ( params$filter && tolower(params$transform) == "tpm" ) {
   
   ##### Get genes lengths
   edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
@@ -191,7 +191,7 @@ if ( params$filter && params$transform == "CPM" ) {
     y$filtered.transformed <- tpm_from_rpkm(y$filtered.transformed)
   }
 ##### TPM transformation without filtering
-} else if ( !params$filter && params$transform == "TPM" ) {
+} else if ( !params$filter && tolower(params$transform) == "tpm" ) {
   
   ##### Get genes lengths
   edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
@@ -249,7 +249,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
   par(mfrow=c(1,2))
   
   ##### Before filtering
@@ -289,7 +289,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
   ##### Without filtering
   plot(density(y$transformed[,1]), lwd=2, ylim=c(0,0.4), las=2, main="", xlab="", col=targets.colour[[2]][1])
   title(main="Transformed data (unfiltered)", xlab=params$transform)
@@ -306,19 +306,19 @@ if ( params$filter ) {
 
 ## Data normalisation
 
-`r if ( params$norm == "None" || params$norm == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
+`r if ( tolower(params$norm) == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
 
-`r if ( params$norm != "None" && params$norm != "none" ) { c(paste0("Box-plots below present ", params$transform, " data for individual samples, coloured by sample groups, before and after ", params$norm, " normalisation.")) }`
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Box-plots below present ", params$transform, " data for individual samples, coloured by sample groups, before and after ", params$norm, " normalisation.")) }`
 
 ```{r data_normalisation_unnorm_vs_norm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
-if ( params$transform == "CPM" ) {
+if ( tolower(params$transform) == "cpm" ) {
   
   ##### Transformations from the raw-scale to CPM and normalisation using TMM method
   if ( params$filter ) {
     
     y$noNorm <-edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y$filtered.transformed <- edgeR::calcNormFactors(y$filtered, method = params$norm)
+    y$filtered.transformed <- edgeR::calcNormFactors(y$filtered, method = tolower(params$norm))
     y$norm <- edgeR::cpm(y$filtered.transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   
   } else {
@@ -329,7 +329,7 @@ if ( params$transform == "CPM" ) {
   }
   
 ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
-} else if ( params$transform == "TPM" ) {
+} else if ( tolower(params$transform) == "tpm" ) {
   
   ##### Normalisation using quantile method
   if ( params$filter ) {
@@ -337,7 +337,7 @@ if ( params$transform == "CPM" ) {
     y$noNorm <- y$filtered.transformed
     y$filtered.transformed <- data.matrix(y$filtered.transformed) 
     
-    if ( params$norm != "None" && params$norm != "none" ) {
+    if ( tolower(params$norm) != "none" ) {
       
       y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
       colnames(y$norm) <- colnames(y$filtered.transformed)
@@ -353,7 +353,7 @@ if ( params$transform == "CPM" ) {
     y$noNorm <- y$transformed
     y$transformed <- data.matrix(y$transformed)
     
-    if ( params$norm != "None" && params$norm != "none" ) {
+    if ( tolower(params$norm) != "none" ) {
       
       y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
       colnames(y$norm) <- colnames(y$transformed)
@@ -367,7 +367,7 @@ if ( params$transform == "CPM" ) {
 }
  
 ##### Plot expression distribution of samples for unnormalised and normalised data
-par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
+par(mfrow=c(2,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
   
 ##### Unnormalised data
 boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
@@ -375,7 +375,7 @@ title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Normalised data
-if ( params$norm != "None" && params$norm != "none" ) {
+if ( tolower(params$norm) != "none" ) {
   
   boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
@@ -383,7 +383,7 @@ if ( params$norm != "None" && params$norm != "none" ) {
 }
   
 ##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.pdf")), width=8, height=14)
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
 par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
 ##### Unnormalised data
@@ -392,7 +392,7 @@ title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Normalised data
-if ( params$norm != "None" && params$norm != "none" ) {
+if ( tolower(params$norm) != "none" ) {
   
   boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
@@ -541,10 +541,10 @@ if ( params$log ) {
   logged <- "noLog"
 }
 ##### Save combined data into a file
-write.table(geneMatrix2write(y$norm), file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+write.table(geneMatrix2write(y$norm), file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
 ```
 
-The combined `r params$transform` expression data were saved in `r paste0(params$results_name, "_", params$transform, "_", params$norm, "_", filtered, "_", logged, ".txt")`.
+The combined `r params$transform` expression data were saved in `r paste0(params$results_name, "_", filtered, "_", logged, ".txt")`.
 
 ***
 
