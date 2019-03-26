@@ -3,14 +3,14 @@ title: "Combined expression data from mutliple samples"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
+  exprDir: '/Users/jmarzec/data/Cohort_analyses/expression/CUP/Combined_data'
+  exprFile: 'CUP.counts.matrix.txt'
+  annotFile: 'CUP_Target.txt'
   transform: 'CPM'
   filter: TRUE
   norm: 'TMM'
   log: TRUE
-  results_name: 
+  results_name: 'test.counts.matrix.txt'
   ensembl_version: 86
 output:
   html_document:
@@ -145,19 +145,19 @@ if ( params$filter && params$transform == "CPM" ) {
   
   #cat(nrow(y$filtered$counts), "genes remained after filtering out of the", nrow(data), "genes in the input read count matrix\n\n")
   
-  ##### Calculate normalization factors and transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
-  y <- edgeR::calcNormFactors(y)
-  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
-  y <- edgeR::calcNormFactors(y$filtered)
-  y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = "none")$samples["norm.factors"]
+  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  
 ##### CPM transformation without filtering
 } else if ( !params$filter && params$transform == "CPM" ) {
   
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
-  ##### Calculate normalization factors and  and transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
-  y <- edgeR::calcNormFactors(y)
-  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
   
 ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
 ##### TPM transformation with filtering
@@ -175,9 +175,8 @@ if ( params$filter && params$transform == "CPM" ) {
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
   
-  ##### Calculate normalization factors and convert data into RPKM
-  y <- edgeR::calcNormFactors(y)
-  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=TRUE, log=FALSE)
+  ##### Convert data into RPKM
+  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
   
   ##### Remove genes with TPM of at least 0.2 in less than 10% of samples
   keep <- rowSums(y$transformed>0.2) >= ncol(y$transformed)/10
@@ -189,12 +188,13 @@ if ( params$filter && params$transform == "CPM" ) {
     
     y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
     y$filtered.transformed <- log2(tpm_from_rpkm(y$filtered.transformed+0.25))
-    gene.length <- gene.length[ names(gene.length) %in% rownames(y$filtered.transformed) ]
   
   } else {
     
+    y$transformed <- tpm_from_rpkm(y$transformed)
     y$filtered.transformed <- tpm_from_rpkm(y$filtered.transformed)
   }
+  
 ##### TPM transformation without filtering
 } else if ( !params$filter && params$transform == "TPM" ) {
   
@@ -210,9 +210,8 @@ if ( params$filter && params$transform == "CPM" ) {
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
   
-  ##### Calculate normalization factors and convert data into RPKM
-  y <- edgeR::calcNormFactors(y)
-  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=TRUE, log=FALSE)
+  ##### Convert data into RPKM
+  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
   
   ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
   if ( params$log ) {
@@ -227,18 +226,18 @@ if ( params$filter && params$transform == "CPM" ) {
 ```
 
 ```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
-if ( params$filter ) {
+##### Collect the most extreme density values for set the x-axis and y-axis boundaries
+den.x <- density(y$transformed[,1])$x
+den.y <- density(y$transformed[,1])$y
   
-  ##### Collect the most extreme density values for set the x-axis and y-axis boundaries
-  den.x <- density(y$transformed[,1])$x
-  den.y <- density(y$transformed[,1])$y
-  
-  for (i in 2:ncol(y$transformed)) {
+for (i in 2:ncol(y$transformed)) {
     
-    den <- density(y$transformed[,i])
-    den.x <- sort(c(den.x, den$x))
-    den.y <- sort(c(den.y, den$y))
-  }
+  den <- density(y$transformed[,i])
+  den.x <- sort(c(den.x, den$x))
+  den.y <- sort(c(den.y, den$y))
+}
+  
+if ( params$filter ) {
 
   par(mfrow=c(1,2))
   
@@ -330,18 +329,18 @@ if ( params$filter ) {
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
 if ( params$transform == "CPM" ) {
   
-  ##### Transformations from the raw-scale to CPM and normalisation using TMM method
+  ##### Calculate normalization factors and  transformations from the raw-scale to CPM and normalisation using user-defined method
   if ( params$filter ) {
     
-    y$noNorm <-edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y <- edgeR::calcNormFactors(y$filtered, method = params$norm)
-    y$norm <- edgeR::cpm(y$filtered.transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+    y$noNorm <- y$filtered.transformed
+    y$filtered$samples["norm.factors"] <- edgeR::calcNormFactors(y$filtered, method = params$norm)$samples["norm.factors"]
+    y$norm <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   
   } else {
     
-    y$noNorm <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y <- edgeR::calcNormFactors(y, method = params$norm)
-    y$norm <- edgeR::cpm(y$transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+    y$noNorm <- y$transformed
+    y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
+    y$norm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
   }
   
 ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
