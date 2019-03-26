@@ -64,32 +64,50 @@ option_list = list(
 
 opt = parse_args(OptionParser(option_list=option_list))
 
-opt$filter <- as.logical(opt$filter)
-opt$log <- as.logical(opt$log)
-
 ##### Read in argument from command line and check if all were provide by the user
-if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$filter) || is.na(opt$log) ) {
+if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --filter TRUE --log TRUE\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt\n\n")
   
   q()
 }
 
+##### Set defualt parameters
+if ( is.na(opt$transform)  ) {
+  
+  opt$transform <- "CPM"
+}
+
+if ( is.na(opt$norm)  ) {
+  
+  opt$norm <- "TMM"
+}
+
+if ( is.na(opt$filter)  ) {
+  
+  opt$filter <- TRUE
+}
+
+if ( is.na(opt$log)  ) {
+  
+  opt$log <- TRUE
+}
+
 ##### Make sure that TMM, TMMwzp, RLE or upperquartile normalisation is used for CPM-tansformed data and quantile normalisation is used for TPM-tansformed data
-if ( tolower(opt$transform) == "tpm" && tolower(opt$norm) == "tmm" ) {
+if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
   
   cat(paste0("\nOnly TPM normalisation is not available for TPM-tansformed data!\n\nQuantile normalisation will be performed for ", opt$transform, "-tansformed data.\n\n"))
   
   opt$norm <- "quantile"
   
-} else if ( tolower(opt$transform) == "cpm" && tolower(opt$norm) == "quantile" ) {
+} else if ( opt$transform == "CPM" && opt$norm == "quantile" ) {
   
   cat(paste0("\nQuantile normalisation is available only for TPM-tansformed data! \"TMM\", \"TMMwzp\", \"RLE\" and \"upperquartile\" methods are available for ", opt$transform, "-tansformed data.\n\n"))
   
   q()
   
-} else if ( tolower(opt$transform) == "cpm" &&  tolower(opt$norm) != "tmm" && tolower(opt$norm) != "tmmwzp" && tolower(opt$norm) != "rle" && tolower(opt$norm) != "upperquartile" && tolower(opt$norm) != "none" ) {
+} else if ( opt$transform == "CPM" &&  opt$norm != "TMM" && opt$norm != "TMMwzp" && opt$norm != "RLE" && opt$norm != "upperquartile" && tolower(opt$norm) != "none" ) {
   
   cat(paste0("\nWrong normalisation method was selected! \"TMM\", \"TMMwzp\", \"RLE\", \"upperquartile\" and \"none\" methods are available for ", opt$transform, "-tansformed data.\n\n"))
   
@@ -105,6 +123,5 @@ if ( !is.na(opt$results_name) ) {
   opt$results_name <- paste0(opt$exprFile, "_", opt$transform, "_", opt$norm)
 }
 
-
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, filter = opt$filter, norm = opt$norm, log = opt$log, results_name = opt$results_name))
+rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, filter = as.logical(opt$filter), norm = opt$norm, log = as.logical(opt$log), results_name = opt$results_name))
