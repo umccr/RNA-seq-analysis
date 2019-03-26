@@ -233,9 +233,9 @@ if ( params$transform == "CPM" ) {
   
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
-  ##### Calculate normalization factors and  and transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
-  y <- edgeR::calcNormFactors(y)
-  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
   
 ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
 ##### TPM transformation with filtering
@@ -253,9 +253,8 @@ if ( params$transform == "CPM" ) {
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
   
-  ##### Calculate normalization factors and convert data into RPKM
-  y <- edgeR::calcNormFactors(y)
-  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=TRUE, log=FALSE)
+  ##### Convert data into RPKM
+  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
   
   ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
   if ( params$log ) {
@@ -317,9 +316,9 @@ invisible(dev.off())
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
 if ( params$transform == "CPM" ) {
     
-  y$noNorm <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-  y <- edgeR::calcNormFactors(y, method = params$norm)
-  y$norm <- edgeR::cpm(y$transformed, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  y$noNorm <- y$transformed
+  y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
+  y$norm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
     
 ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
 } else if ( params$transform == "TPM" ) {
@@ -327,16 +326,16 @@ if ( params$transform == "CPM" ) {
   ##### Normalisation using quantile method
   y$noNorm <- y$transformed
   y$transformed <- data.matrix(y$transformed)
-      
+    
   if ( tolower(params$norm) != "none" ) {
-        
+      
     y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
     colnames(y$norm) <- colnames(y$transformed)
     rownames(y$norm) <- rownames(y$transformed)
-        
+      
   } else {
-        
-      y$norm  <- y$transformed
+      
+    y$norm  <- y$transformed
   }
 }
 
