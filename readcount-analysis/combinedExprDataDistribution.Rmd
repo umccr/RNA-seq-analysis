@@ -85,6 +85,7 @@ suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
+suppressMessages(library(plotly))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
@@ -378,6 +379,18 @@ for (i in 2:nrow(y$transformed)) {
   lines(den$x, den$y, lwd=2, col=genes.colour[i])
 }
 legend("topright", legend=levels(factor(rownames(y$transformed))), fill=genes.colour, bty="n", bg = "transparent")
+
+#### Interactive genes distribution plot
+test <- data.frame(gene = NA, tpm = NA, dens = NA)
+for (i in 1:nrow(y$transformed)) {
+test1 <- data.frame(gene = rownames(y$count)[i],tpm = density(y$transformed[i,])$x, dens = density(y$transformed[i,])$y)
+test <- rbind(test, test1)
+}
+
+plotly::plot_ly(test, x = ~tpm, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene) %>%
+  plotly::layout(title = 'TPM distribution for slected genes',
+         xaxis = list(title = 'tpm', range = c(den.x[1],den.x[length(den.x)])),
+         yaxis = list (title = 'density', range = c(den.y[1],den.y[length(den.y)])))
 
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
