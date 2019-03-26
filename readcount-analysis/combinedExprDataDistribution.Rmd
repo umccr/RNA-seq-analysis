@@ -3,13 +3,14 @@ title: "Investigate expression data distribution for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
+  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/Reference_datasets/UMCCR/Combined_data'
+  exprFile: 'UMCCR_PC.counts.matrix.txt'
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
   transform: 'CPM'
   norm: 'TMM'
   log: TRUE
   genes: 'ENSG00000148773,ENSG00000133703,ENSG00000141646,ENSG00000147889,ENSG00000141510'
+  ensembl: FALSE
   results_name: 
   ensembl_version: 86
 output:
@@ -144,13 +145,54 @@ p
 detach("package:plotly", unload=FALSE)
 ```
 
+```{r gene_annot, comment = NA, message=FALSE, warning=FALSE, eval = params$ensembl}
+##### Loop through data and annotate genes
+##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
+data.df <- as.data.frame(cbind(rownames(data), data))
+colnames(data.df)[1] <- "ENSEMBL"
+
+  ##### Get genes annotation and genomic locations
+  edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+  ##### Get keytypes for gene SYMBOL
+  keys <- keys(edb, keytype="GENEID")
+  
+  ##### Get genes genomic coordiantes
+  gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
+  names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+  names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+  
+  ##### Limit genes annotation to those genes for which sample expression measurments are available
+  gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
+  
+  ##### Remove rows with duplicated ENSEMBL IDs
+  gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+  rownames(gene_info) <- gene_info$ENSEMBL
+  
+  ##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+  gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+  
+  ##### Add info about immune response markers
+  gene_info <- merge(gene_info, ref_genes.list[["genes_immune"]], by = "SYMBOL", all.x = TRUE)
+  
+  ##### Keep only immune response marjers for which there is available annotation
+  ref_genes.list[["genes_immune"]] <- ref_genes.list[["genes_immune"]][ ref_genes.list[["genes_immune"]]$SYMBOL %in% gene_info$SYMBOL, ]
+  
+  ##### Merge genes genomic coordinates info with their annotation and expression data
+  data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+  rownames(data.annot) <- data.annot$ENSEMBL
+  
+  ##### Get data matrix with gene symbols
+  ref_datasets.list[[tissue]][["gene_annot_all"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND", "Immune_Cycle_Role")]
+```
+
 ## Data transformation
 
 The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
 
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
 ##### Subset data to include only user-defined genes
-if ( tolower(params$genes) != ("all")  ) {
+if ( tolower(params$genes) != "all"  ) {
   
   genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
   
@@ -285,7 +327,7 @@ if ( params$transform == "CPM" ) {
   y$noNorm <- y$transformed
   y$transformed <- data.matrix(y$transformed)
       
-  if ( tolower(params$norm != "none") ) {
+  if ( tolower(params$norm) != "none" ) {
         
     y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
     colnames(y$norm) <- colnames(y$transformed)
@@ -298,7 +340,7 @@ if ( params$transform == "CPM" ) {
 }
 
 ##### Set height scaling factor for plots containing normalised data plots
-if ( tolower(params$norm != "none") ) {
+if ( tolower(params$norm) != "none" ) {
   
   norm.height = 2
 } else {
@@ -318,7 +360,7 @@ boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
     
 ##### Normalised data
-if ( tolower(params$norm != "none") ) {
+if ( tolower(params$norm) != "none" ) {
       
   boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
