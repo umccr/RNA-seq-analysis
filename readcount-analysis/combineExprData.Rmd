@@ -3,14 +3,14 @@ title: "Combined expression data from mutliple samples"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '/Users/jmarzec/data/Cohort_analyses/expression/CUP/Combined_data'
-  exprFile: 'CUP.counts.matrix.txt'
-  annotFile: 'CUP_Target.txt'
-  transform: 'CPM'
-  filter: TRUE
-  norm: 'TMM'
+  exprDir: 
+  exprFile: 
+  annotFile: 
+  transform: 
+  filter: 
+  norm: 
   log: TRUE
-  results_name: 'test.counts.matrix.txt'
+  results_name: 
   ensembl_version: 86
 output:
   html_document:
