@@ -3,14 +3,14 @@ title: "Investigate expression data distribution for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/Reference_datasets/UMCCR/Combined_data'
-  exprFile: 'UMCCR_PC.counts.matrix.txt'
-  annotFile: 'UMCCR_PC_Target_cleaned.txt'
-  transform: 'CPM'
-  norm: 'TMM'
-  log: TRUE
-  genes: 'ENSG00000148773,ENSG00000133703,ENSG00000141646,ENSG00000147889,ENSG00000141510'
-  ensembl: FALSE
+  exprDir: 
+  exprFile: 
+  annotFile: 
+  transform: 
+  norm: 
+  log: 
+  genes: 
+  ensembl: 
   results_name: 
   ensembl_version: 86
 output:
@@ -86,6 +86,7 @@ suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
+suppressMessages(library(plotly))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
@@ -397,7 +398,7 @@ Plot presenting `r params$transform` data distribution for selected gene(s).
 ##### Assigne colours to genes
 genes.colour <- getGenesColours(genes)
 
-##### Collect the most extreme density values for set the x-axis and y-axis boundaries
+##### Collect the most extreme density values for setting the x-axis and y-axis boundaries
 den.x <- density(y$transformed[1,])$x
 den.y <- density(y$transformed[1,])$y
 
@@ -410,7 +411,7 @@ for (i in 2:nrow(y$transformed)) {
 
 par(mfrow=c(norm.height,1))
 
-##### Transformed data
+##### Transformed data for html report
 plot(density(y$transformed[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
 title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
@@ -420,6 +421,18 @@ for (i in 2:nrow(y$transformed)) {
   lines(den$x, den$y, lwd=2, col=genes.colour[i])
 }
 legend("topright", legend=levels(factor(rownames(y$transformed))), fill=genes.colour, bty="n", bg = "transparent")
+
+#### Interactive genes distribution plot
+test <- data.frame(gene = NA, tpm = NA, dens = NA)
+for (i in 1:nrow(y$transformed)) {
+test1 <- data.frame(gene = rownames(y$count)[i],tpm = density(y$transformed[i,])$x, dens = density(y$transformed[i,])$y)
+test <- rbind(test, test1)
+}
+
+plotly::plot_ly(test, x = ~tpm, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene) %>%
+  plotly::layout(title = 'TPM distribution for slected genes',
+         xaxis = list(title = 'tpm', range = c(den.x[1],den.x[length(den.x)])),
+         yaxis = list (title = 'density', range = c(den.y[1],den.y[length(den.y)])))
 
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
@@ -440,7 +453,7 @@ if ( tolower(params$norm) != "none" ) {
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_expr_distributions.pdf")), width=8, height=5*norm.height)
 par(mfrow=c(norm.height,1))
 
-##### Transformed data
+##### Transformed data for PDF
 plot(density(y$transformed[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
 title(main="Transformed data", xlab=params$transform)
 abline(v=0, lty=3)
