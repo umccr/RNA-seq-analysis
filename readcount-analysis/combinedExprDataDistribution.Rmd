@@ -195,7 +195,7 @@ The read count data is converted into **`r params$transform`**s using *[edgeR](h
 ##### Subset data to include only user-defined genes
 if ( tolower(params$genes) != "all"  ) {
   
-  genes <- unlist(strsplit(params$genes, split=',', fixed=TRUE))
+  genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
   
   ##### Identify user-defined genes that were not present in the expression matrix
   genes.missing <- genes[ genes %!in% rownames(data) ]
@@ -349,8 +349,6 @@ if ( tolower(params$norm) != "none" ) {
 ```
 
 ```{r data_normalisation_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8*norm.height, eval = runChunk}
-
-
 ##### Plot expression distribution of samples for unnormalised and normalised data
 par(mfrow=c(norm.height,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
     
@@ -419,7 +417,7 @@ for (i in 2:nrow(y$transformed)) {
   den <- density(y$transformed[i,])
   lines(den$x, den$y, lwd=2, col=genes.colour[i])
 }
-legend("topright", legend=levels(factor(rownames(y$transformed))), fill=genes.colour, bty="n", bg = "transparent")
+legend("topright", legend=rownames(y$transformed), fill=genes.colour, bty="n", bg = "transparent")
 
 #### Interactive genes distribution plot
 test <- data.frame(gene = NA, tpm = NA, dens = NA)
@@ -445,7 +443,7 @@ if ( tolower(params$norm) != "none" ) {
     den <- density(y$norm[i,])
     lines(den$x, den$y, lwd=2, col=genes.colour[i])
   }
-  legend("topright", legend=levels(factor(rownames(y$norm))), fill=genes.colour, bty="n", bg = "transparent")
+  legend("topright", legend=rownames(y$norm), fill=genes.colour, bty="n", bg = "transparent")
 }
 
 ##### Save the plot as pdf file
@@ -461,7 +459,7 @@ for (i in 2:nrow(y$transformed)){
   den <- density(y$transformed[i,])
   lines(den$x, den$y, lwd=2, col=genes.colour[i])
 }
-legend("topright", legend=levels(factor(rownames(y$transformed))), fill=genes.colour, bty="n", bg = "transparent")
+legend("topright", legend=rownames(y$transformed), fill=genes.colour, bty="n", bg = "transparent")
   
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
@@ -475,7 +473,7 @@ if ( tolower(params$norm) != "none" ) {
     den <- density(y$norm[i,])
     lines(den$x, den$y, lwd=2, col=genes.colour[i])
   }
-  legend("topright", legend=levels(factor(rownames(y$norm))), fill=genes.colour, bty="n", bg = "transparent")
+  legend("topright", legend=rownames(y$norm), fill=genes.colour, bty="n", bg = "transparent")
 } 
 invisible(dev.off())
 ```
