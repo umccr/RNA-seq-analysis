@@ -420,16 +420,19 @@ for (i in 2:nrow(y$transformed)) {
 legend("topright", legend=rownames(y$transformed), fill=genes.colour, bty="n", bg = "transparent")
 
 #### Interactive genes distribution plot
-test <- data.frame(gene = NA, tpm = NA, dens = NA)
-for (i in 1:nrow(y$transformed)) {
-test1 <- data.frame(gene = rownames(y$count)[i],tpm = density(y$transformed[i,])$x, dens = density(y$transformed[i,])$y)
-test <- rbind(test, test1)
-}
+##### Create empty table
+data.df <- data.frame(matrix(ncol = 3, nrow = 0))
+colnames(data.df) <- c("gene", "tpm", "dens")
 
-plotly::plot_ly(test, x = ~tpm, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene) %>%
-  plotly::layout(title = 'TPM distribution for slected genes',
-         xaxis = list(title = 'tpm', range = c(den.x[1],den.x[length(den.x)])),
-         yaxis = list (title = 'density', range = c(den.y[1],den.y[length(den.y)])))
+for (i in 1:nrow(y$transformed)) {
+  
+  data.df <- rbind(data.df, data.frame(gene = rownames(y$count)[i],tpm = density(y$transformed[i,])$x, dens = density(y$transformed[i,])$y))
+}
+  
+plotly::plot_ly(data.df, x = ~tpm, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 400) %>%
+  plotly::layout(title = 'Transformed data',
+         xaxis = list(title = 'TPM', range = c(den.x[1],den.x[length(den.x)])),
+         yaxis = list (title = 'Density', range = c(den.y[1],den.y[length(den.y)])))
 
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
