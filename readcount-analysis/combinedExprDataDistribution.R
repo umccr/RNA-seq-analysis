@@ -62,7 +62,7 @@ option_list = list(
   make_option(c("-b", "--ensembl"), action="store", default=NA, type='character',
               help="Are genes annotated using ensembl IDs?"),
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
-              help="Log (base 2) transform data before normalisation")
+              help="Prefix for the results files names")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -76,7 +76,7 @@ if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) ) {
   q()
 }
 
-##### Set defualt parameters
+##### Set default parameters
 if ( is.na(opt$transform)  ) {
   
   opt$transform <- "CPM"

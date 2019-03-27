@@ -52,14 +52,14 @@ option_list = list(
               help="Samples annotation file"),
   make_option(c("-t", "--transform"), action="store", default=NA, type='character',
               help="Transformation method to be used when converting read counts"),
-  make_option(c("-f", "--filter"), action="store", default=NA, type='character',
-              help="Normalisation method"),
   make_option(c("-n", "--norm"), action="store", default=NA, type='character',
               help="Normalisation method"),
+  make_option(c("-f", "--filter"), action="store", default=NA, type='character',
+              help="Filtering out low expressed genes"),
   make_option(c("-l", "--log"), action="store", default=NA, type='character',
               help="Log (base 2) transform data before normalisation"),
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
-              help="Log (base 2) transform data before normalisation")
+              help="Prefix for the results files names")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -73,7 +73,7 @@ if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) ) {
   q()
 }
 
-##### Set defualt parameters
+##### Set default parameters
 if ( is.na(opt$transform)  ) {
   
   opt$transform <- "CPM"
@@ -124,4 +124,4 @@ if ( !is.na(opt$results_name) ) {
 }
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, filter = as.logical(opt$filter), norm = opt$norm, log = as.logical(opt$log), results_name = opt$results_name))
+rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), results_name = opt$results_name))
