@@ -351,6 +351,9 @@ invisible(dev.off())
 
 Plot presenting `r params$transform` data distribution for selected gene(s).
 
+
+
+
 ```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*norm.height, eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 ##### Assigne colours to genes
@@ -386,7 +389,7 @@ for (i in 1:nrow(y$transformed)) {
 test1 <- data.frame(gene = rownames(y$count)[i],tpm = density(y$transformed[i,])$x, dens = density(y$transformed[i,])$y)
 test <- rbind(test, test1)
 }
-
+     
 plotly::plot_ly(test, x = ~tpm, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene) %>%
   plotly::layout(title = 'TPM distribution for slected genes',
          xaxis = list(title = 'tpm', range = c(den.x[1],den.x[length(den.x)])),
