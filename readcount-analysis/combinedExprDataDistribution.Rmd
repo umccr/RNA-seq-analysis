@@ -390,6 +390,9 @@ invisible(dev.off())
 
 Plot presenting `r params$transform` data distribution for selected gene(s).
 
+
+
+
 ```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*norm.height, eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 ##### Assigne colours to genes
