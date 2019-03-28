@@ -80,7 +80,7 @@ tpm_from_rpkm <- function(x) {
 }
 
 ##### Generate density plot for selected genes
-densityPlot <- function(genes, data, x_title, sampleName = NULL, distributions = NULL, plot_mode = "static") {
+densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, distributions = NULL, plot_mode = "static") {
   
   ##### Used data for user-defined genes
   data <- data[ genes, ]
@@ -101,7 +101,7 @@ densityPlot <- function(genes, data, x_title, sampleName = NULL, distributions =
   
   ##### Transformed data for html report
   #### Interactive genes distribution plot
-  ##### Create empty table
+  ##### Create empty data frame
   data.df <- data.frame(matrix(ncol = 3, nrow = 0))
   colnames(data.df) <- c("gene", "expr", "dens")
   
@@ -110,15 +110,41 @@ densityPlot <- function(genes, data, x_title, sampleName = NULL, distributions =
     data.df <- rbind(data.df, data.frame(gene = genes[i], expr = density(data[i,])$x, dens = density(data[i,])$y))
   }
   
+  ##### Generate values to generate various distributions
+  if ( !is.null(distributions) ) {
+    
+    ##### Get min and max values based on the expression data
+    data.x <- seq(min(data), max(data), 0.1)
+    
+    ##### Create empty data frame
+    data.df.dist <- data.frame(matrix(ncol = 3, nrow = 0))
+    colnames(data.df.dist) <- c("gene", "expr", "dens")
+    
+    ##### Generate y-values to mirror distributions of interest
+    ##### Generate y-values for normal distribution
+    if ( "normal" %in% tolower(distributions) ) {
+      
+      data.y <- dnorm(data.x, mean = mean(data.x), sd = 0.5)
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Normal distribution", expr=data.x, dens=data.y))
+    
+      ##### Generate y-values for binomial distribution
+    } else if ( "binomial" %in% tolower(distributions) ) {
+      
+      #data.y.binom <- dbinom(transformed.x, size = 1000, prob = 0.25)
+      #data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution", expr=data.x, dens=data.y))
+    
+    }
+    data.df <- rbind(data.df, data.df.dist)
+  }
+  
   ##### Generate interactive density plot
   p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
-  plotly::layout(title = 'Transformed data',
+  plotly::layout(title = main_title,
          xaxis = list(title = x_title, range = c(den.x[1],den.x[length(den.x)])),
          yaxis = list (title = 'Density', range = c(den.y[1],den.y[length(den.y)])))
   
     return( p )
 }
-
 ```
 
 ```{r load_libraries, warning=FALSE}
@@ -427,35 +453,19 @@ invisible(dev.off())
 
 ## Expression distribution patterns {.tabset}
 
-```{r distribution_simulations, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
-##### Generate values to generate various distributions
-##### Get min and max values based on the expression data
-transformed.x <- seq(min(y$transformed), max(y$transformed), 0.1)
-
-##### Generate y-values for normal distribution
-transformed.y.norm <- dnorm(transformed.x, mean = mean(transformed.x), sd = 0.5)
-
-##### Generate y-values for binomial distribution
-#transformed.y.binom <- dbinom(transformed.x, size = 1000, prob = 0.25)
-
-##### Create dataframe with similated values
-data.df.dist <- data.frame(gene="Normal distribution", expr=transformed.x, dens=transformed.y.norm)
-#data.df.dist <- rbind(data.df.dist, data.frame(gene="Gene_binom_dist", expr=transformed.x, dens=transformed.y.binom))
-```
-
 ### Plot
 
 Plot presenting `r params$transform` data distribution for selected gene(s).
 
 ```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*norm.height, eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
-densityPlot(genes, y$transformed, params$transform) 
+densityPlot(genes=genes, data=y$transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
   
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
   
   #### Interactive genes distribution plot
-  densityPlot(genes, y$norm, params$transform)
+  densityPlot(genes=genes, data=y$norm, main_title="Normalised data", x_title=params$transform, distributions = "normal") 
 }
 
 ##### Save the plot as pdf file
