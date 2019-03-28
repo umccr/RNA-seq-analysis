@@ -14,7 +14,7 @@
 #
 #	 Description: Pipeline investigating expression distribution of user-defined genes based on transformed and normalised expression matrix from multiple samples. It requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk). The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
 #
-#	 Command line use example: Rscript  combinedExprDataDistribution.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --log TRUE --genes All --results_name CUP
+#	 Command line use example: Rscript  combinedExprDataDistribution.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --log TRUE --genes All --ensembl TRUE --results_name CUP
 #
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)
@@ -23,6 +23,7 @@
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data. "None" (default) is available for both transformation methods
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
 #   genes:        List of genes to be considered. Available options are: "All" (default), "[list of genes separated by comma]"
+#   ensembl:      Are genes annotated using ensembl IDs? Available options are: "TRUE" (defualt) and "FALSE"
 #   results_name: Desired core name for the results folder
 #
 ################################################################################
@@ -58,21 +59,48 @@ option_list = list(
               help="Log (base 2) transform data before normalisation"),
   make_option(c("-g", "--genes"), action="store", default=NA, type='character',
               help="List of genes to be considered"),
+  make_option(c("-b", "--ensembl"), action="store", default=NA, type='character',
+              help="Are genes annotated using ensembl IDs?"),
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
-              help="Log (base 2) transform data before normalisation")
+              help="Prefix for the results files names")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
 
-opt$log <- as.logical(opt$log)
-
 ##### Read in argument from command line and check if all were provide by the user
-if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$log) ) {
+if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --log TRUE\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt\n\n")
   
   q()
+}
+
+##### Set default parameters
+if ( is.na(opt$transform)  ) {
+  
+  opt$transform <- "CPM"
+}
+
+if ( is.na(opt$norm)  ) {
+  
+  opt$norm <- "TMM"
+}
+
+if ( is.na(opt$log)  ) {
+  
+  opt$log <- TRUE
+}
+
+if ( is.na(opt$genes)  ) {
+  
+  opt$genes <- "all"
+}
+
+if ( is.na(opt$ensembl)  ) {
+  
+  opt$ensembl <- FALSE
+  
 }
 
 ##### Make sure that TMM, TMMwzp, RLE or upperquartile normalisation is used for CPM-tansformed data and quantile normalisation is used for TPM-tansformed data
@@ -88,7 +116,7 @@ if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
   
   q()
   
-} else if ( opt$transform == "CPM" &&  opt$norm != "TMM" && opt$norm != "TMMwzp" && opt$norm != "RLE" && opt$norm != "upperquartile" && opt$norm != "None" && opt$norm != "none" ) {
+} else if ( opt$transform == "CPM" &&  opt$norm != "TMM" && opt$norm != "TMMwzp" && opt$norm != "RLE" && opt$norm != "upperquartile" && tolower(opt$norm) != "none" ) {
   
   cat(paste0("\nWrong normalisation method was selected! \"TMM\", \"TMMwzp\", \"RLE\", \"upperquartile\"and \"none\" methods are available for ", opt$transform, "-tansformed data.\n\n"))
   
@@ -106,4 +134,4 @@ if ( !is.na(opt$results_name) ) {
 
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, log = opt$log, genes = opt$genes,  results_name = opt$results_name))
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, log = as.logical(opt$log), genes = opt$genes, ensembl = as.logical(opt$ensembl),  results_name = opt$results_name))
