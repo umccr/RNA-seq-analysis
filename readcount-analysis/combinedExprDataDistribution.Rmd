@@ -8,6 +8,7 @@ params:
   annotFile: 'UMCCR_PC_Target_cleaned.txt'
   transform: 'TPM'
   norm: 'quantile'
+  filter: TRUE
   log: TRUE
   genes: 'ENSG00000148773,ENSG00000133703,ENSG00000141646,ENSG00000147889,ENSG00000141510'
   ensembl: FALSE
@@ -21,7 +22,7 @@ output:
 #    toc_float: true
 ---
 
-The aim of this report is investigate the expression data distribution patters of all or user-defined genes in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is investigate the expression data distribution patters of all or user-defined genes in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
@@ -256,15 +257,34 @@ colnames(data.df)[1] <- "ENSEMBL"
   ref_datasets.list[[tissue]][["gene_annot_all"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND", "Immune_Cycle_Role")]
 ```
 
-## Data transformation
+## Data transformation and filtering
 
-The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
+The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
 
-```{r data_transformation, comment = NA, message=FALSE, warning=FALSE}
-##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million.
-
-##### CPM transformation
-if ( params$transform == "CPM" ) {
+```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
+##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
+##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
+##### CPM transformation and filtering
+if ( params$filter && params$transform == "CPM" ) {
+  
+  ##### Create EdgeR DGEList object
+  y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+  
+  ##### Remove genes with CPM of at least 1 in less than 10% of samples
+  #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
+  
+  keep <- rowSums(cpm(y)>1) >= ncol(data)/10
+  y$filtered <- y[keep, , keep.lib.sizes=FALSE]
+  
+  #cat(nrow(y$filtered$counts), "genes remained after filtering out of the", nrow(data), "genes in the input read count matrix\n\n")
+  
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = "none")$samples["norm.factors"]
+  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  
+##### CPM transformation without filtering
+} else if ( !params$filter && params$transform == "CPM" ) {
   
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
@@ -274,7 +294,42 @@ if ( params$transform == "CPM" ) {
   
 ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
 ##### TPM transformation with filtering
-} else if ( params$transform == "TPM" ) {
+} else if ( params$filter && params$transform == "TPM" ) {
+  
+  ##### Get genes lengths
+  edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+  gene.length <- lengthOf(edb, filter = GeneIdFilter(rownames(data)))
+  
+  ##### Check for which genes the lenght info is not available and remove them from the data
+  genes.no_length <- rownames(data)[ rownames(data) %!in% names(gene.length)]
+  data <- data[ rownames(data) %!in% genes.no_length, ]
+  
+  ##### Create EdgeR DGEList object
+  y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+  
+  ##### Convert data into RPKM
+  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+  
+  ##### Remove genes with TPM of at least 0.2 in less than 10% of samples
+  keep <- rowSums(y$transformed>0.2) >= ncol(y$transformed)/10
+  y$filtered <- y$counts[keep, ]
+  y$filtered.transformed <- y$transformed[keep, ]
+  
+  ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
+  if ( params$log ) {
+    
+    y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
+    y$filtered.transformed <- log2(tpm_from_rpkm(y$filtered.transformed+0.25))
+  
+  } else {
+    
+    y$transformed <- tpm_from_rpkm(y$transformed)
+    y$filtered.transformed <- tpm_from_rpkm(y$filtered.transformed)
+  }
+  
+##### TPM transformation without filtering
+} else if ( !params$filter && params$transform == "TPM" ) {
   
   ##### Get genes lengths
   edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
@@ -307,38 +362,94 @@ if ( params$transform == "CPM" ) {
 ##### Collect the most extreme density values for set the x-axis and y-axis boundaries
 den.x <- density(y$transformed[,1])$x
 den.y <- density(y$transformed[,1])$y
-
-for (i in 2:ncol(y$transformed)) {
   
+for (i in 2:ncol(y$transformed)) {
+    
   den <- density(y$transformed[,i])
   den.x <- sort(c(den.x, den$x))
   den.y <- sort(c(den.y, den$y))
 }
+  
+if ( params$filter ) {
 
-##### Transformed data distribution
-plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
-title(main="Transformed data", xlab=params$transform)
-abline(v=0, lty=3)
+  par(mfrow=c(1,2))
   
-for (i in 2:ncol(y$transformed)){
-  den <- density(y$transformed[,i])
-  lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  ##### Before filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### After filtering
+  plot(density(y$filtered.transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed and filtered data", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$filtered.transformed)){
+    den <- density(y$filtered.transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  par(mfrow=c(1,2))
+  
+  ##### Before filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### After filtering
+  plot(density(y$filtered.transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed and filtered data", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$filtered.transformed)){
+    den <- density(y$filtered.transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  invisible(dev.off())
+  
+} else if ( !params$filter ) {
+  
+  ##### Without filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  ##### Without filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  invisible(dev.off())
 }
-legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
-  
-##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_transformation.pdf")), width=8, height=5)
-
-plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
-title(main="Transformed data", xlab=params$transform)
-abline(v=0, lty=3)
-  
-for (i in 2:ncol(y$transformed)){
-  den <- density(y$transformed[,i])
-  lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
-}
-legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
-invisible(dev.off())
 ```
 
 ## Data normalisation
@@ -350,27 +461,56 @@ invisible(dev.off())
 ```{r data_normalisation, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
 if ( params$transform == "CPM" ) {
+  
+  ##### Calculate normalization factors and  transformations from the raw-scale to CPM and normalisation using user-defined method
+  if ( params$filter ) {
     
-  y$noNorm <- y$transformed
-  y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
-  y$norm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+    y$noNorm <- y$filtered.transformed
+    y$filtered$samples["norm.factors"] <- edgeR::calcNormFactors(y$filtered, method = params$norm)$samples["norm.factors"]
+    y$norm <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  
+  } else {
     
+    y$noNorm <- y$transformed
+    y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
+    y$norm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  }
+  
 ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
 } else if ( params$transform == "TPM" ) {
-    
+  
   ##### Normalisation using quantile method
-  y$noNorm <- y$transformed
-  y$transformed <- data.matrix(y$transformed)
+  if ( params$filter ) {
     
-  if ( tolower(params$norm) != "none" ) {
+    y$noNorm <- y$filtered.transformed
+    y$filtered.transformed <- data.matrix(y$filtered.transformed) 
+    
+    if ( tolower(params$norm) != "none" ) {
       
-    y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
-    colnames(y$norm) <- colnames(y$transformed)
-    rownames(y$norm) <- rownames(y$transformed)
+      y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
+      colnames(y$norm) <- colnames(y$filtered.transformed)
+      rownames(y$norm) <- rownames(y$filtered.transformed)
       
+    } else {
+      
+      y$norm  <- y$filtered.transformed
+    }
+  
   } else {
+    
+    y$noNorm <- y$transformed
+    y$transformed <- data.matrix(y$transformed)
+    
+    if ( tolower(params$norm) != "none" ) {
       
-    y$norm  <- y$transformed
+      y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
+      colnames(y$norm) <- colnames(y$transformed)
+      rownames(y$norm) <- rownames(y$transformed)
+      
+    } else {
+      
+      y$norm  <- y$transformed
+    }
   }
 }
 
@@ -435,17 +575,31 @@ if ( tolower(params$norm) == "none" ) {
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
 ##### Subset data to include only user-defined genes
 if ( tolower(params$genes) != "all"  ) {
-  
+    
   genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
   
   ##### Identify user-defined genes that were not present in the expression matrix
-  genes.missing <- genes[ genes %!in% rownames(data) ]
+  if ( params$filter ) {
+    
+    genes.missing <- genes[ genes %!in% rownames(y$filtered.transformed) ]
 
-  genes <- genes[ genes %in% rownames(data)  ]
+    genes <- genes[ genes %in% rownames(y$filtered.transformed)  ]
+    
+    keep <- rownames(y$filtered.transformed) %in% genes
+    y.sub <- y[keep, , keep.lib.sizes=FALSE]
+    y.sub$filtered.transformed <- y.sub$filtered.transformed[keep, ]
   
-  keep <- rownames(y$counts) %in% genes
-  y.sub <- y[keep, , keep.lib.sizes=FALSE]
-  y.sub$transformed <- y.sub$transformed[keep, ]
+  } else {
+    
+    genes.missing <- genes[ genes %!in% rownames(y$transformed) ]
+
+    genes <- genes[ genes %in% rownames(y$transformed)  ]
+    
+    keep <- rownames(y$transformed) %in% genes
+    y.sub <- y[keep, , keep.lib.sizes=FALSE]
+    y.sub$transformed <- y.sub$transformed[keep, ]
+  }
+  
   y.sub$noNorm <- y.sub$noNorm[keep, ]
   y.sub$z <- y.sub$z[keep, ]
   
@@ -481,7 +635,12 @@ Plot presenting `r params$transform` data distribution for selected gene(s).
 
 ```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*norm.height, eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
-densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
+if ( params$filter ) {
+  
+  densityPlot(genes=genes, data=y.sub$filtered.transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
+} else {
+    densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
+}
 
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
