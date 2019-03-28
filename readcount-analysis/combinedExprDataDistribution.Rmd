@@ -386,6 +386,22 @@ invisible(dev.off())
 
 ## Expression distribution patterns {.tabset}
 
+```{r distribution_simulations, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+##### Generate values to generate various distributions
+##### Get min and max values based on the expression data
+transformed.x <- seq(min(y$transformed), max(y$transformed), 0.1)
+
+##### Generate y-values for normal distribution
+transformed.y.norm <- dnorm(transformed.x, mean = mean(transformed.x), sd = 0.5)
+
+##### Generate y-values for binomial distribution
+#transformed.y.binom <- dbinom(transformed.x, size = 1000, prob = 0.25)
+
+##### Create dataframe with similated values
+data.df.dist <- data.frame(gene="Normal distribution", expr=transformed.x, dens=transformed.y.norm)
+#data.df.dist <- rbind(data.df.dist, data.frame(gene="Gene_binom_dist", expr=transformed.x, dens=transformed.y.binom))
+```
+
 ### Plot
 
 Plot presenting `r params$transform` data distribution for selected gene(s).
@@ -416,7 +432,11 @@ for (i in 1:nrow(y$transformed)) {
   
   data.trans.df <- rbind(data.trans.df, data.frame(gene = rownames(y$count)[i], expr = density(y$transformed[i,])$x, dens = density(y$transformed[i,])$y))
 }
-  
+
+##### Add simulated distribution values
+data.trans.df <- rbind(data.trans.df, data.df.dist)
+
+
 plotly::plot_ly(data.trans.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
   plotly::layout(title = 'Transformed data',
          xaxis = list(title = params$transform, range = c(den.x[1],den.x[length(den.x)])),
