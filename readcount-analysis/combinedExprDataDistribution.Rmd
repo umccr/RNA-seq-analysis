@@ -78,6 +78,47 @@ tpm_from_rpkm <- function(x) {
   rpkm.sum <- colSums(x)
   return(t(t(x) / (1e-06 * rpkm.sum)))
 }
+
+##### Generate density plot for selected genes
+densityPlot <- function(genes, data, x_title, sampleName = NULL, distributions = NULL, plot_mode = "static") {
+  
+  ##### Used data for user-defined genes
+  data <- data[ genes, ]
+  
+  ##### Assigne colours to genes
+  genes.colour <- getGenesColours(genes)
+  
+  ##### Collect the most extreme density values for setting the x-axis and y-axis boundaries
+  den.x <- density(data[1,])$x
+  den.y <- density(data[1,])$y
+  
+  for (i in 2:nrow(data)) {
+    
+    den <- density(data[i,])
+    den.x <- sort(c(den.x, den$x))
+    den.y <- sort(c(den.y, den$y))
+  }
+  
+  ##### Transformed data for html report
+  #### Interactive genes distribution plot
+  ##### Create empty table
+  data.df <- data.frame(matrix(ncol = 3, nrow = 0))
+  colnames(data.df) <- c("gene", "expr", "dens")
+  
+  for (i in 1:nrow(data)) {
+    
+    data.df <- rbind(data.df, data.frame(gene = genes[i], expr = density(data[i,])$x, dens = density(data[i,])$y))
+  }
+  
+  ##### Generate interactive density plot
+  p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
+  plotly::layout(title = 'Transformed data',
+         xaxis = list(title = x_title, range = c(den.x[1],den.x[length(den.x)])),
+         yaxis = list (title = 'Density', range = c(den.y[1],den.y[length(den.y)])))
+  
+    return( p )
+}
+
 ```
 
 ```{r load_libraries, warning=FALSE}
@@ -408,60 +449,18 @@ Plot presenting `r params$transform` data distribution for selected gene(s).
 
 ```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*norm.height, eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
-##### Assigne colours to genes
-genes.colour <- getGenesColours(genes)
-
-##### Collect the most extreme density values for setting the x-axis and y-axis boundaries
-den.x <- density(y$transformed[1,])$x
-den.y <- density(y$transformed[1,])$y
-
-for (i in 2:nrow(y$transformed)) {
+densityPlot(genes, y$transformed, params$transform) 
   
-  den <- density(y$transformed[i,])
-  den.x <- sort(c(den.x, den$x))
-  den.y <- sort(c(den.y, den$y))
-}
-
-##### Transformed data for html report
-#### Interactive genes distribution plot
-##### Create empty table
-data.trans.df <- data.frame(matrix(ncol = 3, nrow = 0))
-colnames(data.trans.df) <- c("gene", "expr", "dens")
-
-for (i in 1:nrow(y$transformed)) {
-  
-  data.trans.df <- rbind(data.trans.df, data.frame(gene = rownames(y$count)[i], expr = density(y$transformed[i,])$x, dens = density(y$transformed[i,])$y))
-}
-
-##### Add simulated distribution values
-data.trans.df <- rbind(data.trans.df, data.df.dist)
-
-
-plotly::plot_ly(data.trans.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
-  plotly::layout(title = 'Transformed data',
-         xaxis = list(title = params$transform, range = c(den.x[1],den.x[length(den.x)])),
-         yaxis = list (title = 'Density', range = c(den.y[1],den.y[length(den.y)])))
-
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
   
   #### Interactive genes distribution plot
-  ##### Create empty table
-  data.norm.df <- data.frame(matrix(ncol = 3, nrow = 0))
-  colnames(data.norm.df) <- c("gene", "expr", "dens")
-  
-  for (i in 1:nrow(y$norm)) {
-  
-    data.norm.df <- rbind(data.norm.df, data.frame(gene = rownames(y$count)[i], expr = density(y$norm[i,])$x, dens = density(y$norm[i,])$y))
-  }
-  
-  plotly::plot_ly(data.norm.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
-  plotly::layout(title = 'Normalised data',
-         xaxis = list(title = params$transform, range = c(den.x[1],den.x[length(den.x)])),
-         yaxis = list (title = 'Density', range = c(den.y[1],den.y[length(den.y)])))
+  densityPlot(genes, y$norm, params$transform)
 }
 
 ##### Save the plot as pdf file
+genes.colour <- getGenesColours(genes)
+
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_expr_distributions.pdf")), width=8, height=5*norm.height)
 par(mfrow=c(norm.height,1))
 
