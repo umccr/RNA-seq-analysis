@@ -3,16 +3,16 @@ title: "Investigate expression data distribution for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/Reference_datasets/UMCCR/Combined_data'
-  exprFile: 'UMCCR_PC.counts.matrix.txt'
-  annotFile: 'UMCCR_PC_Target_cleaned.txt'
-  transform: 'TPM'
-  norm: 'quantile'
-  filter: TRUE
-  log: TRUE
-  genes: 'ENSG00000148773,ENSG00000133703,ENSG00000141646,ENSG00000147889,ENSG00000141510'
-  ensembl: FALSE
-  results_name: 'UMCCR_PC_cleaned_genes_distributions_TPM_quantile'
+  exprDir: 
+  exprFile: 
+  annotFile: 
+  transform: 
+  norm: 
+  filter: 
+  log: 
+  genes: 
+  ensembl: 
+  results_name: 
   ensembl_version: 86
 output:
   html_document:
