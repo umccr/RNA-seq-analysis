@@ -14,13 +14,14 @@
 #
 #	 Description: Pipeline investigating expression distribution of user-defined genes based on transformed and normalised expression matrix from multiple samples. It requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk). The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
 #
-#	 Command line use example: Rscript  combinedExprDataDistribution.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --log TRUE --genes All --ensembl TRUE --results_name CUP
+#	 Command line use example: Rscript  combinedExprDataDistribution.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --transform CPM --norm TMM --filter TRUE --log TRUE --genes All --ensembl TRUE --results_name CUP
 #
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)
 #   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk)
 #   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (defualt) and "TPM"
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data. "None" (default) is available for both transformation methods
+#   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
 #   genes:        List of genes to be considered. Available options are: "All" (default), "[list of genes separated by comma]"
 #   ensembl:      Are genes annotated using ensembl IDs? Available options are: "TRUE" (defualt) and "FALSE"
@@ -55,6 +56,8 @@ option_list = list(
               help="Transformation method to be used when converting read counts"),
   make_option(c("-n", "--norm"), action="store", default=NA, type='character',
               help="Normalisation method"),
+  make_option(c("-f", "--filter"), action="store", default=NA, type='character',
+              help="Filtering out low expressed genes"),
   make_option(c("-l", "--log"), action="store", default=NA, type='character',
               help="Log (base 2) transform data before normalisation"),
   make_option(c("-g", "--genes"), action="store", default=NA, type='character',
@@ -85,6 +88,11 @@ if ( is.na(opt$transform)  ) {
 if ( is.na(opt$norm)  ) {
   
   opt$norm <- "TMM"
+}
+
+if ( is.na(opt$filter)  ) {
+  
+  opt$filter <- TRUE
 }
 
 if ( is.na(opt$log)  ) {
@@ -134,4 +142,4 @@ if ( !is.na(opt$results_name) ) {
 
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, log = as.logical(opt$log), genes = opt$genes, ensembl = as.logical(opt$ensembl),  results_name = opt$results_name))
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), genes = opt$genes, ensembl = as.logical(opt$ensembl),  results_name = opt$results_name))
