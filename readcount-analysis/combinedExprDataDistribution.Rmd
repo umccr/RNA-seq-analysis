@@ -222,39 +222,34 @@ detach("package:plotly", unload=FALSE)
 data.df <- as.data.frame(cbind(rownames(data), data))
 colnames(data.df)[1] <- "ENSEMBL"
 
-  ##### Get genes annotation and genomic locations
-  edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+##### Get genes annotation and genomic locations
+edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
   
-  ##### Get keytypes for gene SYMBOL
-  keys <- keys(edb, keytype="GENEID")
+##### Get keytypes for gene SYMBOL
+keys <- keys(edb, keytype="GENEID")
   
-  ##### Get genes genomic coordiantes
-  gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
-  names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
-  names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+##### Get genes genomic coordiantes
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
+names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
   
-  ##### Limit genes annotation to those genes for which sample expression measurments are available
-  gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
+##### Limit genes annotation to those genes for which sample expression measurments are available
+gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
   
-  ##### Remove rows with duplicated ENSEMBL IDs
-  gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
-  rownames(gene_info) <- gene_info$ENSEMBL
+##### Remove rows with duplicated ENSEMBL IDs
+gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+rownames(gene_info) <- gene_info$ENSEMBL
   
-  ##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
-  gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
   
-  ##### Add info about immune response markers
-  gene_info <- merge(gene_info, ref_genes.list[["genes_immune"]], by = "SYMBOL", all.x = TRUE)
+
+##### Merge genes genomic coordinates info with their annotation and expression data
+data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+rownames(data.annot) <- data.annot$SYMBOL
   
-  ##### Keep only immune response marjers for which there is available annotation
-  ref_genes.list[["genes_immune"]] <- ref_genes.list[["genes_immune"]][ ref_genes.list[["genes_immune"]]$SYMBOL %in% gene_info$SYMBOL, ]
-  
-  ##### Merge genes genomic coordinates info with their annotation and expression data
-  data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
-  rownames(data.annot) <- data.annot$ENSEMBL
-  
-  ##### Get data matrix with gene symbols
-  ref_datasets.list[[tissue]][["gene_annot_all"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND", "Immune_Cycle_Role")]
+##### Get data matrix with gene symbols
+data <- data.annot[, names(data.annot) %!in% c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
 ```
 
 ## Data transformation and filtering
@@ -633,56 +628,26 @@ if ( exists("genes.missing") && length(genes.missing) > 0 ) {
 
 Plot presenting `r params$transform` data distribution for selected gene(s).
 
-```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*norm.height, eval = runChunk}
+```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( params$filter ) {
   
   densityPlot(genes=genes, data=y.sub$filtered.transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
+  
 } else {
-    densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
+  
+  densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
 }
 
-##### Normalised data
+##### Normalised data 
 if ( tolower(params$norm) != "none" ) {
   
   #### Interactive genes distribution plot
   densityPlot(genes=genes, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, distributions = "normal") 
 }
 
-densityPlot(genes=genes, data=y.sub$z, main_title="Z-scores data", x_title=params$transform, distributions = "normal") 
+densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, distributions = "normal") 
 
-##### Save the plot as pdf file
-genes.colour <- getGenesColours(genes)
-
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_expr_distributions.pdf")), width=8, height=5*norm.height)
-par(mfrow=c(norm.height,1))
-
-##### Transformed data for PDF
-plot(density(y.sub$transformed[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
-title(main="Transformed data", xlab=params$transform)
-abline(v=0, lty=3)
-  
-for (i in 2:nrow(y.sub$transformed)){
-  den <- density(y.sub$transformed[i,])
-  lines(den$x, den$y, lwd=2, col=genes.colour[i])
-}
-legend("topright", legend=rownames(y.sub$transformed), fill=genes.colour, bty="n", bg = "transparent")
-  
-##### Normalised data
-if ( tolower(params$norm) != "none" ) {
-  
-  ##### Normalised data
-  plot(density(y.sub$norm[1,]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=genes.colour[1])
-  title(main="Normalised data", xlab=params$transform)
-  abline(v=0, lty=3)
-      
-  for (i in 2:nrow(y.sub$norm)) {
-    den <- density(y.sub$norm[i,])
-    lines(den$x, den$y, lwd=2, col=genes.colour[i])
-  }
-  legend("topright", legend=rownames(y.sub$norm), fill=genes.colour, bty="n", bg = "transparent")
-} 
-invisible(dev.off())
 ```
 
 ### Table

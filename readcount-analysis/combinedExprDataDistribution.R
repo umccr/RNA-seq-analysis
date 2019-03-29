@@ -24,7 +24,7 @@
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
 #   genes:        List of genes to be considered. Available options are: "All" (default), "[list of genes separated by comma]"
-#   ensembl:      Are genes annotated using ensembl IDs? Available options are: "TRUE" (defualt) and "FALSE"
+#   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (defualt) and "FALSE"
 #   results_name: Desired core name for the results folder
 #
 ################################################################################
