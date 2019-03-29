@@ -12,6 +12,7 @@ params:
   log: 
   genes: 
   ensembl: 
+  sample: 
   results_name: 
   ensembl_version: 86
 output:
