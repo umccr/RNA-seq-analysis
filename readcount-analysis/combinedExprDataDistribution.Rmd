@@ -84,20 +84,19 @@ tpm_from_rpkm <- function(x) {
 densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, distributions = NULL, plot_mode = "static") {
   
   ##### Used data for user-defined genes
-  data <- data[ genes, ]
+  data <- data[ genes, ,drop=FALSE]
   
-  ##### Assigne colours to genes
-  genes.colour <- getGenesColours(genes)
+  den.x <- sort(density(data[1,])$x)
+  den.y <- sort(density(data[1,])$y)
   
-  ##### Collect the most extreme density values for setting the x-axis and y-axis boundaries
-  den.x <- density(data[1,])$x
-  den.y <- density(data[1,])$y
-  
-  for (i in 2:nrow(data)) {
+  if ( nrow(data) > 1 ) {
     
-    den <- density(data[i,])
-    den.x <- sort(c(den.x, den$x))
-    den.y <- sort(c(den.y, den$y))
+    for (i in 2:nrow(data)) {
+      
+      den <- density(data[i,])
+      den.x <- sort(c(den.x, den$x))
+      den.y <- sort(c(den.y, den$y))
+    }
   }
   
   ##### Transformed data for html report
@@ -139,6 +138,9 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, dis
     }
     data.df <- rbind(data.df, data.df.dist)
   }
+  
+  ##### Assigne colours to genes
+  genes.colour <- getGenesColours(unique(data.df$gene))
   
   ##### Generate interactive density plot
   p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
@@ -294,11 +296,11 @@ if ( params$filter && params$transform == "CPM" ) {
   ##### Get genes lengths
   edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
   
-  gene.length <- lengthOf(edb, filter = GeneIdFilter(rownames(data)))
+  gene.length <- lengthOf(edb, filter = GeneIdFilter(data.annot$ENSEMBL))
   
   ##### Check for which genes the lenght info is not available and remove them from the data
-  genes.no_length <- rownames(data)[ rownames(data) %!in% names(gene.length)]
-  data <- data[ rownames(data) %!in% genes.no_length, ]
+  genes.no_length <- data.annot$ENSEMBL[ data.annot$ENSEMBL %!in% names(gene.length)]
+  data <- data[ data.annot$ENSEMBL %!in% genes.no_length, ]
   
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
@@ -329,11 +331,11 @@ if ( params$filter && params$transform == "CPM" ) {
   ##### Get genes lengths
   edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
   
-  gene.length <- lengthOf(edb, filter = GeneIdFilter(rownames(data)))
+  gene.length <- lengthOf(edb, filter = GeneIdFilter(data.annot$ENSEMBL))
   
   ##### Check for which genes the lenght info is not available and remove them from the data
-  genes.no_length <- rownames(data)[ rownames(data) %!in% names(gene.length)]
-  data <- data[ rownames(data) %!in% genes.no_length, ]
+  genes.no_length <- data.annot$ENSEMBL[ data.annot$ENSEMBL %!in% names(gene.length)]
+  data <- data[ data.annot$ENSEMBL %!in% genes.no_length, ]
   
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
@@ -572,34 +574,31 @@ if ( tolower(params$norm) == "none" ) {
 if ( tolower(params$genes) != "all"  ) {
     
   genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
+  y.sub <- y
   
   ##### Identify user-defined genes that were not present in the expression matrix
   if ( params$filter ) {
     
-    genes.missing <- genes[ genes %!in% rownames(y$filtered.transformed) ]
-
-    genes <- genes[ genes %in% rownames(y$filtered.transformed)  ]
+    genes.missing <- genes[ genes %!in% rownames(y$filtered) ]
+    genes <- genes[ genes %in% rownames(y$filtered)  ]
     
-    keep <- rownames(y$filtered.transformed) %in% genes
-    y.sub <- y[keep, , keep.lib.sizes=FALSE]
-    y.sub$filtered.transformed <- y.sub$filtered.transformed[keep, ]
-  
+    keep <- rownames(y$filtered) %in% genes
+    y.sub$filtered.transformed <- y$filtered.transformed[keep, , drop=FALSE]
+    
   } else {
     
     genes.missing <- genes[ genes %!in% rownames(y$transformed) ]
-
     genes <- genes[ genes %in% rownames(y$transformed)  ]
     
     keep <- rownames(y$transformed) %in% genes
-    y.sub <- y[keep, , keep.lib.sizes=FALSE]
-    y.sub$transformed <- y.sub$transformed[keep, ]
+    y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
   }
-  
-  y.sub$noNorm <- y.sub$noNorm[keep, ]
-  y.sub$z <- y.sub$z[keep, ]
+
+  y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
+  y.sub$z <- y.sub$z[keep, , drop=FALSE]
   
   if ( tolower(params$norm) != "none" ) {
-    y.sub$norm <- y.sub$norm[keep, ]
+    y.sub$norm <- y.sub$norm[keep, , drop=FALSE]
   }
   
 } else {
@@ -628,6 +627,8 @@ if ( exists("genes.missing") && length(genes.missing) > 0 ) {
 
 Plot presenting `r params$transform` data distribution for selected gene(s).
 
+**`r if ( !runChunk ) { c("Queried genes are not present in the input data.") } else { c("") }`**
+
 ```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( params$filter ) {
@@ -654,21 +655,35 @@ densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params
 
 Table with `r params$transform` data values for each sample for selected genes.
 
-**Transformed data**
+**`r if ( runChunk ) { c("Transformed data") } else { c("Queried genes are not present in the input data.") }`**
 
 ```{r expr_dist_table_trans, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Generate a table with expression values for selected genes
-if ( nrow(y.sub$transformed) < 25 ) {
+if ( params$filter ) {
   
-  DT::datatable( data = round(t(y.sub$transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
-    DT::formatStyle( columns = names(t(y.sub$transformed)), `font-size` = '12px', 'text-align' = 'center' )
-  
+ if ( nrow(y.sub$filtered.transformed) < 25 ) {
+    
+    DT::datatable( data = round(t(y.sub$filtered.transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+      DT::formatStyle( columns = names(t(y.sub$filtered.transformed)), `font-size` = '12px', 'text-align' = 'center' )
+    
+  } else {
+    cat(paste0(nrow(y.sub$filtered.transformed), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+  }
+
 } else {
-  cat(paste0(nrow(y.sub$transformed), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+  
+  if ( nrow(y.sub$transformed) < 25 ) {
+    
+    DT::datatable( data = round(t(y.sub$transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+      DT::formatStyle( columns = names(t(y.sub$transformed)), `font-size` = '12px', 'text-align' = 'center' )
+    
+  } else {
+    cat(paste0(nrow(y.sub$transformed), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+  }
 }
 ```
 
-**`r if ( tolower(params$norm) != "none" ) { c("Normalised data") }`**
+**`r if ( tolower(params$norm) != "none" && runChunk ) { c("Normalised data") }`**
 
 ```{r expr_dist_table_normalised, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = runChunk}
 ##### Generate a table with expression values for selected genes
@@ -682,6 +697,20 @@ if ( tolower(params$norm) != "none" ) {
   } else {
     cat(paste0(nrow(y.sub$norm), " genes were selected. The tables is available only if less than 25 genes are selected!"))
   }
+}
+```
+
+**`r if ( runChunk ) { c("Z-score data") }`**
+
+```{r expr_dist_table_z, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+##### Generate a table with expression values for selected genes
+if ( nrow(y.sub$z) < 25 ) {
+    
+  DT::datatable( data = round(t(y.sub$z), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+      DT::formatStyle( columns = names(t(y.sub$z)), `font-size` = '12px', 'text-align' = 'center' )
+    
+  } else {
+  cat(paste0(nrow(y.sub$z), " genes were selected. The tables is available only if less than 25 genes are selected!"))
 }
 ```
 
