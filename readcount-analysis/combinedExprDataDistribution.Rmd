@@ -1,5 +1,5 @@
 ---
-title: "Investigate expression data distribution for selected genes"
+title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
@@ -176,6 +176,9 @@ rownames(targetFile) <- make.names(rownames(targetFile))
 
 ##### Make sure that the target file contains info only about samples present in the data matrix
 targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
+
+##### Change the target file to mark the sample of intersted
+targetFile$Target[match(params$sample, targetFile$Sample_name)] <- "Sample"
 
 ##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
 if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {

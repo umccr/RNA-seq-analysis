@@ -150,4 +150,4 @@ if ( !is.na(opt$results_name) ) {
 
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), genes = opt$genes, ensembl = as.logical(opt$ensembl), sample = as.logical(opt$sample),  results_name = opt$results_name))
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), genes = opt$genes, ensembl = as.logical(opt$ensembl), sample = opt$sample,  results_name = opt$results_name))
