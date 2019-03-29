@@ -81,24 +81,19 @@ tpm_from_rpkm <- function(x) {
   return(t(t(x) / (1e-06 * rpkm.sum)))
 }
 
+##### Convert density to counts
+density2freq <- function(density) {
+
+  freq = length(density)/sum(density) * density
+  return(freq)
+}
+  
+
 ##### Generate density plot for selected genes
 densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, distributions = NULL, plot_mode = "static") {
   
   ##### Used data for user-defined genes
   data <- data[ genes, ,drop=FALSE]
-  
-  den.x <- sort(density(data[1,])$x)
-  den.y <- sort(density(data[1,])$y)
-  
-  if ( nrow(data) > 1 ) {
-    
-    for (i in 2:nrow(data)) {
-      
-      den <- density(data[i,])
-      den.x <- sort(c(den.x, den$x))
-      den.y <- sort(c(den.y, den$y))
-    }
-  }
   
   ##### Transformed data for html report
   #### Interactive genes distribution plot
@@ -108,7 +103,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, dis
   
   for (i in 1:nrow(data)) {
     
-    data.df <- rbind(data.df, data.frame(gene = genes[i], expr = density(data[i,])$x, dens = density(data[i,])$y))
+    data.df <- rbind(data.df, data.frame(gene = genes[i], expr = density(data[i,])$x, dens = density2freq(density(data[i,])$y)))
   }
   
   ##### Generate values to generate various distributions
@@ -126,7 +121,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, dis
     if ( "normal" %in% tolower(distributions) ) {
       
       data.y <- dnorm(data.x, mean = mean(data.x), sd = 0.5)
-      data.df.dist <- rbind(data.df.dist, data.frame(gene="Normal distribution", expr=data.x, dens=data.y))
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Normal distribution", expr=data.x, dens=density2freq(data.y)))
       
       den.y <- sort(c(den.y, data.y))
     
@@ -140,6 +135,10 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, dis
     data.df <- rbind(data.df, data.df.dist)
   }
   
+  ##### Get min and max values based on the expression data
+  den.x <- sort(data.df$expr)
+  den.y <- sort(data.df$dens)
+  
   ##### Assigne colours to genes
   genes.colour <- getGenesColours(unique(data.df$gene))
   
@@ -147,7 +146,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, dis
   p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
   plotly::layout(title = main_title,
          xaxis = list(title = x_title, range = c(den.x[1],den.x[length(den.x)])),
-         yaxis = list (title = 'Density', range = c(den.y[1],den.y[length(den.y)])))
+         yaxis = list (title = 'Frequency (smoothed)', range = c(den.y[1],den.y[length(den.y)])))
   
     return( p )
 }
