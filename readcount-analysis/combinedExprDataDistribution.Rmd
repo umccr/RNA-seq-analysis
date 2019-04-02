@@ -10,7 +10,7 @@ params:
   norm: 'quantile'
   filter: TRUE
   log: TRUE
-  genes: 'MKI67,KRAS,CDKN2A'
+  genes: 'KRAS'
   ensembl: TRUE
   sample: 'CCR180029_MH18T002P038_RNA'
   results_name: 'test'
@@ -119,23 +119,23 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
   
   ##### Generate values to generate various distributions
-  if ( !is.null(distributions) ) {
+  if ( !is.null(distributions) && length(genes) == 1) {
     
     ##### Get min and max values based on the expression data
-    data.x <- seq(min(data), max(data), 0.1)
+    data.x <- seq(min(data), max(data), length.out = ncol(data))
     
     ##### Create empty data frame
-    data.df.dist <- data.frame(matrix(ncol = 3, nrow = 0))
-    colnames(data.df.dist) <- c("gene", "expr", "dens")
+    data.df.dist <- data.frame(matrix(ncol = 4, nrow = 0))
+    colnames(data.df.dist) <- c("gene", "sample", "expr", "dens")
     
     ##### Generate y-values to mirror distributions of interest
     ##### Generate y-values for normal distribution
-    if ( "normal" %in% tolower(distributions) ) {
+    if ( "normal" %in% tolower(distributions)) {
       
       data.y <- dnorm(data.x, mean = mean(data.x), sd = 0.5)
-      data.df.dist <- rbind(data.df.dist, data.frame(gene="Normal distribution", expr=data.x, dens=density2freq(data.y)))
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Normal distribution", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
       
-      den.y <- sort(c(den.y, data.y))
+      #den.y <- sort(c(den.y, data.y))
     
       ##### Generate y-values for binomial distribution
     } else if ( "binomial" %in% tolower(distributions) ) {
@@ -145,6 +145,8 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     
     }
     data.df <- rbind(data.df, data.df.dist)
+    ##### Extract expression for selected sample in normal distribution
+    data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
   }
   
   ##### Get min and max values based on the expression data
@@ -158,7 +160,14 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
   plotly::layout(title = main_title,
          xaxis = list(title = x_title, range = c(den.x[1],den.x[length(den.x)])),
-         yaxis = list (title = 'Frequency (smoothed)', range = c(den.y[1],den.y[length(den.y)])))
+         yaxis = list (title = 'Frequency (smoothed)', range = c(den.y[1],den.y[length(den.y)]))) %>%
+    
+    plotly::add_annotations(y = data.df.selected$dens, x = data.df.selected$expr,
+                #text = data.df.selected$sample,
+                text = "Patient",
+                #name = "Patient",
+                marker = list(size = 12, color = "black"),
+                showlegend = TRUE)
   
     return( p )
 }
