@@ -3,17 +3,17 @@ title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
-  transform: 
-  norm: 
-  filter: 
-  log: 
-  genes: 
-  ensembl: 
-  sample: 
-  results_name: 
+  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
+  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  transform: 'TPM'
+  norm: 'quantile'
+  filter: TRUE
+  log: TRUE
+  genes: 'MKI67,KRAS,CDKN2A'
+  ensembl: TRUE
+  sample: 'CCR180029_MH18T002P038_RNA'
+  results_name: 'test'
   ensembl_version: 86
 output:
   html_document:
@@ -90,21 +90,33 @@ density2freq <- function(density) {
   
 
 ##### Generate density plot for selected genes
-densityPlot <- function(genes, data, main_title, x_title, sampleName = NULL, distributions = NULL, plot_mode = "static") {
+densityPlot <- function(genes, data, main_title, x_title, sampleName, distributions = NULL, plot_mode = "static") {
   
   ##### Used data for user-defined genes
   data <- data[ genes, ,drop=FALSE]
   
+  sampleName.position <- NULL
+  
+  for ( gene in genes ) {
+    
+    sampleName.position <- c(sampleName.position, match(sampleName, names(sort(data[ gene, ]))))
+  }
+  
+  names(sampleName.position) <- genes
+  
   ##### Transformed data for html report
   #### Interactive genes distribution plot
   ##### Create empty data frame
-  data.df <- data.frame(matrix(ncol = 3, nrow = 0))
-  colnames(data.df) <- c("gene", "expr", "dens")
+  data.df <- data.frame(matrix(ncol = 4, nrow = 0))
+  colnames(data.df) <- c("gene", "sample", "expr", "dens")
   
   for (i in 1:nrow(data)) {
     
-    data.df <- rbind(data.df, data.frame(gene = genes[i], expr = density(data[i,])$x, dens = density2freq(density(data[i,])$y)))
+    data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(sort(data[ genes[i], ])), expr = density(data[i,], n= ncol(data))$x, dens = density2freq(density(data[i,], n=ncol(data))$y)))
   }
+  
+  ##### Extract expression for selected sample
+  data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
   
   ##### Generate values to generate various distributions
   if ( !is.null(distributions) ) {
@@ -636,21 +648,25 @@ Plot presenting `r params$transform` data distribution for selected gene(s).
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( params$filter ) {
   
-  densityPlot(genes=genes, data=y.sub$filtered.transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
+  densityPlot(genes=genes, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+              sampleName=params$sample, distributions = "normal") 
   
 } else {
   
-  densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, distributions = "normal") 
+  densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=params$sample,
+              distributions = "normal") 
 }
 
 ##### Normalised data 
 if ( tolower(params$norm) != "none" ) {
   
   #### Interactive genes distribution plot
-  densityPlot(genes=genes, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, distributions = "normal") 
+  densityPlot(genes=genes, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=params$sample, 
+              distributions = "normal") 
 }
 
-densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, distributions = "normal") 
+densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=params$sample,
+            distributions = "normal") 
 
 ```
 
