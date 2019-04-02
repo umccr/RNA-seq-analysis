@@ -3,17 +3,17 @@ title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
-  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
-  annotFile: 'UMCCR_PC_Target_cleaned.txt'
-  transform: 'TPM'
-  norm: 'quantile'
-  filter: TRUE
-  log: TRUE
-  genes: 'KRAS'
-  ensembl: TRUE
-  sample: 'CCR180029_MH18T002P038_RNA'
-  results_name: 'test'
+  exprDir: 
+  exprFile: 
+  annotFile: 
+  transform: 
+  norm: 
+  filter: 
+  log: 
+  genes: 
+  ensembl: 
+  sample: 
+  results_name: 
   ensembl_version: 86
 output:
   html_document:
