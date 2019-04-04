@@ -3,17 +3,17 @@ title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
-  transform: 
-  norm: 
-  filter: 
-  log: 
-  genes: 
-  ensembl: 
-  sample: 
-  results_name: 
+  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
+  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  transform: 'TPM'
+  norm: 'quantile'
+  filter: TRUE
+  log: TRUE
+  genes: 'MKI67'
+  ensembl: TRUE
+  sample: 'CCR170012_MH17T001P013'
+  results_name: 'test'
   ensembl_version: 86
 output:
   html_document:
@@ -115,6 +115,8 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(sort(data[ genes[i], ])), expr = density(data[i,], n= ncol(data))$x, dens = density2freq(density(data[i,], n=ncol(data))$y)))
   }
   
+  expr.den <- density(data[i,], n= ncol(data))$x
+  
   ##### Extract expression for selected sample
   data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
   
@@ -122,7 +124,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   if ( !is.null(distributions) && length(genes) == 1) {
     
     ##### Get min and max values based on the expression data
-    data.x <- seq(min(data), max(data), length.out = ncol(data))
+    data.x <- seq(min(expr.den), max(expr.den), length.out = ncol(data))
     
     ##### Create empty data frame
     data.df.dist <- data.frame(matrix(ncol = 4, nrow = 0))
@@ -132,16 +134,20 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     ##### Generate y-values for normal distribution
     if ( "normal" %in% tolower(distributions)) {
       
-      data.y <- dnorm(data.x, mean = mean(data.x), sd = 0.5)
+      data.y <- dnorm(data.x, mean = mean(data.x), sd = (max(data.x)-mean(data.x))/5)
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Normal distribution", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
-      
-      #den.y <- sort(c(den.y, data.y))
     
       ##### Generate y-values for binomial distribution
-    } else if ( "binomial" %in% tolower(distributions) ) {
+    } 
+    
+    if ( "binomial" %in% tolower(distributions) ) {
       
-      #data.y.binom <- dbinom(transformed.x, size = 1000, prob = 0.25)
-      #data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution", expr=data.x, dens=data.y))
+      #data.x <- round(seq(min(data), max(data), length.out = ncol(data)), digits = 0)
+      data.x <- 1:ncol(data)
+      data.y <- dbinom(data.x, ncol(data), 0.25)
+      
+      data.x <- rescale(data.x, to = c(min(data.x), max(data.x)))
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
     
     }
     data.df <- rbind(data.df, data.df.dist)
@@ -180,6 +186,7 @@ suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 suppressMessages(library(plotly))
+suppressMessages(library(scales))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
