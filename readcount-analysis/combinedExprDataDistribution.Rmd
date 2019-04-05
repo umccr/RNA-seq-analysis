@@ -10,7 +10,7 @@ params:
   norm: 'quantile'
   filter: TRUE
   log: TRUE
-  genes: 'MKI67'
+  genes: 'MKI67,KRAS'
   ensembl: TRUE
   sample: 'CCR170012_MH17T001P013'
   results_name: 'test'
@@ -95,14 +95,19 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   ##### Used data for user-defined genes
   data <- data[ genes, ,drop=FALSE]
   
+  ##### Extract positon for samples of interest from the data
   sampleName.position <- NULL
-  
-  for ( gene in genes ) {
-    
-    sampleName.position <- c(sampleName.position, match(sampleName, names(sort(data[ gene, ]))))
+  for (sample in sampleName) {
+    sample.intermediate <- NULL
+    for ( gene in genes ) {
+      sample.intermediate <- cbind(sample.intermediate, match(sample, names(sort(data[ gene, ]))))
+    }
+    sampleName.position <- rbind(sampleName.position, sample.intermediate)
   }
   
-  names(sampleName.position) <- genes
+  #names(sample.inter) <- genes
+  rownames(sample.inter) = sampleName
+  colnames(sample.inter) = genes
   
   ##### Transformed data for html report
   #### Interactive genes distribution plot
