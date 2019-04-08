@@ -106,8 +106,8 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   }
   
   #names(sample.inter) <- genes
-  rownames(sample.inter) = sampleName
-  colnames(sample.inter) = genes
+  rownames(sampleName.position) = sampleName
+  colnames(sampleName.position) = genes
   
   ##### Transformed data for html report
   #### Interactive genes distribution plot
@@ -116,8 +116,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   colnames(data.df) <- c("gene", "sample", "expr", "dens")
   
   for (i in 1:nrow(data)) {
-    
-    data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(sort(data[ genes[i], ])), expr = density(data[i,], n= ncol(data))$x, dens = density2freq(density(data[i,], n=ncol(data))$y)))
+      data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(sort(data[ genes[i], ])), expr = density(data[i,], n= ncol(data))$x, dens = density2freq(density(data[i,], n=ncol(data))$y)))
   }
   
   expr.den <- density(data[i,], n= ncol(data))$x
@@ -174,9 +173,9 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
          yaxis = list (title = 'Frequency (smoothed)', range = c(den.y[1],den.y[length(den.y)]))) %>%
     
     plotly::add_annotations(y = data.df.selected$dens, x = data.df.selected$expr,
-                #text = data.df.selected$sample,
-                text = "Patient",
-                #name = "Patient",
+                text = data.df.selected$sample,
+                #text = "Patient",
+                name = "Patient",
                 marker = list(size = 12, color = "black"),
                 showlegend = TRUE)
   
