@@ -10,9 +10,9 @@ params:
   norm: 'quantile'
   filter: TRUE
   log: TRUE
-  genes: 'MKI67,KRAS'
+  genes: 'MKI67'
   ensembl: TRUE
-  sample: 'CCR170012_MH17T001P013'
+  sample: 'CCR170012_MH17T001P013, CCR180029_MH18T002P038_RNA'
   results_name: 'test'
   ensembl_version: 86
 output:
@@ -150,12 +150,24 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
       data.x <- 1:ncol(data)
       data.y <- dbinom(data.x, ncol(data), 0.25)
       
-      data.x <- rescale(data.x, to = c(min(data.x), max(data.x)))
+      data.x <- rescale(data.x, to = c(min(expr.den), max(expr.den)))
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
     
     }
+    
+    if ("bimodal" %in% tolower(distributions)){
+      data.x <- c(rtruncnorm(ncol(data)/2, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
+                  rtruncnorm(ncol(data)/2, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1))
+      data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = mean(data.x[1:(length(data.x)/2)]), sd = 1),
+                  dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean =
+                               mean(data.x[((length(data.x)/2)+1):length(data.x)]), sd = 1))
+      
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=data.x,
+                                                           dens=density2freq(data.y)))
+    }
+    
     data.df <- rbind(data.df, data.df.dist)
-    ##### Extract expression for selected sample in normal distribution
+    ##### Extract expression for selected sample in the distributions dataframe
     data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
   }
   
@@ -191,6 +203,7 @@ suppressMessages(library(tidyverse))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 suppressMessages(library(plotly))
 suppressMessages(library(scales))
+suppressMessages(library(truncnorm))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
@@ -669,12 +682,12 @@ Plot presenting `r params$transform` data distribution for selected gene(s).
 if ( params$filter ) {
   
   densityPlot(genes=genes, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
-              sampleName=params$sample, distributions = "normal") 
+              sampleName=params$sample, distributions = c("normal", "binomial",  "bimodal") )
   
 } else {
   
   densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=params$sample,
-              distributions = "normal") 
+              distributions = c("normal", "binomial", "bimodal") ) 
 }
 
 ##### Normalised data 
@@ -682,11 +695,11 @@ if ( tolower(params$norm) != "none" ) {
   
   #### Interactive genes distribution plot
   densityPlot(genes=genes, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=params$sample, 
-              distributions = "normal") 
+              distributions = c("normal", "binomial", "bimodal") ) 
 }
 
 densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=params$sample,
-            distributions = "normal") 
+            distributions = c("normal", "binomial",  "bimodal") ) 
 
 ```
 
