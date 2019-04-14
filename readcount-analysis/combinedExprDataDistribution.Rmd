@@ -12,7 +12,7 @@ params:
   log: TRUE
   genes: 'MKI67'
   ensembl: TRUE
-  sample: 'CCR170012_MH17T001P013, CCR180029_MH18T002P038_RNA'
+  sample: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA'
   results_name: 'test'
   ensembl_version: 86
 output:
@@ -122,7 +122,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   expr.den <- density(data[i,], n= ncol(data))$x
   
   ##### Extract expression for selected sample
-  data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
+  #data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
   
   ##### Generate values to generate various distributions
   if ( !is.null(distributions) && length(genes) == 1) {
@@ -168,7 +168,13 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     
     data.df <- rbind(data.df, data.df.dist)
     ##### Extract expression for selected sample in the distributions dataframe
-    data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
+    #data.df.selected <- data.df[ strsplit(sampleName, split=',', fixed=TRUE) %in% data.df$sample, ]
+    for ( i in 1:length(sampleName) ) {
+      data.df.selected <- data.df[sampleName[i] == data.df$sample, ]
+    }
+    
+    genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
+    
   }
   
   ##### Get min and max values based on the expression data
@@ -221,6 +227,9 @@ rownames(targetFile) <- make.names(rownames(targetFile))
 
 ##### Make sure that the target file contains info only about samples present in the data matrix
 targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
+
+#### Prepare input samples of interest
+sample <- unique(unlist(strsplit(params$sample, split=',', fixed=TRUE)))
 
 ##### Change the target file to mark the sample of intersted
 targetFile$Target[match(params$sample, targetFile$Sample_name)] <- "Sample"
@@ -682,11 +691,11 @@ Plot presenting `r params$transform` data distribution for selected gene(s).
 if ( params$filter ) {
   
   densityPlot(genes=genes, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
-              sampleName=params$sample, distributions = c("normal", "binomial",  "bimodal") )
+              sampleName=sample, distributions = c("normal", "binomial",  "bimodal") )
   
 } else {
   
-  densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=params$sample,
+  densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=sample,
               distributions = c("normal", "binomial", "bimodal") ) 
 }
 
@@ -694,11 +703,11 @@ if ( params$filter ) {
 if ( tolower(params$norm) != "none" ) {
   
   #### Interactive genes distribution plot
-  densityPlot(genes=genes, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=params$sample, 
+  densityPlot(genes=genes, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=sample, 
               distributions = c("normal", "binomial", "bimodal") ) 
 }
 
-densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=params$sample,
+densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=sample,
             distributions = c("normal", "binomial",  "bimodal") ) 
 
 ```
