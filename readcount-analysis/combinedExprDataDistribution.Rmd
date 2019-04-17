@@ -156,14 +156,16 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     }
     
     if ("bimodal" %in% tolower(distributions)){
-      data.x <- c(rtruncnorm(ncol(data)/2, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
-                  rtruncnorm(ncol(data)/2, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1))
-      data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = mean(data.x[1:(length(data.x)/2)]), sd = 1),
-                  dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean =
-                               mean(data.x[((length(data.x)/2)+1):length(data.x)]), sd = 1))
+      data.x <- c( min(expr.den), rtruncnorm(ncol(data)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
+                  rtruncnorm(ncol(data)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1), max(expr.den))
       
-      data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=data.x,
-                                                           dens=density2freq(data.y)))
+      data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.den) + (max(expr.den)/2))/2, sd = 1),
+                  dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, 
+                             sd =1))
+      data.y[c(1, length(data.y))] <- 0
+      
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=sort(data.x),
+                                                           dens=density2freq(data.y[order(data.x)])*2))
     }
     
     data.df <- rbind(data.df, data.df.dist)
