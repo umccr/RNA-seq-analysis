@@ -156,11 +156,19 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     }
     
     if ("bimodal" %in% tolower(distributions)){
-      data.x <- c( min(expr.den), rtruncnorm(ncol(data)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
-                  rtruncnorm(ncol(data)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1), max(expr.den))
       
+      #expr.den.rescaled <- rescale(expr.den, to = c(-1.5, 19))
+      
+      #data.x <- c( min(expr.den), rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den*5) + (max(expr.den*5)/2))/2, sd=1),
+      #            rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den*5)/2) + max(expr.den*5))/2, sd=1), max(expr.den))
+      data.x <- c( min(expr.den), rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
+                  rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1), max(expr.den))
+      
+      #data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.den*5) + (max(expr.den*5)/2))/2, sd = 1),
+      #            dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.den*5)/2) + max(expr.den*5))/2, 
+      #                       sd =1))
       data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.den) + (max(expr.den)/2))/2, sd = 1),
-                  dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, 
+                  dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.den)/2) + max(expr.den))/2, 
                              sd =1))
       data.y[c(1, length(data.y))] <- 0
       
@@ -711,7 +719,6 @@ if ( tolower(params$norm) != "none" ) {
 
 densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=sample,
             distributions = c("normal", "binomial",  "bimodal") ) 
-
 ```
 
 ### Table
