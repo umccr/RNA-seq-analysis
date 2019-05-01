@@ -157,23 +157,23 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     
     if ("bimodal" %in% tolower(distributions)){
       
-      #expr.den.rescaled <- rescale(expr.den, to = c(-1.5, 19))
+      #data.x <- c( min(expr.den), rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
+      #            rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1), max(expr.den))
       
-      #data.x <- c( min(expr.den), rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den*5) + (max(expr.den*5)/2))/2, sd=1),
-      #            rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den*5)/2) + max(expr.den*5))/2, sd=1), max(expr.den))
-      data.x <- c( min(expr.den), rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
-                  rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1), max(expr.den))
-      
-      #data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.den*5) + (max(expr.den*5)/2))/2, sd = 1),
-      #            dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.den*5)/2) + max(expr.den*5))/2, 
+      #data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.den) + (max(expr.den)/2))/2, sd = 1),
+      #            dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.den)/2) + max(expr.den))/2, 
       #                       sd =1))
-      data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.den) + (max(expr.den)/2))/2, sd = 1),
-                  dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.den)/2) + max(expr.den))/2, 
-                             sd =1))
-      data.y[c(1, length(data.y))] <- 0
+      #data.y[c(1, length(data.y))] <- 0
       
-      data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=sort(data.x),
-                                                           dens=density2freq(data.y[order(data.x)])*2))
+      data.x1 <- seq(min(expr.den), median(expr.den), length.out = ncol(data)/2)
+      data.x2 <- seq(median(expr.den), max(expr.den), length.out = ncol(data)/2)
+      data.x <- c(data.x1, data.x2)
+      
+      data.y <- c(dnorm(data.x1, mean = mean(data.x1), sd = (max(data.x1)-mean(data.x1))/3),
+                  dnorm(data.x2, mean = mean(data.x2), sd = (max(data.x2)-mean(data.x2))/3))
+      
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=data.x,
+                                                           dens=density2freq(data.y)))
     }
     
     data.df <- rbind(data.df, data.df.dist)
