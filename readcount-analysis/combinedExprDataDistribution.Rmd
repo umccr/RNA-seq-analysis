@@ -165,13 +165,18 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
       #                       sd =1))
       #data.y[c(1, length(data.y))] <- 0
       
+      ##### Draw n/2 samples from a normal distributions with one median and another n/2 samples from a second normal distribution with a different median
       data.x1 <- seq(min(expr.den), median(expr.den), length.out = ncol(data)/2)
       data.x2 <- seq(median(expr.den), max(expr.den), length.out = ncol(data)/2)
+      
+      ##### Combine both normal distributions to generate a bimodal distribution
       data.x <- c(data.x1, data.x2)
       
+      ##### Generate y-values for bimodal distribution
       data.y <- c(dnorm(data.x1, mean = mean(data.x1), sd = (max(data.x1)-mean(data.x1))/3),
                   dnorm(data.x2, mean = mean(data.x2), sd = (max(data.x2)-mean(data.x2))/3))
       
+      ##### Add bimodal dist values to the distribution dataframe
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=data.x,
                                                            dens=density2freq(data.y)))
     }
