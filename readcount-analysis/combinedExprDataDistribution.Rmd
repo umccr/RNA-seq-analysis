@@ -182,13 +182,15 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     }
     
     data.df <- rbind(data.df, data.df.dist)
+    
     ##### Extract expression for selected sample in the distributions dataframe
-    #data.df.selected <- data.df[ strsplit(sampleName, split=',', fixed=TRUE) %in% data.df$sample, ]
+    data.df.selected <- data.frame(matrix(ncol = 4, nrow = 0))
+    colnames(data.df) <- c("gene", "sample", "expr", "dens")
     for ( i in 1:length(sampleName) ) {
-      data.df.selected <- data.df[sampleName[i] == data.df$sample, ]
+      data.df.selected <- rbind(data.df.selected, data.df[sampleName[i] == data.df$sample, ])
     }
     
-    genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
+    #genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
     
   }
   
@@ -201,18 +203,26 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   
   ##### Generate interactive density plot
   p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
-  plotly::layout(title = main_title,
-         xaxis = list(title = x_title, range = c(den.x[1],den.x[length(den.x)])),
-         yaxis = list (title = 'Frequency (smoothed)', range = c(den.y[1],den.y[length(den.y)]))) %>%
-    
-    plotly::add_annotations(y = data.df.selected$dens, x = data.df.selected$expr,
+     plotly::add_trace(y = data.df.selected$dens, x = data.df.selected$expr, 
+                name = 'sample(s) of interest',
                 text = data.df.selected$sample,
-                #text = "Patient",
-                name = "Patient",
-                marker = list(size = 12, color = "black"),
-                showlegend = TRUE)
+                marker = list(size = 6, color = "black"),
+                mode = 'markers',
+                showlegend = TRUE,
+                inherit = FALSE) %>%
+     plotly::layout(title = main_title,
+           xaxis = list(title = x_title, range = c(den.x[1],den.x[length(den.x)])),
+           yaxis = list (title = 'Frequency (smoothed)', range = c(den.y[1],den.y[length(den.y)])))
+   
+    #plotly::add_annotations(y = data.df.selected$dens, x = data.df.selected$expr, 
+    #            text = data.df.selected$sample,
+    #            #text = "Patient",
+    #            showarrow = FALSE,
+    #            name = "Patient",
+    #            marker = list(size = 12, color = "black"),
+    #            showlegend = TRUE)
   
-    return( p )
+return( p )
 }
 ```
 
