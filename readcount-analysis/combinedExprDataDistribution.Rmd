@@ -704,29 +704,38 @@ Plot(s) presenting `r params$transform` data distribution for selected gene(s).
 #### `r if ( !is.na(genes[1]) ) { genes[1] }`
 
 ```{r expr_dist_plot_1, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[1]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -734,29 +743,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[2]) ) { genes[2] }`
 
 ```{r expr_dist_plot_2, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[2]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -764,29 +782,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[3]) ) { genes[3] }`
 
 ```{r expr_dist_plot_3, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[3]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -794,29 +821,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[4]) ) { genes[4] }`
 
 ```{r expr_dist_plot_4, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[4]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -824,29 +860,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[5]) ) { genes[5] }`
 
 ```{r expr_dist_plot_5, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[5]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -854,29 +899,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[6]) ) { genes[6] }`
 
 ```{r expr_dist_plot_6, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[6]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -884,29 +938,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[7]) ) { genes[7] }`
 
 ```{r expr_dist_plot_7, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[7]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -914,29 +977,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[8]) ) { genes[8] }`
 
 ```{r expr_dist_plot_8, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[8]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -944,29 +1016,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[9]) ) { genes[9] }`
 
 ```{r expr_dist_plot_9, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[9]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -974,29 +1055,38 @@ if ( !is.na(gene) ) {
 #### `r if ( !is.na(genes[10]) ) { genes[10] }`
 
 ```{r expr_dist_plot_10, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+##### Create a list for htmlwidgets
+widges.list <- htmltools::tagList()
+
 gene <- genes[10]
+plotsNo <- 1
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   if ( params$filter ) {
     
-    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
                 sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
   } else {
-    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
   
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
     
+    plotsNo <- plotsNo + 1
+    
     #### Interactive gene distribution plot
-    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
                 distributions = c("normal", "binomial", "bimodal") ) 
   }
-  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title="Z-score", sampleName=samples,
               distributions = c("normal", "binomial",  "bimodal") )
 }
+
+##### Print a list of htmlwidgets
+widges.list
 ```
 
 ***
@@ -1024,7 +1114,7 @@ if ( params$filter ) {
   
   if ( nrow(y.sub$transformed) < 11 ) {
     
-    DT::datatable( data = round(t(y.sub$transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::datatable( data = round(t(y.sub$transformed[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$transformed)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
@@ -1041,7 +1131,7 @@ if ( tolower(params$norm) != "none" ) {
   
   if ( nrow(y.sub$norm) < 11 ) {
     
-    DT::datatable( data = round(t(y.sub$norm), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::datatable( data = round(t(y.sub$norm[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$norm)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
@@ -1056,7 +1146,7 @@ if ( tolower(params$norm) != "none" ) {
 ##### Generate a table with expression values for selected genes
 if ( nrow(y.sub$z) < 11 ) {
     
-  DT::datatable( data = round(t(y.sub$z), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+  DT::datatable( data = round(t(y.sub$z[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$z)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
