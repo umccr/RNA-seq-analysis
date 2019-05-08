@@ -1,2 +1,2 @@
 projectDir	datasetsFile
-./Combined_data	Datasets_list.txt
+/data/cephfs/punim0010/projects/Jacek_RNA_seq_workflows/RNA-seq-analysis/readcount-analysis/Combined_data	Datasets_list.txt
