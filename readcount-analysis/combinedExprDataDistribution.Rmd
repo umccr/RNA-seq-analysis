@@ -3,17 +3,17 @@ title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
-  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
-  annotFile: 'UMCCR_PC_Target_cleaned.txt'
-  transform: 'TPM'
-  norm: 'quantile'
-  filter: TRUE
-  log: TRUE
-  genes: 'MKI67'
-  ensembl: TRUE
-  sample: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA'
-  results_name: 'test'
+  exprDir: 
+  exprFile: 
+  annotFile: 
+  transform: 
+  norm: '
+  filter: 
+  log: 
+  genes: 
+  ensembl: 
+  sample: 
+  results_name: 
   ensembl_version: 86
 output:
   html_document:
@@ -110,20 +110,6 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   ##### Used data for user-defined genes
   data <- data[ genes, ,drop=FALSE]
   
-  ##### Extract positon for samples of interest from the data
-  sampleName.position <- NULL
-  for (sample in sampleName) {
-    sample.intermediate <- NULL
-    for ( gene in genes ) {
-      sample.intermediate <- cbind(sample.intermediate, match(sample, names(sort(data[ gene, ]))))
-    }
-    sampleName.position <- rbind(sampleName.position, sample.intermediate)
-  }
-  
-  #names(sample.inter) <- genes
-  rownames(sampleName.position) = sampleName
-  colnames(sampleName.position) = genes
-  
   ##### Transformed data for html report
   #### Interactive genes distribution plot
   ##### Create empty data frame
@@ -131,19 +117,17 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   colnames(data.df) <- c("gene", "sample", "expr", "dens")
   
   for (i in 1:nrow(data)) {
-      data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(sort(data[ genes[i], ])), expr = density(data[i,], n= ncol(data))$x, dens = density2freq(density(data[i,], n=ncol(data))$y)))
+      data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(sort(data[ genes[i], ])), expr = sort(data[ genes[i], ]), dens = density2freq(density(data[i,], n=ncol(data))$y)))
   }
-  
-  expr.den <- density(data[i,], n= ncol(data))$x
-  
-  ##### Extract expression for selected sample
-  #data.df.selected <- data.df[ data.df$sample %in% sampleName, ]
   
   ##### Generate values to generate various distributions
   if ( !is.null(distributions) && length(genes) == 1) {
     
+    ##### Use the density values obtained from the expression values
+    expr.sorted <- sort(data[ genes, ])
+    
     ##### Get min and max values based on the expression data
-    data.x <- seq(min(expr.den), max(expr.den), length.out = ncol(data))
+    data.x <- seq(min(expr.sorted), max(expr.sorted), length.out = ncol(data))
     
     ##### Create empty data frame
     data.df.dist <- data.frame(matrix(ncol = 4, nrow = 0))
@@ -165,24 +149,24 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
       data.x <- 1:ncol(data)
       data.y <- dbinom(data.x, ncol(data), 0.25)
       
-      data.x <- rescale(data.x, to = c(min(expr.den), max(expr.den)))
+      data.x <- rescale(data.x, to = c(min(expr.sorted), max(expr.sorted)))
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
     
     }
     
     if ("bimodal" %in% tolower(distributions)){
       
-      #data.x <- c( min(expr.den), rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=(min(expr.den) + (max(expr.den)/2))/2, sd=1),
-      #            rtruncnorm(length(expr.den)/2 -1, a=min(expr.den), b=max(expr.den), mean=((max(expr.den)/2) + max(expr.den))/2, sd=1), max(expr.den))
+      #data.x <- c( min(expr.sorted), rtruncnorm(length(expr.sorted)/2 -1, a=min(expr.sorted), b=max(expr.sorted), mean=(min(expr.sorted) + (max(expr.sorted)/2))/2, sd=1),
+      #            rtruncnorm(length(expr.sorted)/2 -1, a=min(expr.sorted), b=max(expr.sorted), mean=((max(expr.sorted)/2) + max(expr.sorted))/2, sd=1), max(expr.sorted))
       
-      #data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.den) + (max(expr.den)/2))/2, sd = 1),
-      #            dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.den)/2) + max(expr.den))/2, 
+      #data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.sorted) + (max(expr.sorted)/2))/2, sd = 1),
+      #            dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.sorted)/2) + max(expr.sorted))/2, 
       #                       sd =1))
       #data.y[c(1, length(data.y))] <- 0
       
       ##### Draw n/2 samples from a normal distributions with one median and another n/2 samples from a second normal distribution with a different median
-      data.x1 <- seq(min(expr.den), median(expr.den), length.out = ncol(data)/2)
-      data.x2 <- seq(median(expr.den), max(expr.den), length.out = ncol(data)/2)
+      data.x1 <- seq(min(expr.sorted), median(expr.sorted), length.out = ncol(data)/2)
+      data.x2 <- seq(median(expr.sorted), max(expr.sorted), length.out = ncol(data)/2)
       
       ##### Combine both normal distributions to generate a bimodal distribution
       data.x <- c(data.x1, data.x2)
@@ -204,9 +188,6 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     for ( i in 1:length(sampleName) ) {
       data.df.selected <- rbind(data.df.selected, data.df[sampleName[i] == data.df$sample, ])
     }
-    
-    #genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
-    
   }
   
   ##### Get min and max values based on the expression data
