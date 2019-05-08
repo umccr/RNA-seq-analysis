@@ -23,7 +23,7 @@ output:
 #    toc_float: true
 ---
 
-The aim of this report is investigate the expression data distribution patters of all or user-defined genes in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is investigate the expression data distribution patters of user-defined genes (max 10) in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
