@@ -1103,7 +1103,7 @@ if ( params$filter ) {
   
  if ( nrow(y.sub$filtered.transformed) < 11 ) {
     
-    DT::datatable( data = round(t(y.sub$filtered.transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::datatable( data = round(t(y.sub$filtered.transformed[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$filtered.transformed)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
