@@ -23,9 +23,9 @@
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data. "None" (default) is available for both transformation methods
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
-#   genes:        List of genes to be considered. Available options are: "All" (default), "[list of genes separated by comma]"
+#   genes:        List of genes to be considered. Up to 10 genes are allowed, each separated by comma. 
 #   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (defualt) and "FALSE"
-#   sample (optional):  ID of sample of interest
+#   samples (optional):  ID of samples of interest
 #   results_name: Desired core name for the results folder
 #
 ################################################################################
@@ -65,8 +65,8 @@ option_list = list(
               help="List of genes to be considered"),
   make_option(c("-b", "--ensembl"), action="store", default=NA, type='character',
               help="Are genes annotated using ensembl IDs?"),
-  make_option(c("-s", "--sample"), action="store", default=NA, type='character',
-              help="ID of sample of interest"),
+  make_option(c("-s", "--samples"), action="store", default=NA, type='character',
+              help="ID of samples of interest"),
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
               help="Prefix for the results files names")
 )
@@ -74,10 +74,10 @@ option_list = list(
 opt = parse_args(OptionParser(option_list=option_list))
 
 ##### Read in argument from command line and check if all were provide by the user
-if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) ) {
+if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$genes) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --genes MKI67,KRAS\n\n")
   
   q()
 }
@@ -103,20 +103,25 @@ if ( is.na(opt$log)  ) {
   opt$log <- TRUE
 }
 
-if ( is.na(opt$genes)  ) {
-  
-  opt$genes <- "all"
-}
-
 if ( is.na(opt$ensembl)  ) {
   
   opt$ensembl <- FALSE
   
 }
 
-if ( is.na(opt$sample)  ) {
+if ( is.na(opt$samples)  ) {
   
-  opt$sample <- FALSE
+  opt$samples <- FALSE
+}
+
+##### Make sure that not more than 10 genes are quertied
+if ( !is.na(opt$genes) ) {
+  
+  if ( length(unique(unlist(strsplit(opt$genes, split=',', fixed=TRUE)))) > 10 ) {
+    
+    cat(paste0("\n", length(unique(unlist(strsplit(opt$genes, split=',', fixed=TRUE)))), " genes were queried but up to 10 genes are allowed!\n\n"))
+    q()
+  }
 }
 
 ##### Make sure that TMM, TMMwzp, RLE or upperquartile normalisation is used for CPM-tansformed data and quantile normalisation is used for TPM-tansformed data
@@ -150,4 +155,4 @@ if ( !is.na(opt$results_name) ) {
 
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), genes = opt$genes, ensembl = as.logical(opt$ensembl), sample = opt$sample,  results_name = opt$results_name))
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), genes = opt$genes, ensembl = as.logical(opt$ensembl), samples = opt$samples,  results_name = opt$results_name))

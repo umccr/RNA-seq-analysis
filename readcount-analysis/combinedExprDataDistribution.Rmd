@@ -7,12 +7,12 @@ params:
   exprFile: 
   annotFile: 
   transform: 
-  norm: '
+  norm: 
   filter: 
   log: 
   genes: 
   ensembl: 
-  sample: 
+  samples: 
   results_name: 
   ensembl_version: 86
 output:
@@ -104,7 +104,7 @@ density2freq <- function(density) {
 }
   
 
-##### Generate density plot for selected genes
+##### Generate density plot for selected genes. Currently, this function works for one gene at a time
 densityPlot <- function(genes, data, main_title, x_title, sampleName, distributions = NULL, plot_mode = "static") {
   
   ##### Used data for user-defined genes
@@ -137,14 +137,14 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     ##### Generate y-values for normal distribution
     if ( "normal" %in% tolower(distributions)) {
       
+      ##### Generate y-values for normal distribution
       data.y <- dnorm(data.x, mean = mean(data.x), sd = (max(data.x)-mean(data.x))/5)
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Normal distribution", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
-    
-      ##### Generate y-values for binomial distribution
     } 
     
     if ( "binomial" %in% tolower(distributions) ) {
       
+      ##### Generate x- and y-values for binomial distribution
       #data.x <- round(seq(min(data), max(data), length.out = ncol(data)), digits = 0)
       data.x <- 1:ncol(data)
       data.y <- dbinom(data.x, ncol(data), 0.25)
@@ -172,12 +172,10 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
       data.x <- c(data.x1, data.x2)
       
       ##### Generate y-values for bimodal distribution
-      data.y <- c(dnorm(data.x1, mean = mean(data.x1), sd = (max(data.x1)-mean(data.x1))/3),
-                  dnorm(data.x2, mean = mean(data.x2), sd = (max(data.x2)-mean(data.x2))/3))
+      data.y <- c(dnorm(data.x1, mean = mean(data.x1), sd = (max(data.x1)-mean(data.x1))/3), dnorm(data.x2, mean = mean(data.x2), sd = (max(data.x2)-mean(data.x2))/3))
       
       ##### Add bimodal dist values to the distribution dataframe
-      data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=data.x,
-                                                           dens=density2freq(data.y)))
+      data.df.dist <- rbind(data.df.dist, data.frame(gene="Bimodal distribution", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
     }
     
     data.df <- rbind(data.df, data.df.dist)
@@ -247,10 +245,10 @@ rownames(targetFile) <- make.names(rownames(targetFile))
 targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
 
 #### Prepare input samples of interest
-sample <- unique(unlist(strsplit(params$sample, split=',', fixed=TRUE)))
+samples <- unique(unlist(strsplit(params$samples, split=',', fixed=TRUE)))
 
 ##### Change the target file to mark the sample of intersted
-targetFile$Target[match(params$sample, targetFile$Sample_name)] <- "Sample"
+targetFile$Target[match(params$samples, targetFile$Sample_name)] <- "Sample"
 
 ##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
 if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
@@ -328,6 +326,8 @@ rownames(data.annot) <- data.annot$SYMBOL
 ##### Get data matrix with gene symbols
 data <- data.annot[, names(data.annot) %!in% c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
 ```
+
+***
 
 ## Data transformation and filtering
 
@@ -524,6 +524,8 @@ if ( params$filter ) {
 }
 ```
 
+***
+
 ## Data normalisation
 
 `r if ( tolower(params$norm) == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
@@ -642,45 +644,40 @@ if ( tolower(params$norm) == "none" ) {
 }
 ```
 
+***
+
 ## Expression distribution patterns {.tabset}
 
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
 ##### Subset data to include only user-defined genes
-if ( tolower(params$genes) != "all"  ) {
-    
-  genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
-  y.sub <- y
+genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
+y.sub <- y
   
-  ##### Identify user-defined genes that were not present in the expression matrix
-  if ( params$filter ) {
+##### Identify user-defined genes that were not present in the expression matrix
+if ( params$filter ) {
     
-    genes.missing <- genes[ genes %!in% rownames(y$filtered) ]
-    genes <- genes[ genes %in% rownames(y$filtered)  ]
+  genes.missing <- genes[ genes %!in% rownames(y$filtered) ]
+  genes <- genes[ genes %in% rownames(y$filtered)  ]
     
-    keep <- rownames(y$filtered) %in% genes
-    y.sub$filtered.transformed <- y$filtered.transformed[keep, , drop=FALSE]
+  keep <- rownames(y$filtered) %in% genes
+  y.sub$filtered.transformed <- y$filtered.transformed[keep, , drop=FALSE]
     
-  } else {
-    
-    genes.missing <- genes[ genes %!in% rownames(y$transformed) ]
-    genes <- genes[ genes %in% rownames(y$transformed)  ]
-    
-    keep <- rownames(y$transformed) %in% genes
-    y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
-  }
-
-  y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
-  y.sub$z <- y.sub$z[keep, , drop=FALSE]
-  
-  if ( tolower(params$norm) != "none" ) {
-    y.sub$norm <- y.sub$norm[keep, , drop=FALSE]
-  }
-  
 } else {
-  
-  y.sub <- y
-  genes <- rownames(data)
+    
+  genes.missing <- genes[ genes %!in% rownames(y$transformed) ]
+  genes <- genes[ genes %in% rownames(y$transformed)  ]
+    
+  keep <- rownames(y$transformed) %in% genes
+  y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
 }
+
+y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
+y.sub$z <- y.sub$z[keep, , drop=FALSE]
+  
+if ( tolower(params$norm) != "none" ) {
+  y.sub$norm <- y.sub$norm[keep, , drop=FALSE]
+}
+
 
 ##### Write list of genes into a file
 if ( length(genes) > 0 ) {
@@ -698,36 +695,311 @@ if ( exists("genes.missing") && length(genes.missing) > 0 ) {
 }
 ```
 
-### Plot
+### Plots {.tabset .tabset-fade}
 
-Plot presenting `r params$transform` data distribution for selected gene(s).
+Plot(s) presenting `r params$transform` data distribution for selected gene(s).
 
-**`r if ( !runChunk ) { c("Queried genes are not present in the input data.") } else { c("") }`**
+**`r if ( !runChunk ) { c("None of the queried genes are not present in the input data.") } else { c("") }`**
 
-```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+#### `r if ( !is.na(genes[1]) ) { genes[1] }`
+
+```{r expr_dist_plot_1, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[1]
+
 ##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( params$filter ) {
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
   
-  densityPlot(genes=genes, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
-              sampleName=sample, distributions = c("normal", "binomial",  "bimodal") )
-  
-} else {
-  
-  densityPlot(genes=genes, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=sample,
-              distributions = c("normal", "binomial", "bimodal") ) 
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
 }
-
-##### Normalised data 
-if ( tolower(params$norm) != "none" ) {
-  
-  #### Interactive genes distribution plot
-  densityPlot(genes=genes, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=sample, 
-              distributions = c("normal", "binomial", "bimodal") ) 
-}
-
-densityPlot(genes=genes, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=sample,
-            distributions = c("normal", "binomial",  "bimodal") ) 
 ```
+
+***
+
+#### `r if ( !is.na(genes[2]) ) { genes[2] }`
+
+```{r expr_dist_plot_2, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[2]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[3]) ) { genes[3] }`
+
+```{r expr_dist_plot_3, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[3]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[4]) ) { genes[4] }`
+
+```{r expr_dist_plot_4, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[4]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[5]) ) { genes[5] }`
+
+```{r expr_dist_plot_5, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[5]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[6]) ) { genes[6] }`
+
+```{r expr_dist_plot_6, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[6]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[7]) ) { genes[7] }`
+
+```{r expr_dist_plot_7, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[7]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[8]) ) { genes[8] }`
+
+```{r expr_dist_plot_8, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[8]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[9]) ) { genes[9] }`
+
+```{r expr_dist_plot_9, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[9]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
+
+#### `r if ( !is.na(genes[10]) ) { genes[10] }`
+
+```{r expr_dist_plot_10, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
+gene <- genes[10]
+
+##### Plot expression distribution in transfromed and normalised data for selected genes
+if ( !is.na(gene) ) {
+  if ( params$filter ) {
+    
+    densityPlot(genes=gene, data=y.sub$filtered.transformed, main_title="Transformed and filtered data", x_title=params$transform,
+                sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  } else {
+    densityPlot(genes=gene, data=y.sub$transformed, main_title="Transformed data", x_title=params$transform, sampleName=samples,
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+    
+    #### Interactive gene distribution plot
+    densityPlot(genes=gene, data=y.sub$norm, main_title="Normalised data", x_title=params$transform, sampleName=samples, 
+                distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  densityPlot(genes=gene, data=y.sub$z, main_title="Z-score data", x_title=params$transform, sampleName=samples,
+              distributions = c("normal", "binomial",  "bimodal") )
+}
+```
+
+***
 
 ### Table
 
@@ -739,24 +1011,24 @@ Table with `r params$transform` data values for each sample for selected genes.
 ##### Generate a table with expression values for selected genes
 if ( params$filter ) {
   
- if ( nrow(y.sub$filtered.transformed) < 25 ) {
+ if ( nrow(y.sub$filtered.transformed) < 11 ) {
     
     DT::datatable( data = round(t(y.sub$filtered.transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$filtered.transformed)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
-    cat(paste0(nrow(y.sub$filtered.transformed), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+    cat(paste0(nrow(y.sub$filtered.transformed), " genes were selected. The tables is available for not more than 10 genes!"))
   }
 
 } else {
   
-  if ( nrow(y.sub$transformed) < 25 ) {
+  if ( nrow(y.sub$transformed) < 11 ) {
     
     DT::datatable( data = round(t(y.sub$transformed), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$transformed)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
-    cat(paste0(nrow(y.sub$transformed), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+    cat(paste0(nrow(y.sub$transformed), " genes were selected. The tables is available for not more than 10 genes!"))
   }
 }
 ```
@@ -767,13 +1039,13 @@ if ( params$filter ) {
 ##### Generate a table with expression values for selected genes
 if ( tolower(params$norm) != "none" ) {
   
-  if ( nrow(y.sub$norm) < 25 ) {
+  if ( nrow(y.sub$norm) < 11 ) {
     
     DT::datatable( data = round(t(y.sub$norm), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$norm)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
-    cat(paste0(nrow(y.sub$norm), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+    cat(paste0(nrow(y.sub$norm), " genes were selected. The tables is available for not more than 10 genes!"))
   }
 }
 ```
@@ -782,16 +1054,15 @@ if ( tolower(params$norm) != "none" ) {
 
 ```{r expr_dist_table_z, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Generate a table with expression values for selected genes
-if ( nrow(y.sub$z) < 25 ) {
+if ( nrow(y.sub$z) < 11 ) {
     
   DT::datatable( data = round(t(y.sub$z), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
       DT::formatStyle( columns = names(t(y.sub$z)), `font-size` = '12px', 'text-align' = 'center' )
     
   } else {
-  cat(paste0(nrow(y.sub$z), " genes were selected. The tables is available only if less than 25 genes are selected!"))
+  cat(paste0(nrow(y.sub$z), " genes were selected. The tables is available for not more than 10 genes!"))
 }
 ```
-
 
 ***
 
