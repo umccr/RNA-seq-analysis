@@ -3,17 +3,17 @@ title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
-  transform: 
-  norm: 
-  filter: 
-  log: 
-  genes: 
-  ensembl: 
-  samples: 
-  results_name: 
+  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/in-house/UMCCR/Combined_data'
+  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  transform: 'CPM'
+  norm: 'TMM'
+  filter: TRUE
+  log: TRUE
+  genes: "KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF"
+  ensembl: TRUE
+  samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
+  results_name: 'expression_distributions_CPM_TMM'
   ensembl_version: 86
 output:
   html_document:
@@ -627,6 +627,14 @@ if ( tolower(params$norm) != "none" ) {
 invisible(dev.off())
 ```
 
+***
+
+## Z-score transformation
+
+This step aims to put data from different sources onto the same scale. Z-scores, or standard scores, indicate how many standard deviations an observation is above or below the mean. The z-score reflects a standard normal deviate - the variation of across the standard normal distribution, which is a normal distribution with mean equal to zero and standard deviation equal to one.
+
+Box-plot below present z-score transformed data for individual samples, coloured according to corresponding groups.
+
 ```{r z_transformation, comment = NA, message=FALSE, warning=FALSE}
 ##### Perform Z-score transformation
 if ( tolower(params$norm) == "none" ) {
@@ -636,6 +644,24 @@ if ( tolower(params$norm) == "none" ) {
 } else {
     y$z <- scale(y$noNorm)
 }
+```
+
+```{r data_z_score_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Plot expression distribution of samples for unnormalised and normalised data
+par(mfrow=c(1,1), mar=c((max(nchar(colnames(y$z)))+3)/2, 5, 3, 2))
+    
+boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+  title(main="Z-score transformed data", ylab="Z-score")
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+    
+##### Save the plot as pdf file
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_z_scores.pdf")), width=8, height=7)
+par(mfrow=c(1,1), mar=c(max(nchar(colnames(y$z)))/2, 5, 3, 2))
+    
+boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+title(main="Z-score transformed data", ylab="Z-score")
+    legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+invisible(dev.off())
 ```
 
 ***
