@@ -69,8 +69,9 @@ getGenesColours <- function(genes) {
   f.genes <- factor(genes)
   vec.genes <- genes.colours[1:length(levels(f.genes))]
   genes.colour <- rep(0,length(f.genes))
-  for(i in 1:length(f.genes))
+  for(i in 1:length(f.genes)){
     genes.colour[i] <- vec.genes[ f.genes[i]==levels(f.genes)]
+  }
   
   return( genes.colour )
 }
@@ -84,8 +85,9 @@ getSamplesColours <- function(samples) {
   f.samples <- factor(samples)
   vec.samples <- samples.colours[1:length(levels(f.samples))]
   samples.colour <- rep(0,length(f.samples))
-  for(i in 1:length(f.samples))
-    samples.colour[i] <- vec.samples[ f.samples[i]==levels(f.samples)]
+  for(i in 1:length(f.samples)){
+   samples.colour[i] <- vec.samples[ f.samples[i]==levels(f.samples)] 
+  }
   
   return( samples.colour )
 }
@@ -156,14 +158,6 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     
     if ("bimodal" %in% tolower(distributions)){
       
-      #data.x <- c( min(expr.sorted), rtruncnorm(length(expr.sorted)/2 -1, a=min(expr.sorted), b=max(expr.sorted), mean=(min(expr.sorted) + (max(expr.sorted)/2))/2, sd=1),
-      #            rtruncnorm(length(expr.sorted)/2 -1, a=min(expr.sorted), b=max(expr.sorted), mean=((max(expr.sorted)/2) + max(expr.sorted))/2, sd=1), max(expr.sorted))
-      
-      #data.y <- c(dtruncnorm(data.x[1:(length(data.x)/2)], a=min(data.x), b=max(data.x), mean = (min(expr.sorted) + (max(expr.sorted)/2))/2, sd = 1),
-      #            dtruncnorm(data.x[((length(data.x)/2)+1):length(data.x)], a=min(data.x), b=max(data.x), mean=((max(expr.sorted)/2) + max(expr.sorted))/2, 
-      #                       sd =1))
-      #data.y[c(1, length(data.y))] <- 0
-      
       ##### Draw n/2 samples from a normal distributions with one median and another n/2 samples from a second normal distribution with a different median
       data.x1 <- seq(min(expr.sorted), median(expr.sorted), length.out = ncol(data)/2)
       data.x2 <- seq(median(expr.sorted), max(expr.sorted), length.out = ncol(data)/2)
@@ -205,7 +199,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
                 name = data.df.selected$sample,
                 text = data.df.selected$sample,
                 mode = 'markers',
-                marker = list(size = 8, colors = data.df.selected$sample, color = rep(sample.colour, each = nrow(data.df.selected)/2), line = list(color = "grey", width = 2)),
+                marker = list(size = 8, colors = data.df.selected$sample, color = rep(sample.colour, each = nrow(data.df.selected)/length(samples)), line = list(color = "grey", width = 2)),
                 showlegend = TRUE,
                 inherit = FALSE) %>%
      plotly::layout(title = main_title,
@@ -247,7 +241,7 @@ targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
 #### Prepare input samples of interest
 samples <- unique(unlist(strsplit(params$samples, split=',', fixed=TRUE)))
 
-##### Change the target file to mark the sample of intersted
+##### Change the target file to mark the sample of interest
 targetFile$Target[match(params$samples, targetFile$Sample_name)] <- "Sample"
 
 ##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
