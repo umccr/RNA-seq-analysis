@@ -543,7 +543,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   invisible(dev.off())
   
-} else if ( !params$filter ) {
+} else {
   
   ##### Without filtering
   plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
@@ -728,14 +728,14 @@ invisible(dev.off())
 ##### Subset data to include only user-defined genes
 genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
 y.sub <- y
-  
+
 ##### Identify user-defined genes that were not present in the expression matrix
 if ( params$filter ) {
     
-  genes.missing <- genes[ genes %!in% rownames(y$filtered) ]
-  genes <- genes[ genes %in% rownames(y$filtered)  ]
+  genes.missing <- genes[ genes %!in% rownames(y$filtered.transformed) ]
+  genes <- genes[ genes %in% rownames(y$filtered.transformed)  ]
     
-  keep <- rownames(y$filtered) %in% genes
+  keep <- rownames(y$filtered.transformed) %in% genes
   y.sub$filtered.transformed <- y$filtered.transformed[keep, , drop=FALSE]
     
 } else {
@@ -753,7 +753,6 @@ y.sub$z <- y.sub$z[keep, , drop=FALSE]
 if ( tolower(params$norm) != "none" ) {
   y.sub$norm <- y.sub$norm[keep, , drop=FALSE]
 }
-
 
 ##### Write list of genes into a file
 if ( length(genes) > 0 ) {
