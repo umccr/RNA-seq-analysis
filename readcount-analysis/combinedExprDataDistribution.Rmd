@@ -796,23 +796,16 @@ if ( !is.na(gene) ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="Transformed vs normalised data", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
       
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs z-score data", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs z-score data", x_title=params$transform, y_title="Z-score", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs z-score data", x_title=params$transform, y_title="Z-score", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -832,35 +825,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -882,35 +867,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -932,35 +909,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -982,35 +951,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -1032,35 +993,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -1082,35 +1035,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -1132,35 +1077,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -1182,35 +1119,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
@@ -1232,35 +1161,27 @@ plotsNo <- 1
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
   
+  if ( params$filter ) {
+    transformed.data <- y.sub$filtered.transformed
+  } else {
+    transformed.data <- y.sub$transformed
+  }
+  
   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
-
-    if ( params$filter ) {
-      
-      ##### Check the effect of data normalisation
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$filtered.transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-      
-    } else {
-      
-      ##### Check the effect of data Z-score transformation 
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$transformed, main_title="Transformed vs normalised data", x_title="Normalised data", y_title=params$transform, sampleName=samples )
-    }
-          
+    
+    ##### For normalisation ON
     ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="Normalised vs Z-score data", x_title="Normalised data", y_title="Z-score data", sampleName=samples )
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform), y_title=params$transform, sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation 
+    widges.list[[plotsNo+1]] <- comparPlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform), y_title="Z-score", sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
     ##### Check the effect of data Z-score transformation 
-    if ( params$filter ) {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$filtered.transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-      
-    } else {
-      
-      widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=y.sub$transformed, dataset2=y.sub$z, main_title="Transformed vs Z-score data", x_title=params$transform, y_title="Z-score data", sampleName=samples )
-    }
+    widges.list[[plotsNo]] <- comparPlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
 }
 
