@@ -105,7 +105,7 @@ if ( is.na(opt$log)  ) {
 
 if ( is.na(opt$ensembl)  ) {
   
-  opt$ensembl <- FALSE
+  opt$ensembl <- TRUE
   
 }
 
