@@ -204,8 +204,8 @@ The script allows to process the read count data using combonation of the follow
 
 Transformation | TMM | TMMwzp | RLE | Upperquartile | Quantile | None
 ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------
-CPM | [x] | [x] | [x] | [x] | [ ] | [x]
-TPM | [ ] | [ ] | [ ] | [ ] | [x] | [x]
+CPM | Yes | Yes | Yes | Yes | - | Yes
+TPM | - | - | - | - | Yes | Yes
 <br/>
 
 **CPM** (Counts Per Million) are obtained by dividing counts by the library counts sum and multiplying the results by a million.
