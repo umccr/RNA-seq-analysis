@@ -263,7 +263,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
                 inherit = FALSE) %>%
      plotly::layout(title = main_title,
            xaxis = list(title = x_title, range = c(den.x[1],den.x[length(den.x)])),
-           yaxis = list (title = 'Weigth', range = c(den.y[1],den.y[length(den.y)])))
+           yaxis = list (title = 'Weight', range = c(den.y[1],den.y[length(den.y)])))
   
 return( p )
 }
@@ -847,6 +847,7 @@ if ( !is.na(gene) ) {
       
   ##### For normalisation OFF
   } else {
+    
     ##### Check the effect of data Z-score transformation 
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
   }
