@@ -243,7 +243,7 @@ Rscript combinedExprDataDistribution.R --exprDir $data/Combined_data --exprFile 
 
 <br>
 
-This will generate **[expression_distributions_results.html report** with interactive summary plots and the following output files in the *[data]/Combined_data* project directory:
+This will generate **expression_distributions_results_CPM_TMM.html report** with interactive summary plots and the following output files in the *[data]/Combined_data* project directory:
 
 1. Bar-plot illustrating library size for each sample
 2. Histograms presenting distributions of transformed data before and after data filtering (optional step)
