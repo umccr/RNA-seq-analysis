@@ -197,6 +197,63 @@ Output file | Description
 
 ## Data distribution evaluation
 
-To investigate the expression data distribution patters of user-defined genes (max 10) in [combined expression data](#read-count-data-combination) derived from different samples.
+Use [combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R) script to investigate the expression data distribution patters of user-defined genes (max 10) in [combined expression data](#read-count-data-combination) derived from different samples. It generates a report with interactive plots illustrating changes in the data introduced at individual processing steps and facilitate catching pontetial problems due to applied proecssing methods.
+
+The script allows to process the read count data using combonation of the following transformation and normalisation methods:
+
+
+Transformation | TMM | TMMwzp | RLE | Upperquartile | Quantile | None
+------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------
+CPM | [x] | [x] | [x] | [x] | [ ] | [x]
+TPM | [ ] | [ ] | [ ] | [ ] | [x] | [x]
+<br/>
+
+**CPM** (Counts Per Million) are obtained by dividing counts by the library counts sum and multiplying the results by a million.
+
+**TPM** (Transcripts Per Million) are obtained by dividing read counts by gene lengths (RPK, Reads Per Kilobases). These RPK are then divided by the sum of all RPK values in a sample and multiplying the results by 1 million.
+
+CPM is depth-normalised counts whereas TPM is length normalised (and then normalized by the length-normalized values of the other genes).
+
+*[combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R)* script collects user-defined parameters and pass them to *[combinedExprDataDistribution.Rmd](./readcount-analysis/combinedExprDataDistribution.Rmd)*, which generates html report with interactive plots and tables.
+
+### Arguments
+
+**Script**: *[combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R)*
+
+Argument | Description
+------------ | ------------
+--exprDir | Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
+--exprFile | File with expression data (read counts)
+--annotFile | Samples annotation file with four columns: (1) *Sample_name*, (2) *File_name* (may be balnk), (3) *Target* and (4) *Replicates* (may be balnk)
+--transform | Transformation method to be used when converting read counts. Available options are: *CPM* (defualt) and *TPM*
+--norm | Normalisation method. *TMM*, *TMMwzp*, *RLE* and *upperquartile* methods are available for *CPM-transformed* data and *quantile* normalisation is used for *TPM-transformed* data. *None* (default) is available for both transformation methods
+--filter | Filtering out low expressed genes. Available options are: *TRUE* (defualt) and *FALSE*
+--log | Log (base 2) transform data before normalisation. Available options are: *TRUE* (defualt) and *FALSE*
+--genes | List of genes to be considered. Up to 10 genes are allowed, each separated by comma
+--ensembl | Is input data annotated using ensembl gene IDs? Available options are: *TRUE* (defualt) and *FALSE*
+--samples | ID of samples of interest (OPTIONAL)
+--results_name | Desired core name for the results folder
+<br/>
+
+**Command-line use example**:
+
+```
+Rscript combinedExprDataDistribution.R --exprDir $data/Combined_data --exprFile UMCCR_PC.counts.matrix.txt.subset.txt --annotFile UMCCR_PC_Target_cleaned.txt --transform CPM --norm TMM --filter TRUE --log TRUE --genes KRAS,CDKN2A,TP53,SMAD4 --samples CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA --results_name expression_distributions_results 
+```
+
+<br>
+
+This will generate **[expression_distributions_results.html report** with interactive summary plots and the following output files in the *[data]/Combined_data* project directory:
+
+1. Bar-plot illustrating library size for each sample
+2. Histograms presenting distributions of transformed data before and after data filtering (optional step)
+3. Box-plots presenting transformed (and filtered) data for individual samples, coloured by sample groups, before and after normalisation procedure (optional step)
+4. Box-plot illustrating z-score transformed data for individual samples, coloured according to corresponding groups
+5. Scatter-plots illustrating the effect of data normalisation (optional step) and z-score transformation on the transformed data for user-defined genes, as well as per-sample normlaisation factors indicated by a colour shading
+6. Plots presenting transformed, normalised (optional step) and z-score data distribution for selected gene(s) along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data)
+
+### Output report
+
+[expression_distributions_results_CPM_TMM.html](./readcount-analysis/Combined_data/expression_distributions_results_CPM_TMM.html) is an example output report generated using the [example command above](#arguments).
 
 <br>
