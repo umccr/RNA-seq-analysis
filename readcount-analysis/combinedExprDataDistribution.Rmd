@@ -3,17 +3,17 @@ title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
-  transform: 
-  norm: 
-  filter: 
-  log: 
-  genes: 
-  ensembl: 
-  samples: 
-  results_name: 
+  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
+  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  transform: 'TPM'
+  norm: 'quantile'
+  filter: TRUE
+  log: TRUE
+  genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
+  ensembl: TRUE
+  samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
+  results_name: 'test'
   ensembl_version: 86
 output:
   html_document:
@@ -23,7 +23,7 @@ output:
 #    toc_float: true
 ---
 
-The aim of this report is investigate the expression data distribution patters of user-defined genes (max 10) in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is investigate the expression data distribution patterns of user-defined genes (max 10) in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
@@ -106,7 +106,7 @@ density2freq <- function(density) {
 }
   
 
-##### Generate density plot for selected genes. Currently, this function works for one gene at a time
+##### Generate scatter plots for samples (highlighting the samples and genes of interest) to illustrate the effect of data normalization and z-score transformation. Currently, this function works for one gene at a time.
 comparePlot <- function(genes, dataset1, dataset2, main_title, x_title, y_title, sampleName, plot_mode = "static") {
   
   ##### Used data for user-defined genes
@@ -160,7 +160,7 @@ comparePlot <- function(genes, dataset1, dataset2, main_title, x_title, y_title,
 return( p )
 }
 
-##### Generate density plot for selected genes. Currently, this function works for one gene at a time
+##### Generate density and expression distribution plots for selected genes, highlighting samples of interest. Currently, this function works for one gene at a time.
 densityPlot <- function(genes, data, main_title, x_title, sampleName, distributions = NULL, plot_mode = "static") {
   
   ##### Used data for user-defined genes
@@ -190,7 +190,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     colnames(data.df.dist) <- c("gene", "sample", "expr", "dens")
     
     ##### Generate y-values to mirror distributions of interest
-    ##### Generate y-values for normal distribution
+    ##### Generate y-values for normal distribution. Useful resource https://stats.idre.ucla.edu/r/modules/probabilities-and-distributions/
     if ( "normal" %in% tolower(distributions)) {
       
       ##### Generate y-values for normal distribution
@@ -200,7 +200,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     
     if ( "binomial" %in% tolower(distributions) ) {
       
-      ##### Generate x- and y-values for binomial distribution
+      ##### Generate x- and y-values for binomial distribution. Useful link https://stat.ethz.ch/R-manual/R-devel/library/stats/html/Binomial.html
       #data.x <- round(seq(min(data), max(data), length.out = ncol(data)), digits = 0)
       data.x <- 1:ncol(data)
       data.y <- dbinom(data.x, ncol(data), 0.25)
@@ -217,7 +217,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     
     if ("bimodal" %in% tolower(distributions)){
       
-      ##### Draw n/2 samples from a normal distributions with one median and another n/2 samples from a second normal distribution with a different median
+      ##### Draw n/2 samples from a normal distributions with one median and another n/2 samples from a second normal distribution with a different median. Useful link                  https://stats.stackexchange.com/questions/355344/simulating-a-bimodal-distribution-in-the-range-of-15-in-r
       data.x1 <- seq(min(expr.sorted), median(expr.sorted), length.out = ncol(data)/2)
       data.x2 <- seq(median(expr.sorted), max(expr.sorted), length.out = ncol(data)/2)
       
