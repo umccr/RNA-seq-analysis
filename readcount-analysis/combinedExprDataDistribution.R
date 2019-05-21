@@ -27,7 +27,7 @@
 #   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (defualt) and "FALSE"
 #   samples (optional):  ID of samples of interest
 #   results_name: Desired core name for the results folder
-#
+#   scaling:      Apply z-score transformation, either row-wise (across samples) or column-wise (across genes in a sample). Available options are: col (default) or row
 ################################################################################
 
 ##### Clear workspace
@@ -68,12 +68,14 @@ option_list = list(
   make_option(c("-s", "--samples"), action="store", default=NA, type='character',
               help="ID of samples of interest"),
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
-              help="Prefix for the results files names")
+              help="Prefix for the results files names"),
+  make_option(c("-c", "--scaling"), action="store", default=NA, type='character',
+              help="Scaling for z-score transformation")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
 
-##### Read in argument from command line and check if all were provide by the user
+##### Read in arguments from command line and check if all the required ones were provide by the user
 if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$genes) ) {
   
   cat("\nPlease type in required arguments!\n\n")
@@ -112,6 +114,11 @@ if ( is.na(opt$ensembl)  ) {
 if ( is.na(opt$samples)  ) {
   
   opt$samples <- FALSE
+}
+
+if ( is.na(opt$scaling)  ) {
+  
+  opt$scaling <- "col"
 }
 
 ##### Make sure that not more than 10 genes are quertied
