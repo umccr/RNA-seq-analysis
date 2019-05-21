@@ -695,7 +695,7 @@ Box-plot below present z-score transformed data for individual samples, coloured
 
 ```{r z_transformation, comment = NA, message=FALSE, warning=FALSE}
 ##### Perform Z-score transformation
-if ( tolower(params$norm) == "none" ) {
+if ( tolower(params$norm) != "none" ) {
   
     y$z <- scale(y$norm)
     
