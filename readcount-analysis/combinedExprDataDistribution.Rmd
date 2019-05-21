@@ -251,7 +251,6 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   ##### Assign colours to samples
   sample.colour <- getSamplesColours(unique(data.df.selected$sample))
 
-  
   ##### Generate interactive density plot
   p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
     plotly::add_markers(y = data.df.selected$dens, x = data.df.selected$expr, 
