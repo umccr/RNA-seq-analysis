@@ -697,20 +697,23 @@ Box-plot below present z-score transformed data for individual samples, coloured
 ```{r z_transformation, comment = NA, message=FALSE, warning=FALSE}
 ##### Perform Z-score transformation
 if ( tolower(params$norm) != "none" ) {
-  
-    y$z <- scale(y$norm)
     
-    if (tolower(params$scaling) == "col"){
+    if (tolower(params$scaling) == "row"){
       
-      y$z <- scale(t(y$norm))
+      y$z <- t(scale(t(y$norm)))
+    } else {
+      
+      y$z <- scale(y$norm, scale = FALSE)
     }
     
 } else {
-    y$z <- scale(y$noNorm)
     
-    if (tolower(params$scaling) == "col"){
+    if (tolower(params$scaling) == "row"){
       
-      y$z <- scale(t(y$noNorm))
+      y$z <- t(scale(t(y$noNorm)))
+    } else {
+      
+      y$z <- scale(y$noNorm, scale = FALSE)
     }
 }
 ```
