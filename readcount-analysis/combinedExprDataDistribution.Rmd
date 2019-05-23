@@ -15,7 +15,7 @@ params:
   samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
   results_name: 'test'
   ensembl_version: 86
-  scaling: 'col'
+  scaling: 'row'
 output:
   html_document:
     keep_md: yes
@@ -703,7 +703,7 @@ if ( tolower(params$norm) != "none" ) {
       y$z <- t(scale(t(y$norm)))
     } else {
       
-      y$z <- scale(y$norm)
+      y$z <- scale(y$norm, scale = FALSE)
     }
     
 } else {
@@ -713,7 +713,7 @@ if ( tolower(params$norm) != "none" ) {
       y$z <- t(scale(t(y$noNorm)))
     } else {
       
-      y$z <- scale(y$noNorm)
+      y$z <- scale(y$noNorm, scale = FALSE)
     }
 }
 ```
