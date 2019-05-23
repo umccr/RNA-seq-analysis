@@ -3,7 +3,7 @@ title: "Investigate expression data for selected genes"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
+  exprDir: 
   exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
   annotFile: 'UMCCR_PC_Target_cleaned.txt'
   transform: 'CPM'
@@ -15,7 +15,7 @@ params:
   samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
   results_name: 'test'
   ensembl_version: 86
-  scaling: 'row'
+  scaling: 
 output:
   html_document:
     keep_md: yes
@@ -698,7 +698,7 @@ Box-plot below present z-score transformed data for individual samples, coloured
 ##### Perform Z-score transformation
 if ( tolower(params$norm) != "none" ) {
     
-    if (tolower(params$scaling) == "row"){
+    if (tolower(params$scaling) == "sample-wise"){
       
       y$z <- t(scale(t(y$norm)))
     } else {
@@ -708,7 +708,7 @@ if ( tolower(params$norm) != "none" ) {
     
 } else {
     
-    if (tolower(params$scaling) == "row"){
+    if (tolower(params$scaling) == "sample-wise"){
       
       y$z <- t(scale(t(y$noNorm)))
     } else {
