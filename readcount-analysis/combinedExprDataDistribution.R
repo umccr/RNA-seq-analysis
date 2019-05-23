@@ -70,7 +70,7 @@ option_list = list(
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
               help="Prefix for the results files names"),
   make_option(c("-c", "--scaling"), action="store", default=NA, type='character',
-              help="Scaling for z-score transformation (genes-wise (row) or sample-wise (col)")
+              help="Scaling for z-score transformation (genes-wise or sample-wise")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -118,7 +118,7 @@ if ( is.na(opt$samples)  ) {
 
 if ( is.na(opt$scaling)  ) {
   
-  opt$scaling <- "col"
+  opt$scaling <- "sample-wise"
 }
 
 ##### Make sure that not more than 10 genes are quertied
