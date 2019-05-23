@@ -703,7 +703,7 @@ if ( tolower(params$norm) != "none" ) {
       y$z <- t(scale(t(y$norm)))
     } else {
       
-      y$z <- scale(y$norm, scale = FALSE)
+      y$z <- scale(y$norm)
     }
     
 } else {
@@ -713,7 +713,7 @@ if ( tolower(params$norm) != "none" ) {
       y$z <- t(scale(t(y$noNorm)))
     } else {
       
-      y$z <- scale(y$noNorm, scale = FALSE)
+      y$z <- scale(y$noNorm)
     }
 }
 ```
