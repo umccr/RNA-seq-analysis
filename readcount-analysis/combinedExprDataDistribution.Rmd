@@ -13,9 +13,9 @@ params:
   genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
   ensembl: TRUE
   samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
-  results_name: 'test'
+  results_name: 'expression_distributions_CPM_TMM'
+  scaling: "sample-wise"
   ensembl_version: 86
-  scaling: 
 output:
   html_document:
     keep_md: yes
@@ -692,7 +692,7 @@ invisible(dev.off())
 
 This step aims to put data from different sources onto the same scale. Z-scores, or standard scores, indicate how many standard deviations an observation is above or below the mean. The z-score reflects a standard normal deviate - the variation of across the standard normal distribution, which is a normal distribution with mean equal to zero and standard deviation equal to one.
 
-Box-plot below present z-score transformed data for individual samples, coloured according to corresponding groups.
+Box-plot below present z-score transformed data (`r if ( tolower(params$scaling) == "sample-wise" ) { c("sample-wise") } else { c("gene-wise") }`) for individual samples, coloured according to corresponding groups.
 
 ```{r z_transformation, comment = NA, message=FALSE, warning=FALSE}
 ##### Perform Z-score transformation
@@ -700,9 +700,11 @@ if ( tolower(params$norm) != "none" ) {
     
     if (tolower(params$scaling) == "sample-wise"){
       
+      z_scaling <- "sample-wise"
       y$z <- t(scale(t(y$norm)))
     } else {
       
+      z_scaling <- "gene-wise"
       y$z <- scale(y$norm, scale = FALSE)
     }
     
@@ -710,9 +712,11 @@ if ( tolower(params$norm) != "none" ) {
     
     if (tolower(params$scaling) == "sample-wise"){
       
+      z_scaling <- "sample-wise"
       y$z <- t(scale(t(y$noNorm)))
     } else {
       
+      z_scaling <- "gene-wise"
       y$z <- scale(y$noNorm, scale = FALSE)
     }
 }
@@ -740,7 +744,7 @@ invisible(dev.off())
 
 ## Data processing effects {.tabset}
 
-`r if ( tolower(params$norm) != "none" ) { c(paste0("Scatter-plots illustrating the effect of data normalisation and z-score transformation on the ", params$transform, " data. The ", params$transform, " and z-score data, respectively, are plotted as a function of ", paste0("normalised ", params$transform, " (", params$norm, ")"), " values.")) } else { c(paste0("Scatter-plots illustrating the effect of data z-score transformation on the ", params$transform, " data. The z-scores are plotted as a function of ", params$transform, " values.")) }`
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Scatter-plots illustrating the effect of data normalisation and z-score transformation (", z_scaling, ") on the ", params$transform, " data. The ", params$transform, " and z-score data, respectively, are plotted as a function of ", paste0("normalised ", params$transform, " (", params$norm, ")"), " values.")) } else { c(paste0("Scatter-plots illustrating the effect of data z-score transformation (", z_scaling, ") on the ", params$transform, " data. The z-scores are plotted as a function of ", params$transform, " values.")) }`
 
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
 ##### Subset data to include only user-defined genes
@@ -1212,7 +1216,7 @@ widges.list
 
 ### Plots {.tabset .tabset-fade}
 
-`r if ( tolower(params$norm) != "none" ) { c(paste0("Plot(s) illustrating ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and z-score transformated data distributions for selected gene(s)")) } else { c(paste0("Plot(s) illustrating ", params$transform, " and z-score transformated data distributions for selected gene(s)")) }` along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data).
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Plot(s) illustrating ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and z-score transformated  (", z_scaling, ") data distributions for selected gene(s)")) } else { c(paste0("Plot(s) illustrating ", params$transform, " and z-score transformated (", z_scaling, ") data distributions for selected gene(s)")) }` along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data).
 
 **`r if ( !runChunk ) { c("None of the queried genes are not present in the input data.") } else { c("") }`**
 
