@@ -301,7 +301,7 @@ targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
 samples <- unique(unlist(strsplit(params$samples, split=',', fixed=TRUE)))
 
 ##### Change the target file to mark the sample of interest
-targetFile$Target[match(params$samples, targetFile$Sample_name)] <- "Sample"
+targetFile$Target[ rownames(targetFile) %in% samples ] <- "Queried sample(s)"
 
 ##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
 if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
