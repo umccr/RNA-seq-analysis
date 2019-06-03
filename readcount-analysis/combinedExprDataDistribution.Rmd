@@ -298,10 +298,17 @@ rownames(targetFile) <- make.names(rownames(targetFile))
 targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
 
 #### Prepare input samples of interest
-samples <- unique(unlist(strsplit(params$samples, split=',', fixed=TRUE)))
+if ( !is.na(params$samples) ) {
+  
+  samples <- unique(unlist(strsplit(params$samples, split=',', fixed=TRUE)))
 
-##### Change the target file to mark the sample of interest
-targetFile$Target[ rownames(targetFile) %in% samples ] <- "Queried sample(s)"
+  ##### Change the target file to mark the sample of interest
+  targetFile$Target[ rownames(targetFile) %in% samples ] <- "Queried sample(s)"
+  
+} else {
+  
+  samples <- rownames(targetFile) 
+}
 
 ##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
 if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
@@ -747,7 +754,7 @@ boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
     
 ##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_z_scores.pdf")), width=8, height=7)
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", scaled_title, ".pdf")), width=8, height=7)
 par(mfrow=c(1,1), mar=c(max(nchar(colnames(y$z)))/2, 5, 3, 2))
     
 boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)

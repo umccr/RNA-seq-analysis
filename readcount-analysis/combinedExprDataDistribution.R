@@ -111,11 +111,6 @@ if ( is.na(opt$ensembl)  ) {
   
 }
 
-if ( is.na(opt$samples)  ) {
-  
-  opt$samples <- FALSE
-}
-
 if ( is.na(opt$scaling)  ) {
   
   opt$scaling <- "sample-wise"
