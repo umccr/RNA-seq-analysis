@@ -313,6 +313,14 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
 }
 ```
 
+**`r if ( any( samples %!in% colnames(data) ) || any( samples %!in% colnames(data) ) ) { c("NOTE:\n") } else { c(" ") }`** 
+
+`r if ( any( samples %!in% rownames(targetFile) ) ) { c(paste0("\nQueried sample(s) \"", samples[ samples %!in%rownames(targetFile) ], "\" are not present in the \"",  params$annotFile, "\" samples annotation file.\n\n")) }`
+
+`r if ( any( samples %!in% colnames(data) ) ) { c(paste0("\nQueried sample(s) \"", samples[ samples %!in%colnames(data) ], "\" are not present in the \"", params$exprFile, "\" samples annotation file.\n\n")) }`
+
+`r if ( any( samples %!in% colnames(data) ) || any( samples %!in% colnames(data) ) ) { c("These sample(s) will be ignored.\n\n") } else { c(" ") }`
+
 ***
 
 ## Library size
@@ -802,6 +810,16 @@ widges.list <- htmltools::tagList()
 
 gene <- genes[1]
 plotsNo <- 1
+
+##### Check if queried samples are present in the data matrix and target file. If now, then ignore them
+if ( any( samples %!in% rownames(targetFile) ) ) { 
+  
+  samples <- samples[ samples %in% rownames(targetFile) ]
+  
+} else if ( any( samples %!in% colnames(data) ) ) { 
+  
+  samples <- samples[ samples %in% colnames(data) ]
+}
 
 ##### Plot expression distribution in transfromed and normalised data for selected genes
 if ( !is.na(gene) ) {
