@@ -4,17 +4,17 @@ author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
   exprDir: 
-  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
-  annotFile: 'UMCCR_PC_Target_cleaned.txt'
-  transform: 'CPM'
-  norm: 'TMM'
-  filter: TRUE
-  log: TRUE
-  genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
-  ensembl: TRUE
-  samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
-  results_name: 'expression_distributions_CPM_TMM'
-  scaling: "sample-wise"
+  exprFile: 
+  annotFile: 
+  transform: 
+  norm: 
+  filter: 
+  log: 
+  genes: 
+  ensembl: 
+  samples: 
+  results_name: 
+  scaling: 
   ensembl_version: 86
 output:
   html_document:
@@ -24,7 +24,7 @@ output:
 #    toc_float: true
 ---
 
-The aim of this report is investigate the expression data distribution patterns of user-defined genes (max 10) in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is investigate the expression data distribution patterns of user-defined genes (max 10) in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`) and scaling (`r if ( tolower(params$scaling) == "sample-wise" ) { c("Z-score tansformation") } else { c("centering") }`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
@@ -107,7 +107,7 @@ density2freq <- function(density) {
 }
   
 
-##### Generate scatter plots for samples (highlighting the samples and genes of interest) to illustrate the effect of data normalization and z-score transformation. Currently, this function works for one gene at a time.
+##### Generate scatter plots for samples (highlighting the samples and genes of interest) to illustrate the effect of data normalization and z-score transformation/centering. Currently, this function works for one gene at a time.
 comparePlot <- function(genes, dataset1, dataset2, main_title, x_title, y_title, sampleName, plot_mode = "static") {
   
   ##### Used data for user-defined genes
@@ -696,14 +696,14 @@ invisible(dev.off())
 
 ***
 
-## Z-score transformation
+## `r if ( tolower(params$scaling) == "sample-wise" ) { c("Z-score transformation") } else { c("Centering") }`
 
-This step aims to put data from different sources onto the same scale. Z-scores, or standard scores, indicate how many standard deviations an observation is above or below the mean. The z-score reflects a standard normal deviate - the variation of across the standard normal distribution, which is a normal distribution with mean equal to zero and standard deviation equal to one.
+`r if ( tolower(params$scaling) == "sample-wise" ) { c("This step aims to put data from different sources onto the same scale. Z-scores, or standard scores, indicate how many standard deviations an observation is above or below the mean. The z-score reflects a standard normal deviate - the variation of across the standard normal distribution, which is a normal distribution with mean equal to zero and standard deviation equal to one.") } else { c("This step aims to put data from different sources onto the same scale. The centering is done by subtracting the mean expression of all genes in the corresponding sample from the expresion of queried gene in that sample.") }`
 
-Box-plot below present z-score transformed data (`r if ( tolower(params$scaling) == "sample-wise" ) { c("sample-wise") } else { c("gene-wise") }`) for individual samples, coloured according to corresponding groups.
+Box-plot below presents `r if ( tolower(params$scaling) == "sample-wise" ) { c("z-score transformed") } else { c("centered") }` data (`r if ( tolower(params$scaling) == "sample-wise" ) { c("sample-wise") } else { c("gene-wise") }`) for individual samples, coloured according to corresponding groups.
 
 ```{r z_transformation, comment = NA, message=FALSE, warning=FALSE}
-##### Perform Z-score transformation
+##### Perform Z-score transformation/centering
 if ( tolower(params$norm) != "none" ) {
     
     if (tolower(params$scaling) == "sample-wise"){
@@ -728,6 +728,14 @@ if ( tolower(params$norm) != "none" ) {
       y$z <- scale(y$noNorm, scale = FALSE)
     }
 }
+
+##### Define axis title for scaled data
+if ( tolower(params$scaling) == "sample-wise" ) {
+  
+  scaled_title <- "Z-score"
+} else { 
+  scaled_title <-  paste0("Centered ", params$transform)
+}
 ```
 
 ```{r data_z_score_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
@@ -735,7 +743,7 @@ if ( tolower(params$norm) != "none" ) {
 par(mfrow=c(1,1), mar=c((max(nchar(colnames(y$z)))+3)/2, 5, 3, 2))
     
 boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-  title(main="Z-score transformed data", ylab="Z-score")
+  title(main=paste0(scaled_title, " data"), ylab=scaled_title)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
     
 ##### Save the plot as pdf file
@@ -743,7 +751,7 @@ pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_z_s
 par(mfrow=c(1,1), mar=c(max(nchar(colnames(y$z)))/2, 5, 3, 2))
     
 boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-title(main="Z-score transformed data", ylab="Z-score")
+title(main=paste0(scaled_title, " data"), ylab=scaled_title)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
 invisible(dev.off())
 ```
@@ -752,7 +760,7 @@ invisible(dev.off())
 
 ## Data processing effects {.tabset}
 
-`r if ( tolower(params$norm) != "none" ) { c(paste0("Scatter-plots illustrating the effect of data normalisation and z-score transformation (", z_scaling, ") on the ", params$transform, " data. The ", params$transform, " and z-score data, respectively, are plotted as a function of ", paste0("normalised ", params$transform, " (", params$norm, ")"), " values.")) } else { c(paste0("Scatter-plots illustrating the effect of data z-score transformation (", z_scaling, ") on the ", params$transform, " data. The z-scores are plotted as a function of ", params$transform, " values.")) }`
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Scatter-plots illustrating the effect of data normalisation and ", if ( tolower(params$scaling) == "sample-wise" ) { c("z-score transformation") } else { c("centering") }, " data (", z_scaling, ") on the ", params$transform, " data. The ", params$transform, " and ", if ( tolower(params$scaling) == "sample-wise" ) { c("z-score data") } else { c(paste0("centered ", params$transform, " values")) }, " , respectively, are plotted as a function of ", paste0("normalised ", params$transform, " (", params$norm, ")"), " values.")) } else { c(paste0("Scatter-plots illustrating the effect of data ", if ( tolower(params$scaling) == "sample-wise" ) { c("z-score transformation") } else { c("centering") }, " (", z_scaling, ") on the ", params$transform, " data. The ", if ( tolower(params$scaling) == "sample-wise" ) { c("z-scores") } else { c(paste0("centered ", params$transform, "s")) }, " are plotted as a function of ", params$transform, " values.")) }`
 
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
 ##### Subset data to include only user-defined genes
@@ -834,17 +842,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -874,17 +882,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -916,17 +924,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -958,17 +966,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -1000,17 +1008,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -1042,17 +1050,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -1084,17 +1092,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -1126,17 +1134,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -1168,17 +1176,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -1210,17 +1218,17 @@ if ( !is.na(gene) ) {
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation 
+    ##### Check the effect of data Z-score transformation / centering
     widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
       
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation 
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="Z-score transformation", x_title=params$transform, y_title="Z-score", sampleName=samples )
+    ##### Check the effect of data Z-score transformation / centering
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
   }
 }
 
@@ -1234,7 +1242,7 @@ widges.list
 
 ### Plots {.tabset .tabset-fade}
 
-`r if ( tolower(params$norm) != "none" ) { c(paste0("Plot(s) illustrating ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and z-score transformated  (", z_scaling, ") data distributions for selected gene(s)")) } else { c(paste0("Plot(s) illustrating ", params$transform, " and z-score transformated (", z_scaling, ") data distributions for selected gene(s)")) }` along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data).
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Plot(s) illustrating ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and ", if ( tolower(params$scaling) == "sample-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") data distributions for selected gene(s)")) } else { c(paste0("Plot(s) illustrating ", params$transform, " and ", if ( tolower(params$scaling) == "sample-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") data distributions for selected gene(s)")) }` along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data).
 
 **`r if ( !runChunk ) { c("None of the queried genes are not present in the input data.") } else { c("") }`**
 
@@ -1266,7 +1274,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1303,7 +1311,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1340,7 +1348,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1377,7 +1385,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1414,7 +1422,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1451,7 +1459,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1488,7 +1496,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1525,7 +1533,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1562,7 +1570,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
@@ -1599,7 +1607,7 @@ if ( !is.na(gene) ) {
     #### Interactive gene distribution plot
     widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title="Z-score", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
 }
 
 ##### Print a list of htmlwidgets
