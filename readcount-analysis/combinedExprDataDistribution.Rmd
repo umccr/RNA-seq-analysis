@@ -1,5 +1,5 @@
 ---
-title: "Investigate expression data for selected genes"
+title: "Investigate expression data"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
@@ -20,6 +20,7 @@ output:
   html_document:
     keep_md: yes
     code_folding: hide
+    theme: readable
 #    toc: true
 #    toc_float: true
 ---
