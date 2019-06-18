@@ -175,7 +175,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   colnames(data.df) <- c("gene", "sample", "expr", "dens")
   
   for (i in 1:nrow(data)) {
-      data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(sort(data[ genes[i], ])), expr = sort(data[ genes[i], ]), dens = density2freq(density(data[i,], n=ncol(data))$y)))
+      data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(data[ genes[i], ]), expr = sort(data[ genes[i], ]), dens = density2freq(density(data[i,], n=ncol(data))$y)))
   }
   
   ##### Generate values to generate various distributions
