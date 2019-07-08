@@ -3,18 +3,21 @@ title: "Investigate expression data"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: 
-  exprFile: 
-  annotFile: 
-  transform: 
-  norm: 
-  filter: 
-  log: 
-  genes: 
-  ensembl: 
-  samples: 
-  results_name: 
-  scaling: 
+  samplename: 
+  dataset: 
+  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
+  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
+  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  transform: 'CPM'
+  norm: 'TMM'
+  filter: TRUE
+  log: TRUE
+  genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
+  ensembl: TRUE
+  samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
+  results_name: 'test'
+  scaling: 'gene-wise'
+  ref_data_dir: '../data'
   ensembl_version: 86
 output:
   html_document:
@@ -45,6 +48,100 @@ geneMatrix2write <- function (x) {
   x2write <- cbind(rownames(x), x)
   colnames(x2write) <- c("Gene",colnames(x))
   return(x2write)
+}
+
+##### Combine sample expression profile with reference datasets. This function outputs a vector with first element containing the merged data and second element containing merged targets info
+combineDatasets <- function(sample_name, ref_dataset) {
+  
+  ##### Read file with reference datasets information
+  DatasetInput <- read.table(ref_dataset, sep="\t", as.is=TRUE, header=TRUE, row.names=1)
+  
+  ##### Extract info about target file for the first dataset
+  fileInfo <- strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
+  targetFile <- read.table(DatasetInput[1,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+  targetFile <- cbind(targetFile[,1:4],rownames(DatasetInput[1,]))
+  colnames(targetFile)[ncol(targetFile)] <- "Dataset"
+  
+  ##### Add prexit to sample names
+  rownames(targetFile) <- paste(targetFile[,"Dataset"], targetFile[,"Sample_name"], sep = ".")
+  targetFile <- targetFile[, -1]
+  
+  if ( nrow(DatasetInput) > 1 ) {
+    for ( i in 2:nrow(DatasetInput) ) {
+        
+      ##### Create a temporary object to store info from the remaining target files
+      targetFileTmp <- read.table(DatasetInput[i,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+      targetFileTmp <- cbind(targetFileTmp[,1:4],rownames(DatasetInput[i,]))
+      colnames(targetFileTmp)[ncol(targetFileTmp)] <- "Dataset"
+      
+      ##### Add prexit to sample names
+      rownames(targetFileTmp) <- paste(targetFileTmp[,"Dataset"], targetFileTmp[,"Sample_name"], sep = ".")
+      targetFileTmp <- targetFileTmp[, -1]
+        
+      targetFile <- rbind(targetFile, targetFileTmp)
+    }
+  }  
+  
+  ##### Add sample info
+  sampleTargetFile <- data.frame("Patient", sample_name, NA, sample_name)
+  names(sampleTargetFile) <- names(targetFile)
+  rownames(sampleTargetFile) <- sample_name
+  targetFile <- rbind( targetFile, sampleTargetFile )
+  
+  ##### Make syntactically valid names
+  rownames(targetFile) <- make.names(rownames(targetFile))
+  
+  ##### Read sample read count file and combine it with reference datasets
+  #datasets.comb <- sample_counts
+  #names(datasets.comb) <- c("", sample_name)
+      
+  ##### list genes present in the read count file
+  gene_list <- as.vector(datasets.comb[,1])
+      
+  ##### Loop through the expression data from different datasets and merge them into one matrix
+  for ( i in 1:length(DatasetInput[ , "Expression_matrix" ]) ) {
+    
+    data_matrix <- DatasetInput[ , "Expression_matrix" ][i]
+    
+    ##### Add data from the reference datasets
+    dataset <- as.data.frame( read.table(data_matrix, header=TRUE, sep="\t", row.names=NULL) )
+    
+    ##### Add prexit to sample names
+    colnames(dataset) <- paste(levels(targetFile[,"Dataset"])[i], colnames(dataset), sep = ".")
+    
+    ##### list genes present in individal files
+    gene_list <- c( gene_list, as.vector(dataset[,1]) )
+    
+    ##### Merge the expression datasets and make sure that the genes order is the same
+    datasets.comb <- merge( datasets.comb, dataset, by=1, all = FALSE, sort= TRUE)
+      
+    ##### Remove per-sample data for merged samples to free some memory
+    rm(dataset)
+  }
+  
+  ##### Use gene IDs as rownames
+  rownames(datasets.comb) <- datasets.comb[,1]
+  datasets.comb <- datasets.comb[, -1]
+  
+  ##### Make syntactically valid names
+  colnames(datasets.comb) <- make.names(colnames(datasets.comb))
+  
+  ##### Make sure that the target file contains info only about samples present in the data matrix
+  targetFile <- targetFile[ rownames(targetFile) %in% colnames(datasets.comb),  ]
+  
+  ##### Make sure that the samples order in the data matrix is the same as in the target file 
+  datasets.comb <- datasets.comb[ , rownames(targetFile) ]
+  
+  ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
+  gene_list <- unique(gene_list)
+  gene_list.missing <- gene_list[ gene_list %!in% rownames(datasets.comb) ]
+  
+  ##### Write list of missing genes into a file
+  if ( length(gene_list.missing) > 0 ) {
+    write.table(prepare2write(gene_list.missing), file = paste0(params$report_dir, "/", sample_name, ".", params$dataset, ".missing_genes.txt"), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+  }
+  
+    return( list(datasets.comb, targetFile) )
 }
 
 ##### Assign colours to different groups
@@ -283,6 +380,23 @@ suppressMessages(library(RColorBrewer))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
+##### Load reference datasets
+##### Define the reference datasets based on user-defined input
+ref_dataset <- list( "pdac" = c(paste(params$ref_data_dir, "Datasets_list_PDAC.txt", sep="/"), "PDAC (UMCCR)", "PDAC (TCGA)"), "cervix" = c(paste(params$ref_data_dir, "Datasets_list_cervical_SCC.txt", sep="/"), "PDAC (UMCCR)", "CESC (TCGA)"), "bladder" = c(paste(params$ref_data_dir, "Datasets_list_bladder.txt", sep="/"), "PDAC (UMCCR)", "BLCA (TCGA)") )
+
+dataset <- params$dataset
+int_cancer_group <- ref_dataset[[dataset]][2]
+ext_cancer_group <- ref_dataset[[dataset]][3]
+
+##### Create a list with reference datasets
+ref_datasets <- c(dataset)
+ref_datasets.list <- vector("list", length(ref_datasets))
+names(ref_datasets.list) <- ref_datasets
+
+##### Read in reference datasets and merge them with UMCCR data. This part outputs a vector with first element containing the merged data and second element containing merged targets info
+ref_datasets.list[[dataset]] <- combineDatasets(sample_name=params$sample_name, ref_dataset=ref_dataset[[dataset]][1])
+names(ref_datasets.list[[dataset]]) <- c("combined_data", "sample_annot")
+
 ##### Read in expression data and associated sample annotation files
 data <- read.table(paste(params$exprDir, params$exprFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE, row.names = 1)
 targetFile <- read.table(paste(params$exprDir, params$annotFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
