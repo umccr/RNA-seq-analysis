@@ -366,6 +366,7 @@ suppressMessages(library(plotly))
 suppressMessages(library(scales))
 suppressMessages(library(truncnorm))
 suppressMessages(library(RColorBrewer))
+suppressMessages(library(limma))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
@@ -387,12 +388,8 @@ ref_datasets.list[[dataset]] <- combineDatasets(ref_dataset=ref_dataset[[dataset
 names(ref_datasets.list[[dataset]]) <- c("combined_data", "sample_annot")
 
 ##### Read in expression data and associated sample annotation files
-data <- read.table(paste(params$exprDir, params$exprFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE, row.names = 1)
-targetFile <- read.table(paste(params$exprDir, params$annotFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
-
-##### Make sure that there are no duplciated samples in the target file
-targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
-rownames(targetFile) <- targetFile[,"Sample_name"]
+data <- ref_datasets.list[[dataset]][["combined_data"]]
+targetFile <- ref_datasets.list[[dataset]][["sample_annot"]]
 
 ##### Make syntactically valid names
 colnames(data) <- make.names(colnames(data))
@@ -522,10 +519,11 @@ if ( params$filter && params$transform == "CPM" ) {
   
   #cat(nrow(y$filtered$counts), "genes remained after filtering out of the", nrow(data), "genes in the input read count matrix\n\n")
   
-  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
   y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = "none")$samples["norm.factors"]
   y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
   y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
   
 ##### CPM transformation without filtering
 } else if ( !params$filter && params$transform == "CPM" ) {
@@ -533,8 +531,9 @@ if ( params$filter && params$transform == "CPM" ) {
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
   
-  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
   y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
   
 ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
 ##### TPM transformation with filtering
@@ -560,16 +559,18 @@ if ( params$filter && params$transform == "CPM" ) {
   y$filtered <- y$counts[keep, ]
   y$filtered.transformed <- y$transformed[keep, ]
   
-  ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
+  ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero and remove batch effect
   if ( params$log ) {
     
     y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
     y$filtered.transformed <- log2(tpm_from_rpkm(y$filtered.transformed+0.25))
+    y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
   
   } else {
     
     y$transformed <- tpm_from_rpkm(y$transformed)
     y$filtered.transformed <- tpm_from_rpkm(y$filtered.transformed)
+    y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
   }
   
 ##### TPM transformation without filtering
@@ -594,10 +595,12 @@ if ( params$filter && params$transform == "CPM" ) {
   if ( params$log ) {
     
     y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
+    y$transformed.batch.removed <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
   
   } else {
     
     y$transformed <- tpm_from_rpkm(y$transformed)
+    y$transformed.batch.removed <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
   }
 }
 ```
