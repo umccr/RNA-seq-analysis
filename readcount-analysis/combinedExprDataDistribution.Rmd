@@ -248,6 +248,83 @@ comparePlot <- function(genes, dataset1, dataset2, main_title, x_title, y_title,
 return( p )
 }
 
+##### Assign colours to different groups
+getTargetsColours <- function(targets) {
+  
+##### Predefined selection of colours for groups
+targets.colours <- c("powderblue", "red", "gray50")
+  
+  f.targets <- factor(targets)
+  vec.targets <- targets.colours[1:length(levels(f.targets))]
+  targets.colour <- rep(0,length(f.targets))
+  for(i in 1:length(f.targets))
+    targets.colour[i] <- vec.targets[ f.targets[i]==unique(f.targets)]
+  
+  return( list(vec.targets, targets.colour) )
+}
+
+##### Assign colours to different datasets
+getDatasetsColours <- function(datasets) {
+  
+  ##### Predefined selection of colours for datasets
+  datasets.colours <- c("dodgerblue","firebrick","lightslategrey","darkseagreen","orange","darkcyan","bisque", "coral2", "cadetblue3","red","blue","green")
+  
+  f.datasets <- factor(datasets)
+  vec.datasets <- datasets.colours[1:length(levels(f.datasets))]
+  datasets.colour <- rep(0,length(f.datasets))
+  for(i in 1:length(f.datasets))
+    datasets.colour[i] <- vec.datasets[ f.datasets[i]==levels(f.datasets)]
+  
+  return( list(vec.datasets, datasets.colour) )
+}
+
+##### Perform PCA. This function outputs a list with dataframe and samples colouring info ready for plotting
+pca <- function(data, targets) {
+
+  ##### Keep only genes with variance > 0 across all samples
+  rsd <- apply(data,1,sd)
+  data.subset <- data[rsd>0,]
+  
+  ##### Perform PCA
+  data.subset_pca <- prcomp(t(data.subset), scale=FALSE)
+  
+  ##### Get variance importance for all principal components
+  importance_pca <- summary(data.subset_pca)$importance[2,]
+  importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
+  names(importance_pca) <- names(summary(data.subset_pca)$importance[2,])
+    
+  ##### Prepare data frame
+  data.subset_pca.df <- data.frame(targets$Target, targets$Dataset, data.subset_pca$x[,"PC1"], data.subset_pca$x[,"PC2"], data.subset_pca$x[,"PC3"])
+  colnames(data.subset_pca.df) <- c("Target", "Dataset", "PC1", "PC2", "PC3")
+  
+  ##### Assigne colours to targets and datasets
+  targets.colour <- getTargetsColours(targets$Target)
+  datasets.colour <- getDatasetsColours(targets$Dataset)
+  
+  ##### Create a list with dataframe and samples colouring info
+  pca.list <- list(data.subset_pca.df, importance_pca, targets.colour, datasets.colour)
+  names(pca.list) <- c("pca.df", "importance_pca", "targets", "datasets")
+  
+  ##### Change the targets levels order
+  data.subset_pca.df$Target <- factor(data.subset_pca.df$Target, levels = unique(data.subset_pca.df$Target))
+  
+  ##### Generate PCA 2-D plot
+  pca_plot <- plot_ly(data.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targets$Target, rownames(data.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 800, height = 400) %>%
+  layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+  ##### Generate scree plot
+  data.subset_scree.df <- data.frame(paste0("PC ", c(1:length(data.subset_pca$sdev))), data.subset_pca$sdev)
+colnames(data.subset_scree.df) <- c("PC", "Variances")
+
+  ##### The default order will be alphabetized unless specified as below
+  data.subset_scree.df$PC <- factor(data.subset_scree.df$PC, levels = data.subset_scree.df[["PC"]])
+  
+  scree_plot <- plot_ly(data.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 800, height = 400) %>%
+    layout(title = "", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=20, pad=4), autosize = F)
+  
+  return( list(pca.list, pca_plot, scree_plot) )
+}
+
 ##### Generate density and expression distribution plots for selected genes, highlighting samples of interest. Currently, this function works for one gene at a time.
 densityPlot <- function(genes, data, main_title, x_title, sampleName, distributions = NULL, plot_mode = "static") {
   
@@ -391,6 +468,14 @@ names(ref_datasets.list[[dataset]]) <- c("combined_data", "sample_annot")
 data <- ref_datasets.list[[dataset]][["combined_data"]]
 targetFile <- ref_datasets.list[[dataset]][["sample_annot"]]
 
+#### Check the number of datasets for pca plots
+runPCAchunk <- FALSE
+
+if ( length(unique(targetFile$Dataset)) > 1 ) {
+  
+  runPCAchunk <- TRUE
+}
+
 ##### Make syntactically valid names
 colnames(data) <- make.names(colnames(data))
 rownames(targetFile) <- make.names(rownames(targetFile))
@@ -523,7 +608,12 @@ if ( params$filter && params$transform == "CPM" ) {
   y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = "none")$samples["norm.factors"]
   y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
   y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-  y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+  
+  if (runPCAchunk){
+    y$notBatchCorrected <- y$filtered.transformed
+    y$BatchCorrected <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+    y$filtered.transformed <- y$BatchCorrected
+  }
   
 ##### CPM transformation without filtering
 } else if ( !params$filter && params$transform == "CPM" ) {
@@ -533,7 +623,13 @@ if ( params$filter && params$transform == "CPM" ) {
   
   ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
   y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-  y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+  
+  ##### 
+  if (runPCAchunk){
+    y$notBatchCorrected <- y$transformed
+    y$BatchCorrected <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+    y$transformed <- y$BatchCorrected
+  }
   
 ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
 ##### TPM transformation with filtering
@@ -564,13 +660,23 @@ if ( params$filter && params$transform == "CPM" ) {
     
     y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
     y$filtered.transformed <- log2(tpm_from_rpkm(y$filtered.transformed+0.25))
-    y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+    
+    if (runPCAchunk){
+      y$notBatchCorrected <- y$filtered.transformed
+      y$BatchCorrected <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+      y$filtered.transformed <- y$BatchCorrected
+    }
   
   } else {
     
     y$transformed <- tpm_from_rpkm(y$transformed)
     y$filtered.transformed <- tpm_from_rpkm(y$filtered.transformed)
-    y$filtered.transformed.batch.removed <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+    
+    if (runPCAchunk){
+      y$notBatchCorrected <- y$filtered.transformed
+      y$BatchCorrected <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+      y$filtered.transformed <- y$BatchCorrected
+    }
   }
   
 ##### TPM transformation without filtering
@@ -595,12 +701,22 @@ if ( params$filter && params$transform == "CPM" ) {
   if ( params$log ) {
     
     y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
-    y$transformed.batch.removed <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+    
+    if (runPCAchunk){
+      y$notBatchCorrected <- y$transformed
+      y$BatchCorrected <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+      y$transformed <- y$BatchCorrected
+    }
   
   } else {
     
     y$transformed <- tpm_from_rpkm(y$transformed)
-    y$transformed.batch.removed <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+    
+    if (runPCAchunk){
+      y$notBatchCorrected <- y$transformed
+      y$BatchCorrected <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
+      y$transformed <- y$BatchCorrected
+    }
   }
 }
 ```
@@ -810,6 +926,20 @@ invisible(dev.off())
 
 ***
 
+## `r if ( length(unique(targetFile$Dataset)) > 1) { c("Batch-effect Correction") }`
+
+```{r pca_batch_effect, comment = NA, message=FALSE, warning=FALSE, eval = }
+suppressMessages(library(plotly))
+##### Principal component analysis (PCA)
+pca(y$notBatchCorrected, ref_datasets.list[[dataset]][["sample_annot"]])[[2]]
+pca(y$BatchCorrected, ref_datasets.list[[dataset]][["sample_annot"]])[[2]]
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+***
+
 ## `r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score transformation") } else { c("Centering") }`
 
 `r if ( tolower(params$scaling) == "gene-wise" ) { c("This step aims to put data from different sources onto the same scale. Z-scores, or standard scores, indicate how many standard deviations an observation is above or below the mean. The z-score reflects a standard normal deviate - the variation of across the standard normal distribution, which is a normal distribution with mean equal to zero and standard deviation equal to one.") } else { c("This step aims to put data from different sources onto the same scale. The centering is done by subtracting the mean expression of all genes in the corresponding sample from the expresion of queried gene in that sample.") }`
@@ -933,8 +1063,12 @@ widges.list <- htmltools::tagList()
 gene <- genes[1]
 plotsNo <- 1
 
-##### Check if queried samples are present in the data matrix and target file. If now, then ignore them
-if ( any( samples %!in% rownames(targetFile) ) ) { 
+##### Check if queried samples are present in the data matrix and target file. If no, then ignore them
+if ( !any( samples %in% rownames(targetFile) ) ) { 
+  
+  samples <- rownames(targetFile)
+  
+} else if ( any( samples %!in% rownames(targetFile) ) ) { 
   
   samples <- samples[ samples %in% rownames(targetFile) ]
   
