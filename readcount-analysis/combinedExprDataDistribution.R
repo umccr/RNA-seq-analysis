@@ -47,6 +47,8 @@ suppressMessages(library(optparse))
 #===============================================================================
 
 option_list = list(
+  make_option(c("-ds", "--dataset"), action="store", default=NA, type='character',
+              help="Dataset of interest"),
   make_option(c("-d", "--exprDir"), action="store", default=NA, type='character',
               help="Directory with expression data"),
   make_option(c("-e", "--exprFile"), action="store", default=NA, type='character',
@@ -70,7 +72,10 @@ option_list = list(
   make_option(c("-s", "--samples"), action="store", default=NA, type='character',
               help="ID of samples of interest"),
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
+              help="Prefix for the results files names"),
+  make_option(c("-ref", "--ref_data_dir"), action="store", default=NA, type='character',
               help="Prefix for the results files names")
+  
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -113,7 +118,7 @@ if ( is.na(opt$ensembl)  ) {
 
 if ( is.na(opt$scaling)  ) {
   
-  opt$scaling <- "sample-wise"
+  opt$scaling <- "gene-wise"
 }
 
 ##### Make sure that not more than 10 genes are quertied
@@ -157,4 +162,4 @@ if ( !is.na(opt$results_name) ) {
 
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), scaling = opt$scaling, genes = opt$genes, ensembl = as.logical(opt$ensembl), samples = opt$samples,  results_name = opt$results_name))
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(dataset = opt$dataset, exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), scaling = opt$scaling, genes = opt$genes, ensembl = as.logical(opt$ensembl), samples = opt$samples,  results_name = opt$results_name, ref_data_dir = opt$ref_data_dir))

@@ -3,17 +3,16 @@ title: "Investigate expression data"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  samplename: 
   dataset: 
   exprDir: 
   exprFile: 
   annotFile: 
   transform: 
   norm: 
-  filter: TRUE
-  log: TRUE
+  filter: 
+  log: 
   genes: 
-  ensembl: TRUE
+  ensembl: 
   samples: 
   results_name: 
   scaling: 
