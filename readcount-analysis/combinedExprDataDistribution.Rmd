@@ -1026,7 +1026,7 @@ if ( params$filter ) {
   genes <- genes[ genes %in% rownames(y$transformed)  ]
     
   keep <- rownames(y$transformed) %in% genes
-  c <- y.sub$transformed[keep, , drop=FALSE]
+  y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
 }
 
 y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
