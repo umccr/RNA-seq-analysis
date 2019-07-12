@@ -3,21 +3,21 @@ title: "Investigate expression data"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  samplename: "test_sample_WTS"
-  dataset: "pdac"
-  exprDir: '/Users/kanwals/Documents/UMCCR/data/RNAseq-report/ExpressionData'
-  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
-  annotFile: 'UMCCR_PC_Target_cleaned.txt'
-  transform: 'CPM'
-  norm: 'TMM'
+  samplename: 
+  dataset: 
+  exprDir: 
+  exprFile: 
+  annotFile: 
+  transform: 
+  norm: 
   filter: TRUE
   log: TRUE
-  genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
+  genes: 
   ensembl: TRUE
-  samples: 'CCR170012_MH17T001P013,CCR180029_MH18T002P038_RNA,CCR180027_RNA_MH18T002P043,PRJ180295_1699_8073388'
-  results_name: 'test'
-  scaling: 'gene-wise'
-  ref_data_dir: '../data'
+  samples: 
+  results_name: 
+  scaling: 
+  ref_data_dir: 
   ensembl_version: 86
 output:
   html_document:
@@ -435,7 +435,6 @@ return( p )
 
 ```{r load_libraries, warning=FALSE}
 ### Load libraries
-suppressMessages(library(knitr))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
@@ -1027,7 +1026,7 @@ if ( params$filter ) {
   genes <- genes[ genes %in% rownames(y$transformed)  ]
     
   keep <- rownames(y$transformed) %in% genes
-  y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
+  c <- y.sub$transformed[keep, , drop=FALSE]
 }
 
 y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
