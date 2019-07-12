@@ -5,7 +5,7 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
   samplename: "test_sample_WTS"
   dataset: "pdac"
-  exprDir: '~/Documents/UMCCR/data/RNAseq-report/ExpressionData'
+  exprDir: '/Users/kanwals/Documents/UMCCR/data/RNAseq-report/ExpressionData'
   exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
   annotFile: 'UMCCR_PC_Target_cleaned.txt'
   transform: 'CPM'
@@ -435,6 +435,7 @@ return( p )
 
 ```{r load_libraries, warning=FALSE}
 ### Load libraries
+suppressMessages(library(knitr))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
@@ -928,7 +929,7 @@ invisible(dev.off())
 
 ## `r if ( length(unique(targetFile$Dataset)) > 1) { c("Batch-effect Correction") }`
 
-```{r pca_batch_effect, comment = NA, message=FALSE, warning=FALSE, eval = }
+```{r pca_batch_effect, comment = NA, message=FALSE, warning=FALSE}
 suppressMessages(library(plotly))
 ##### Principal component analysis (PCA)
 pca(y$notBatchCorrected, ref_datasets.list[[dataset]][["sample_annot"]])[[2]]
@@ -1938,6 +1939,7 @@ if ( nrow(y.sub$z) < 11 ) {
 ```{r params_info, comment = NA}
 for ( i in 1:length(params) ) {
   cat(paste("Parameter: ", names(params)[i], "\nValue: ", paste(unlist(params[i]), collapse = ","), "\n\n", sep=""))
+  
 }
 ```
 
