@@ -869,15 +869,15 @@ for ( group in targets_mod.list ) {
     ##### Calculate normalization factors and  transformations from the raw-scale to CPM and normalisation using user-defined method
     if ( params$filter ) {
       
-      y$noNorm <- y$filtered.transformed
-      y$filtered$samples["norm.factors"] <- edgeR::calcNormFactors(y$filtered, method = params$norm)$samples["norm.factors"]
-      y$norm <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+      y[[group]]$noNorm <- y[[group]]$filtered.transformed
+      y[[group]]$filtered$samples["norm.factors"] <- edgeR::calcNormFactors(y[[group]]$filtered, method = params$norm)$samples["norm.factors"]
+      y[[group]]$norm <- edgeR::cpm(y[[group]]$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
     
     } else {
       
-      y$noNorm <- y$transformed
-      y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
-      y$norm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+      y[[group]]$noNorm <- y[[group]]$transformed
+      y[[group]]$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
+      y[[group]]$norm <- edgeR::cpm(y[[group]], normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
     }
     
   ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
@@ -886,34 +886,34 @@ for ( group in targets_mod.list ) {
     ##### Normalisation using quantile method
     if ( params$filter ) {
       
-      y$noNorm <- y$filtered.transformed
-      y$filtered.transformed <- data.matrix(y$filtered.transformed) 
+      y[[group]]$noNorm <- y[[group]]$filtered.transformed
+      y[[group]]$filtered.transformed <- data.matrix(y[[group]]$filtered.transformed) 
       
       if ( tolower(params$norm) != "none" ) {
         
-        y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
-        colnames(y$norm) <- colnames(y$filtered.transformed)
-        rownames(y$norm) <- rownames(y$filtered.transformed)
+        y[[group]]$norm  <- normalize.quantiles(y[[group]]$filtered.transformed, copy = TRUE)
+        colnames(y[[group]]$norm) <- colnames(y[[group]]$filtered.transformed)
+        rownames(y[[group]]$norm) <- rownames(y[[group]]$filtered.transformed)
         
       } else {
         
-        y$norm  <- y$filtered.transformed
+        y[[group]]$norm  <- y[[group]]$filtered.transformed
       }
     
     } else {
       
-      y$noNorm <- y$transformed
-      y$transformed <- data.matrix(y$transformed)
+      y[[group]]$noNorm <- y[[group]]$transformed
+      y[[group]]$transformed <- data.matrix(y[[group]]$transformed)
       
       if ( tolower(params$norm) != "none" ) {
         
-        y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
-        colnames(y$norm) <- colnames(y$transformed)
-        rownames(y$norm) <- rownames(y$transformed)
+        y[[group]]$norm  <- normalize.quantiles(y[[group]]$transformed, copy = TRUE)
+        colnames(y[[group]]$norm) <- colnames(y[[group]]$transformed)
+        rownames(y[[group]]$norm) <- rownames(y[[group]]$transformed)
         
       } else {
         
-        y$norm  <- y$transformed
+        y[[group]]$norm  <- y[[group]]$transformed
       }
     }
   }
@@ -927,7 +927,6 @@ ref_datasets.list[[dataset]][["combined_data_processed"]] <- y[["comb"]]$norm
 
 ##### Set height scaling factor for plots containing normalised data plots
 if ( tolower(params$norm) != "none" ) {
-  
   norm.height = 2
 } else {
   norm.height = 1
@@ -953,7 +952,7 @@ if ( tolower(params$norm) != "none" ) {
     
 ##### Save the plot as pdf file
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
-par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
+par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y[["comb"]]$noNorm)))/2, 5, 3, 2))
     
 ##### Unnormalised data
 boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
