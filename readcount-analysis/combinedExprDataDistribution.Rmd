@@ -544,42 +544,6 @@ p
 detach("package:plotly", unload=FALSE)
 ```
 
-```{r gene_annot, comment = NA, message=FALSE, warning=FALSE, eval = params$ensembl}
-##### Loop through data and annotate genes
-##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
-data.df <- as.data.frame(cbind(rownames(data), data))
-colnames(data.df)[1] <- "ENSEMBL"
-
-##### Get genes annotation and genomic locations
-edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
-  
-##### Get keytypes for gene SYMBOL
-keys <- keys(edb, keytype="GENEID")
-  
-##### Get genes genomic coordiantes
-gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
-names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
-names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
-  
-##### Limit genes annotation to those genes for which sample expression measurments are available
-gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
-  
-##### Remove rows with duplicated ENSEMBL IDs
-gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
-rownames(gene_info) <- gene_info$ENSEMBL
-  
-##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
-gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
-  
-
-##### Merge genes genomic coordinates info with their annotation and expression data
-data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
-rownames(data.annot) <- data.annot$SYMBOL
-  
-##### Get data matrix with gene symbols
-data <- data.annot[, names(data.annot) %!in% c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
-```
-
 ***
 
 ## Data transformation and filtering
@@ -610,7 +574,7 @@ for ( group in targets_mod.list ) {
   if ( params$filter && params$transform == "CPM" ) {
     
     ##### Create EdgeR DGEList object
-    y[[group]] <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+    y[[group]] <- edgeR::DGEList(counts=data,  group=target$Target)
     
     ##### Remove genes with CPM of at least 1 in less than 10% of samples
     #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
@@ -625,12 +589,6 @@ for ( group in targets_mod.list ) {
     y[[group]]$transformed <- edgeR::cpm(y[[group]], normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
     y[[group]]$filtered.transformed <- edgeR::cpm(y[[group]]$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
     
-    if (runPCAchunk){
-      y$notBatchCorrected <- y$filtered.transformed
-      y$BatchCorrected <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
-      y$filtered.transformed <- y$BatchCorrected
-    }
-    
   ##### CPM transformation without filtering
   } else if ( !params$filter && params$transform == "CPM" ) {
     
@@ -639,13 +597,6 @@ for ( group in targets_mod.list ) {
     
     ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
     y[[group]]$transformed <- edgeR::cpm(y[[group]], normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    
-    ##### 
-    if (runPCAchunk){
-      y$notBatchCorrected <- y$transformed
-      y$BatchCorrected <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
-      y$transformed <- y$BatchCorrected
-    }
     
   ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
   ##### TPM transformation with filtering
@@ -676,23 +627,12 @@ for ( group in targets_mod.list ) {
       
       y[[group]]$transformed <- log2(tpm_from_rpkm(y[[group]]$transformed+0.25))
       y[[group]]$filtered.transformed <- log2(tpm_from_rpkm(y[[group]]$filtered.transformed+0.25))
-      
-      if (runPCAchunk){
-        y$notBatchCorrected <- y$filtered.transformed
-        y$BatchCorrected <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
-        y$filtered.transformed <- y$BatchCorrected
-      }
     
     } else {
       
       y[[group]]$transformed <- tpm_from_rpkm(y[[group]]$transformed)
       y[[group]]$filtered.transformed <- tpm_from_rpkm(y[[group]]$filtered.transformed)
-      
-      if (runPCAchunk){
-        y$notBatchCorrected <- y$filtered.transformed
-        y$BatchCorrected <- limma::removeBatchEffect(y$filtered.transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
-        y$filtered.transformed <- y$BatchCorrected
-      }
+
     }
     
   ##### TPM transformation without filtering
@@ -717,22 +657,11 @@ for ( group in targets_mod.list ) {
     if ( params$log ) {
       
       y[[group]]$transformed <- log2(tpm_from_rpkm(y[[group]]$transformed+0.25))
-      
-      if (runPCAchunk){
-        y$notBatchCorrected <- y$transformed
-        y$BatchCorrected <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
-        y$transformed <- y$BatchCorrected
-      }
     
     } else {
       
       y[[group]]$transformed <- tpm_from_rpkm(y[[group]]$transformed)
       
-      if (runPCAchunk){
-        y$notBatchCorrected <- y$transformed
-        y$BatchCorrected <- limma::removeBatchEffect(y$transformed, batch = ref_datasets.list[[dataset]][["sample_annot"]]$Dataset)
-        y$transformed <- y$BatchCorrected
-      }
     }
   }
 }
@@ -804,8 +733,8 @@ if ( params$filter ) {
   title(main="Transformed data (unfiltered)", xlab=params$transform)
   abline(v=0, lty=3)
   
-  for (i in 2:ncol(y$transformed)){
-    den <- density(y$transformed[,i])
+  for (i in 2:ncol(y[["comb"]]$transformed)){
+    den <- density(y[["comb"]]$transformed[,i])
     lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
   }
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
@@ -935,7 +864,7 @@ if ( tolower(params$norm) != "none" ) {
 
 ```{r data_normalisation_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8*norm.height}
 ##### Plot expression distribution of samples for unnormalised and normalised data
-par(mfrow=c(norm.height,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
+par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
     
 ##### Unnormalised data
 boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
@@ -993,8 +922,8 @@ for ( dataset in names(ref_datasets.list) ) {
   
   target <- ref_datasets.list[[dataset]][["sample_annot"]]
   
-  ref_datasets.list[[dataset]][["pca_combined_data_processed"]] <- pca(ref_datasets.list[[dataset]][["combined_data_processed"]], target, plot_mode = params$plots_mode)
-  ref_datasets.list[[dataset]][["pca_batch_effect_corrected"]] <- pca(ref_datasets.list[[dataset]][["batch_effect_corrected"]], target, plot_mode = params$plots_mode)
+  ref_datasets.list[[dataset]][["pca_combined_data_processed"]] <- pca(ref_datasets.list[[dataset]][["combined_data_processed"]], target)
+  ref_datasets.list[[dataset]][["pca_batch_effect_corrected"]] <- pca(ref_datasets.list[[dataset]][["batch_effect_corrected"]], target)
 }
 
 #### Before batch-effects correction
@@ -1009,6 +938,51 @@ detach("package:plotly", unload=FALSE)
 
 ***
 
+```{r gene_annot, comment = NA, message=FALSE, warning=FALSE, eval = params$ensembl}
+##### Get genes annotation and genomic locations
+edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+##### Get keytypes for gene SYMBOL
+keys <- keys(edb, keytype="GENEID")
+  
+##### Get genes genomic coordiantes
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
+names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+  
+##### Limit genes annotation to those genes for which sample expression measurments are available
+gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
+  
+##### Remove rows with duplicated ENSEMBL IDs
+gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+rownames(gene_info) <- gene_info$ENSEMBL
+  
+##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+
+##### Loop through combined datasets and annotate genes
+for ( dataset in names(ref_datasets.list) ) {
+  
+  ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
+  data <- ref_datasets.list[[dataset]][["batch_effect_corrected"]]
+  data.df <- as.data.frame(cbind(rownames(data), data))
+  colnames(data.df)[1] <- "ENSEMBL"
+  
+  ##### Merge genes genomic coordinates info with their annotation and expression data
+  data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+  
+  ##### Keep only genes fo which gene symbol is available
+  data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
+  rownames(data.annot) <- data.annot$SYMBOL
+  
+  ##### Get data matrix with gene symbols
+  ref_datasets.list[[dataset]][["batch_effect_corrected"]] <- apply(data.annot[, colnames(data)], 2, as.numeric)
+  rownames(ref_datasets.list[[dataset]][["batch_effect_corrected"]]) <- data.annot$SYMBOL
+  ref_datasets.list[[dataset]][["gene_annot"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
+}
+
+```
+
 ## `r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score transformation") } else { c("Centering") }`
 
 `r if ( tolower(params$scaling) == "gene-wise" ) { c("This step aims to put data from different sources onto the same scale. Z-scores, or standard scores, indicate how many standard deviations an observation is above or below the mean. The z-score reflects a standard normal deviate - the variation of across the standard normal distribution, which is a normal distribution with mean equal to zero and standard deviation equal to one.") } else { c("This step aims to put data from different sources onto the same scale. The centering is done by subtracting the mean expression of all genes in the corresponding sample from the expresion of queried gene in that sample.") }`
@@ -1022,11 +996,11 @@ if ( tolower(params$norm) != "none" ) {
     if (tolower(params$scaling) == "gene-wise"){
       
       z_scaling <- "gene-wise"
-      y$z <- t(scale(t(y$norm)))
+      y$z <- t(scale(t(y[["comb"]]$norm)))
     } else {
       
       z_scaling <- "sample-wise"
-      y$z <- scale(y$norm, scale = FALSE)
+      y$z <- scale(y[["comb"]]$norm, scale = FALSE)
     }
     
 } else {
@@ -1034,11 +1008,11 @@ if ( tolower(params$norm) != "none" ) {
     if (tolower(params$scaling) == "gene-wise"){
       
       z_scaling <- "gene-wise"
-      y$z <- t(scale(t(y$noNorm)))
+      y$z <- t(scale(t(y[["comb"]]$noNorm)))
     } else {
       
       z_scaling <- "sample-wise"
-      y$z <- scale(y$noNorm, scale = FALSE)
+      y$z <- scale(y[["comb"]]$noNorm, scale = FALSE)
     }
 }
 
@@ -1083,7 +1057,7 @@ y.sub <- y
 ##### Identify user-defined genes that were not present in the expression matrix
 if ( params$filter ) {
     
-  genes.missing <- genes[ genes %!in% rownames(y$filtered.transformed) ]
+  genes.missing <- genes[ genes %!in% rownames(y[["comb"]]$filtered.transformed) ]
   genes <- genes[ genes %in% rownames(y$filtered.transformed)  ]
     
   keep <- rownames(y$filtered.transformed) %in% genes
