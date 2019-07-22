@@ -367,13 +367,13 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
       ##### Generate x- and y-values for binomial distribution. Useful link https://stat.ethz.ch/R-manual/R-devel/library/stats/html/Binomial.html
       #data.x <- round(seq(min(data), max(data), length.out = ncol(data)), digits = 0)
       data.x <- 1:ncol(data)
-      data.y <- dbinom(data.x, ncol(data), 0.25)
+      data.y <- dbinom(data.x, ncol(data), 0.10)
       
       data.x <- rescale(data.x, to = c(min(expr.sorted), max(expr.sorted)))
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution (p=0.25)", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
       
       data.x <- 1:ncol(data)
-      data.y <- dbinom(data.x, ncol(data), 0.75)
+      data.y <- dbinom(data.x, ncol(data), 0.65)
       
       data.x <- rescale(data.x, to = c(min(expr.sorted), max(expr.sorted)))
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution (p=0.75)", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
@@ -546,9 +546,54 @@ detach("package:plotly", unload=FALSE)
 
 ***
 
+```{r gene_annot, comment = NA, message=FALSE, warning=FALSE, eval = params$ensembl}
+##### Get genes annotation and genomic locations
+edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+##### Get keytypes for gene SYMBOL
+keys <- keys(edb, keytype="GENEID")
+  
+##### Get genes genomic coordiantes
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
+names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+  
+##### Limit genes annotation to those genes for which sample expression measurments are available
+gene_info <-  gene_info[ gene_info$ENSEMBL %in% rownames(data),  ]
+  
+##### Remove rows with duplicated ENSEMBL IDs
+gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+rownames(gene_info) <- gene_info$ENSEMBL
+  
+##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+
+##### Loop through combined datasets and annotate genes
+for ( dataset in names(ref_datasets.list) ) {
+  
+  ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
+  #data <- ref_datasets.list[[dataset]][["combined_data_processed"]]
+  data.df <- as.data.frame(cbind(rownames(data), data))
+  colnames(data.df)[1] <- "ENSEMBL"
+  
+  ##### Merge genes genomic coordinates info with their annotation and expression data
+  data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+  
+  ##### Keep only genes fo which gene symbol is available
+  data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
+  rownames(data.annot) <- data.annot$SYMBOL
+  
+  ##### Get data matrix with gene symbols
+  ref_datasets.list[[dataset]][["combined_data"]] <- apply(data.annot[, colnames(data)], 2, as.numeric)
+  rownames(ref_datasets.list[[dataset]][["combined_data"]]) <- data.annot$SYMBOL
+  ref_datasets.list[[dataset]][["gene_annot"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
+}
+
+```
+
 ## Data transformation and filtering
 
-The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
+The read count data is converted into **`r params$transform`** using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
 
 ```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
@@ -862,20 +907,20 @@ if ( tolower(params$norm) != "none" ) {
 }
 ```
 
-```{r data_normalisation_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8*norm.height}
+```{r data_normalisation_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6*norm.height}
 ##### Plot expression distribution of samples for unnormalised and normalised data
 par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
     
 ##### Unnormalised data
-boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
   title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
     
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
       
-  boxplot(y[["comb"]]$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
-  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+  boxplot(y[["comb"]]$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
+  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform, xlab = "")
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
 }
     
@@ -884,14 +929,14 @@ pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_nor
 par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y[["comb"]]$noNorm)))/2, 5, 3, 2))
     
 ##### Unnormalised data
-boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
 title(main="Unnormalised data", ylab=params$transform)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
       
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
       
-  boxplot(y[["comb"]]$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+  boxplot(y[["comb"]]$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent",box.col="transparent")
 }
@@ -936,53 +981,6 @@ ref_datasets.list[[dataset]][["pca_batch_effect_corrected"]][[2]]
 detach("package:plotly", unload=FALSE)
 ```
 
-***
-
-```{r gene_annot, comment = NA, message=FALSE, warning=FALSE, eval = params$ensembl}
-##### Get genes annotation and genomic locations
-edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
-  
-##### Get keytypes for gene SYMBOL
-keys <- keys(edb, keytype="GENEID")
-  
-##### Get genes genomic coordiantes
-gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
-names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
-names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
-  
-##### Limit genes annotation to those genes for which sample expression measurments are available
-gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
-  
-##### Remove rows with duplicated ENSEMBL IDs
-gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
-rownames(gene_info) <- gene_info$ENSEMBL
-  
-##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
-gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
-
-##### Loop through combined datasets and annotate genes
-for ( dataset in names(ref_datasets.list) ) {
-  
-  ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
-  data <- ref_datasets.list[[dataset]][["batch_effect_corrected"]]
-  data.df <- as.data.frame(cbind(rownames(data), data))
-  colnames(data.df)[1] <- "ENSEMBL"
-  
-  ##### Merge genes genomic coordinates info with their annotation and expression data
-  data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
-  
-  ##### Keep only genes fo which gene symbol is available
-  data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
-  rownames(data.annot) <- data.annot$SYMBOL
-  
-  ##### Get data matrix with gene symbols
-  ref_datasets.list[[dataset]][["batch_effect_corrected"]] <- apply(data.annot[, colnames(data)], 2, as.numeric)
-  rownames(ref_datasets.list[[dataset]][["batch_effect_corrected"]]) <- data.annot$SYMBOL
-  ref_datasets.list[[dataset]][["gene_annot"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
-}
-
-```
-
 ## `r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score transformation") } else { c("Centering") }`
 
 `r if ( tolower(params$scaling) == "gene-wise" ) { c("This step aims to put data from different sources onto the same scale. Z-scores, or standard scores, indicate how many standard deviations an observation is above or below the mean. The z-score reflects a standard normal deviate - the variation of across the standard normal distribution, which is a normal distribution with mean equal to zero and standard deviation equal to one.") } else { c("This step aims to put data from different sources onto the same scale. The centering is done by subtracting the mean expression of all genes in the corresponding sample from the expresion of queried gene in that sample.") }`
@@ -991,30 +989,16 @@ Box-plot below presents `r if ( tolower(params$scaling) == "gene-wise" ) { c("z-
 
 ```{r z_transformation, comment = NA, message=FALSE, warning=FALSE}
 ##### Perform Z-score transformation/centering
-if ( tolower(params$norm) != "none" ) {
-    
-    if (tolower(params$scaling) == "gene-wise"){
-      
-      z_scaling <- "gene-wise"
-      y$z <- t(scale(t(y[["comb"]]$norm)))
-    } else {
-      
-      z_scaling <- "sample-wise"
-      y$z <- scale(y[["comb"]]$norm, scale = FALSE)
-    }
-    
+if (tolower(params$scaling) == "gene-wise"){
+  
+  z_scaling <- "gene-wise"
+  y[["comb"]]$z <- t(scale(t(ref_datasets.list[[dataset]][["batch_effect_corrected"]])))
 } else {
+  
+  z_scaling <- "sample-wise"
+  y[["comb"]]$z <- scale(ref_datasets.list[[dataset]][["batch_effect_corrected"]], scale = FALSE)
+  }
     
-    if (tolower(params$scaling) == "gene-wise"){
-      
-      z_scaling <- "gene-wise"
-      y$z <- t(scale(t(y[["comb"]]$noNorm)))
-    } else {
-      
-      z_scaling <- "sample-wise"
-      y$z <- scale(y[["comb"]]$noNorm, scale = FALSE)
-    }
-}
 
 ##### Define axis title for scaled data
 if ( tolower(params$scaling) == "gene-wise" ) {
@@ -1025,19 +1009,19 @@ if ( tolower(params$scaling) == "gene-wise" ) {
 }
 ```
 
-```{r data_z_score_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+```{r data_z_score_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12}
 ##### Plot expression distribution of samples for unnormalised and normalised data
-par(mfrow=c(1,1), mar=c((max(nchar(colnames(y$z)))+3)/2, 5, 3, 2))
+par(mfrow=c(1,1), mar=c((max(nchar(colnames(y[["comb"]]$z)))+3)/2, 5, 3, 2))
     
-boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
   title(main=paste0(scaled_title, " data"), ylab=scaled_title)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
     
 ##### Save the plot as pdf file
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", scaled_title, ".pdf")), width=8, height=7)
-par(mfrow=c(1,1), mar=c(max(nchar(colnames(y$z)))/2, 5, 3, 2))
+par(mfrow=c(1,1), mar=c(max(nchar(colnames(y[["comb"]]$z)))/2, 5, 3, 2))
     
-boxplot(y$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
 title(main=paste0(scaled_title, " data"), ylab=scaled_title)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
 invisible(dev.off())
@@ -1052,26 +1036,25 @@ invisible(dev.off())
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
 ##### Subset data to include only user-defined genes
 genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
-y.sub <- y
+y.sub <- y[["comb"]]
 
 ##### Identify user-defined genes that were not present in the expression matrix
 if ( params$filter ) {
     
   genes.missing <- genes[ genes %!in% rownames(y[["comb"]]$filtered.transformed) ]
-  genes <- genes[ genes %in% rownames(y$filtered.transformed)  ]
+  genes <- genes[ genes %in% rownames(y[["comb"]]$filtered.transformed)  ]
     
-  keep <- rownames(y$filtered.transformed) %in% genes
-  y.sub$filtered.transformed <- y$filtered.transformed[keep, , drop=FALSE]
+  keep <- rownames(y[["comb"]]$filtered.transformed) %in% genes
+  y.sub$filtered.transformed <- y[["comb"]]$filtered.transformed[keep, , drop=FALSE]
     
 } else {
     
-  genes.missing <- genes[ genes %!in% rownames(y$transformed) ]
-  genes <- genes[ genes %in% rownames(y$transformed)  ]
+  genes.missing <- genes[ genes %!in% rownames(y[["comb"]]$transformed) ]
+  genes <- genes[ genes %in% rownames(y[["comb"]]$transformed)  ]
     
-  keep <- rownames(y$transformed) %in% genes
+  keep <- rownames(y[["comb"]]$transformed) %in% genes
   y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
 }
-
 y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
 y.sub$z <- y.sub$z[keep, , drop=FALSE]
   
@@ -1124,26 +1107,33 @@ if ( !any( samples %in% rownames(targetFile) ) ) {
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
-  ##### For normalisation ON
+ ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
     ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1164,9 +1154,9 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
   ##### For normalisation ON
@@ -1174,16 +1164,23 @@ if ( !is.na(gene) ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1206,9 +1203,9 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
   ##### For normalisation ON
@@ -1216,16 +1213,23 @@ if ( !is.na(gene) ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1248,26 +1252,33 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
-  ##### For normalisation ON
+ ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1290,26 +1301,33 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
-  ##### For normalisation ON
+ ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1332,9 +1350,9 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
   ##### For normalisation ON
@@ -1342,16 +1360,23 @@ if ( !is.na(gene) ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1374,31 +1399,39 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
-  ##### For normalisation ON
+ ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
 ##### Print a list of htmlwidgets
 widges.list
+
 ```
 
 ***
@@ -1416,9 +1449,9 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
   ##### For normalisation ON
@@ -1426,16 +1459,23 @@ if ( !is.na(gene) ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1458,26 +1498,33 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
-  ##### For normalisation ON
+   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
@@ -1500,26 +1547,33 @@ plotsNo <- 1
 if ( !is.na(gene) ) {
   
   if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
+    transformed.data <- y[["comb"]]$filtered.transformed
   } else {
-    transformed.data <- y.sub$transformed
+    transformed.data <- y[["comb"]]$transformed
   }
   
-  ##### For normalisation ON
+   ##### For normalisation ON
   if ( tolower(params$norm) != "none" ) {
     
     ##### For normalisation ON
     ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-      
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=y.sub$norm, dataset2=y.sub$z, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=scaled_title, sampleName=samples )
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
       
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=transformed.data, dataset2=y.sub$z, main_title="", x_title=params$transform, y_title=scaled_title, sampleName=samples )
+    ##### Check the effect of data batch-effect correction
+    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
   }
 }
 
