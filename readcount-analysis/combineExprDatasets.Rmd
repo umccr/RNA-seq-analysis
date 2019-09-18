@@ -3,8 +3,8 @@ title: "Combining expression data from different datasets"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  projectDir:
-  datasetsFile:
+  projectDir: 
+  datasetsFile: 
 output:
   html_document:
     keep_md: yes
@@ -33,7 +33,10 @@ Note, only genes intersection across all datasets expression matrices will be re
 prepare2write <- function (x) {
   
   x2write <- cbind(rownames(x), x)
-  colnames(x2write) <- c("Gene",colnames(x))
+  colnames(x2write) <- c("",colnames(x))
+  
+  ##### Clean the space and return output
+  rm(x)
   return(x2write)
 }
 
@@ -97,10 +100,6 @@ getDatasetsSymbols <- function(datasets) {
 ```{r load_libraries}
 suppressMessages(library(preprocessCore))
 suppressMessages(library(rapportools))
-suppressMessages(library(sva))
-suppressMessages(library(RUVSeq))
-suppressMessages(library(sneer))
-suppressMessages(library(FactoMineR))
 suppressMessages(library(plotly))
 suppressMessages(library(edgeR))
 suppressMessages(library(corrplot))
@@ -118,30 +117,32 @@ DatasetInput=read.table(paste(params$projectDir,params$datasetsFile,sep="/"),sep
 
 ##### Extract info about target file for the first dataset
 fileInfo = strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
-targetFile <- read.table(DatasetInput[1,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+targetFile <- read.table(DatasetInput[1,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:2)]
 
 ##### Make sure that there are no duplciated samples in the target file
 targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
 rownames(targetFile) <- targetFile[,"Sample_name"]
-targetFile <- cbind(targetFile[,2:4],rownames(DatasetInput[1,]))
+targetFile <- cbind(targetFile[,"Target", drop = FALSE],rownames(DatasetInput[1,]))
 colnames(targetFile)[ncol(targetFile)] <- "Dataset"
 
 if ( nrow(DatasetInput) > 1 ) {
   for ( i in 2:nrow(DatasetInput) ) {
     
     ##### Create a temporary object to store info from the remaining target files
-    targetFileTmp <- read.table(DatasetInput[i,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+    targetFileTmp <- read.table(DatasetInput[i,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:2)]
     
     ##### Make sure that there are no duplciated samples in the target file
     targetFileTmp <- targetFileTmp[!duplicated(targetFileTmp[,"Sample_name"]),]
     rownames(targetFileTmp) <- targetFileTmp[,"Sample_name"]
-    targetFileTmp <- cbind(targetFileTmp[,2:4],rownames(DatasetInput[i,]))
+    targetFileTmp <- cbind(targetFileTmp[,"Target", drop = FALSE],rownames(DatasetInput[i,]))
     colnames(targetFileTmp)[ncol(targetFileTmp)] <- "Dataset"
     
     ##### Deal with replicates
-    if ( any(!is.na(targetFile[,"Replicates"])) ) {
-      maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
-      targetFileTmp[,"Replicates"] <- targetFileTmp[,"Replicates"] + maxRep
+    if ( !is.na(match("Replicates", colnames(targetFile))) ) {
+      if ( any(!is.na(targetFile[,"Replicates"])) ) {
+        maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
+        targetFileTmp[,"Replicates"] <- targetFileTmp[,"Replicates"] + maxRep
+      }
     }
     targetFile <- rbind(targetFile, targetFileTmp)
   }
@@ -155,14 +156,14 @@ for (data_matrix in DatasetInput[ , "Expression_matrix" ] ) {
   
   ##### Create combined dataset variable if it doesn't exist yet
   if (!exists("datasets")) {
-    datasets <- as.data.frame( read.table(data_matrix, header=TRUE, sep="\t", row.names=NULL) )
+    datasets <- as.data.frame( read.table(gzfile(data_matrix), header=TRUE, sep="\t", row.names=NULL) )
     
     ##### list genes present in individal files
     gene_list <- as.vector(datasets[,1])
     
     ##### Add data for the remaining samples   
   } else if (exists("datasets")) {
-    dataset <-as.data.frame( read.table(data_matrix, header=TRUE, sep="\t", row.names=NULL) )
+    dataset <-as.data.frame( read.table(gzfile(data_matrix), header=TRUE, sep="\t", row.names=NULL) )
     
     ##### list genes present in individal files
     gene_list <- c( gene_list, as.vector(dataset[,1]) )
@@ -242,6 +243,11 @@ outlierList <- make.names(outlierList)
 ##### Remove outliers from the combined expression matrix and target file
 datasets <- datasets[, setdiff(colnames(datasets), outlierList) ]
 targetFile <- targetFile[ setdiff(rownames(targetFile) , outlierList) ,]
+
+##### Save the combined expression matrix, genes list and associated targets into txt files
+write.table(prepare2write(datasets), file = paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),".combined_data_processed.txt"), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
+
+write.table(prepare2write(targetFile), file = paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),".combined_sample_annot.txt"), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 ```
 
 ## Datasets library size {.tabset}
