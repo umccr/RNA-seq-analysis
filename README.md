@@ -1,6 +1,6 @@
 # RNA-seq-analysis
 
-This repository documents scripts available for analysing RNA-seq data.
+This repository documents scripts for combining RNA-seq count data and exploring data distribution patters of transformed data as whole as well as for the genes of interest.
 
 ## Table of contents
 
@@ -29,10 +29,10 @@ The figure below is an overall workflow combining pre-processed and per-sample R
 
 To merge multiple read count files use the *[mergeCounts2Matrix.R](./readcount-analysis/mergeCounts2Matrix.R)* script. Each per-sample read count file should have two columns containing gene and read count information without a header (see this [example read count file](./readcount-analysis/TCGA-PAAD/TCGA-2J-AAB1-01A-11R-A41B-07.htseq.counts)). Read count files for all samples should be located in one directory. Also, the user needs to create a tab-delimited **target file** with four columns (see this [example target file](./readcount-analysis/TCGA-PAAD/TCGA_PAAD_Target.txt)):
 
-1. "Sample_name" - this coloumn specifies preferred sample names that will appear in the merged matrix and any tables or plots in downstream analyses
-2. "File_name" - name of the corresponding read count file
-3. "Target" - biological group/phenotypes that will be used to annotate samples and to perform downstream analyses, including differential expression analysis
-4. "Replicates" - indication of any technical replicates to take into account in differential expression analysis 
+1. `Sample_name` - this coloumn specifies preferred sample names that will appear in the merged matrix and any tables or plots in downstream analyses
+2. `File_name` - name of the corresponding read count file
+3. `Target` - biological group/phenotypes that will be used to annotate samples and to perform downstream analyses
+4. `Replicates` - indication of any technical replicates to take into account, i.e. for differential expression analysis (can be left blank)
 
 To facilitate downstream analyses and files organisation, the output files will be saved in user-defined **project directory** with user-defined prefix (core name).
 
@@ -97,10 +97,10 @@ To combine gene-by-sample read count matrices from different datasets use the *[
 
 *[combineExprData.R](./readcount-analysis/combineExprData.R)* script requires manually prepared tab-delimited **datasets file** with four columns (*Dataset_name*, *Expression_matrix*, *Target_file* and *Outliers_file*) to define names of the datasets to be merged, the correspoding expression matrices and target files, samples's names for the merged matrix, as well as the files listing outlier samples to be removed before combining the data (see this [example datasets  file](./readcount-analysis/Combined_data/Datasets_list.txt)):
 
-1. "Dataset_name" - this coloumn specifies preferred dataset name that will appear in any tables or plots in downstream analyses
-2. "Expression_matrix" - location and name of the corresponding read count matrix
-3. "Target_file" - location and name of the corresponding target file
-4. "Outliers_file" - location and name of the corresponding outliers file listing outlier samples to be removed before combining the data
+1. `Dataset_name` - this coloumn specifies preferred dataset name that will appear in any tables or plots in downstream analyses
+2. `Expression_matrix` - location and name of the corresponding read count matrix
+3. `Target_file` - location and name of the corresponding target file
+4. `Outliers_file` - location and name of the corresponding outliers file listing outlier samples to be removed before combining the data (this can be left blank)
 
 An example of **target file** is [here](./readcount-analysis/TCGA-PAAD/TCGA_PAAD_Target.txt) and is described in [Merge per-sample read count data](#merge-per-sample-read-count-data) section in this repo. An example of **outliers file** is [here](./readcount-analysis/Combined_data/TCGA-PAAD_outliers.txt). This file, however, is not required if no samples in the corresponding dataset are to be removed.
 
@@ -191,13 +191,15 @@ Output file | Description
 
 <br/>
 
-**Note**, read count data combined from various resources, datasets or batches will be confounded by non-biological experimental variances that prevent direct comparison of samples from different studies. These inevitable variations may be due to differences in sample preparation or processing protocols, as well as time of the day when the assays were performed. The discrepancies observed across different experiments may influence the consistency and reliability of downstream analysis, so it is important to check for possible batch effects and adjust expression measurements to minimise the variance caused by confounding factors. Currently, however, this part of the workflow is not implemented yet.
+###### Note
+
+Read count data combined from various resources, datasets or batches will be confounded by non-biological experimental variances that prevent direct comparison of samples from different studies. These inevitable variations may be due to differences in sample preparation or processing protocols, as well as time of the day when the assays were performed. The discrepancies observed across different experiments may influence the consistency and reliability of downstream analysis, so it is important to check for possible batch effects and adjust expression measurements to minimise the variance caused by confounding factors. Currently, however, this part of the workflow is not implemented yet.
 
 <br>
 
 ## Data distribution evaluation
 
-Use [combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R) script to investigate the expression data distribution patters of user-defined genes (max 10) in [combined expression data](#read-count-data-combination) derived from different samples. It generates a report with interactive plots illustrating changes in the data introduced at individual processing steps and facilitate catching pontetial problems due to applied proecssing methods.
+Use [combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R) script to investigate the expression data distribution patters of user-defined genes (max 10) in [combined expression data](#read-count-data-combination) derived from different samples. The script generates a report with interactive plots illustrating changes in the data introduced at individual processing steps and facilitate catching pontetial problems due to applied proecssing methods.
 
 The script allows to process the read count data using combonation of the following transformation and normalisation methods:
 
@@ -243,7 +245,9 @@ Rscript combinedExprDataDistribution.R --exprDir $data/Combined_data --exprFile 
 
 <br>
 
-This will generate **expression_distributions_results_CPM_TMM.html report** with interactive summary plots and the following output files in the *[data]/Combined_data* project directory:
+### Output report
+
+The example command above will generate ***[expression_distributions_results_CPM_TMM.html report](./readcount-analysis/Combined_data/expression_distributions_results_CPM_TMM.html)*** with interactive summary plots and the following output files in the *[data]/Combined_data* project directory:
 
 1. Bar-plot illustrating library size for each sample
 2. Histograms presenting distributions of transformed data before and after data filtering (optional step)
@@ -251,9 +255,5 @@ This will generate **expression_distributions_results_CPM_TMM.html report** with
 4. Box-plot illustrating z-score transformed data for individual samples, coloured according to corresponding groups
 5. Scatter-plots illustrating the effect of data normalisation (optional step) and z-score transformation on the transformed data for user-defined genes, as well as per-sample normlaisation factors indicated by a colour shading
 6. Plots presenting transformed, normalised (optional step) and z-score data distribution for selected gene(s) along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data)
-
-### Output report
-
-[expression_distributions_results_CPM_TMM.html](./readcount-analysis/Combined_data/expression_distributions_results_CPM_TMM.html) is an example output report generated using the [example command above](#arguments).
 
 <br>
