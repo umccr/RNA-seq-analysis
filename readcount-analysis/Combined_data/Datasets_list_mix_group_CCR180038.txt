@@ -1,7 +1,0 @@
-Dataset_name	Expression_matrix	Target_file	Outliers_file
-TCGA-PAAD	./Combined_data/ref_cohorts/TCGA_PAAD_Counts.exp	./Combined_data/ref_cohorts/TCGA_PAAD_Target.txt	
-TCGA-LAML	./Combined_data/ref_cohorts/TCGA_LAML_Counts.exp	./Combined_data/ref_cohorts/TCGA_LAML_Target.txt	
-TCGA-GBM	./Combined_data/ref_cohorts/TCGA_GBM_Counts.exp	./Combined_data/ref_cohorts/TCGA_GBM_Target.txt	
-TCGA-BRCA	./Combined_data/ref_cohorts/TCGA_BRCA_Counts.exp	./Combined_data/ref_cohorts/TCGA_BRCA_Target.txt	
-GTEx	./Combined_data/ref_cohorts/GTEx_normal_pancreas_Counts.exp	./Combined_data/ref_cohorts/GTEx_normal_pancreas_Target.txt	
-CCR180038	/Users/jmarzec/data/Patients/WTS/CCR180038_SV18T002P006_RNA/CCR180038_SV18T002P006_RNA-ready.counts.exp	/Users/jmarzec/data/Patients/WTS/CCR180038_SV18T002P006_RNA/CCR180038_SV18T002P006_RNA-ready_Target.txt	
