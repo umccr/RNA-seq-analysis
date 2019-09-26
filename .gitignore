@@ -10,7 +10,7 @@
 # R generated files #
 ######################
 *.Rhistory
-
+readcount-analysis/*.css
 
 # Big data files #
 ######################
