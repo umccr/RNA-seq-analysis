@@ -93,9 +93,9 @@ TCGA-PAAD.mergeCounts2Matrix.missing_genes.txt | File created in case there are 
 
 ## Combine data from different datasets
 
-To combine gene-by-sample read count matrices from different datasets use the *[combineExprData.R](./readcount-analysis/combineExprData.R)* script. It collects user-defined parameters and pass them to *[combineExprData.Rmd](./readcount-analysis/combineExprData.Rmd)*, which generates combined data matrix, accompanying html report, files and plots. Note, only **genes intersection** across all datasets expression matrices will be reported in the combined expression matrix. The pipeline is based on recommendaitons from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html)* package.
+To combine gene-by-sample read count matrices from different datasets use the *[combineExprDatasets.R](./readcount-analysis/combineExprDatasets.R)* script. It collects user-defined parameters and pass them to *[combineExprDatasets.Rmd](./readcount-analysis/combineExprDatasets.Rmd)*, which generates combined data matrix, accompanying html report, files and plots. Note, only **genes intersection** across all datasets expression matrices will be reported in the combined expression matrix. The pipeline is based on recommendaitons from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html)* package.
 
-*[combineExprData.R](./readcount-analysis/combineExprData.R)* script requires manually prepared tab-delimited **datasets file** with four columns (*Dataset_name*, *Expression_matrix*, *Target_file* and *Outliers_file*) to define names of the datasets to be merged, the correspoding expression matrices and target files, samples's names for the merged matrix, as well as the files listing outlier samples to be removed before combining the data (see this [example datasets  file](./readcount-analysis/Combined_data/Datasets_list.txt)):
+*[combineExprDatasets.R](./readcount-analysis/combineExprDatasets.R)* script requires manually prepared tab-delimited **datasets file** with four columns (*Dataset_name*, *Expression_matrix*, *Target_file* and *Outliers_file*) to define names of the datasets to be merged, the correspoding expression matrices and target files, samples's names for the merged matrix, as well as the files listing outlier samples to be removed before combining the data (see this [example datasets  file](./readcount-analysis/Combined_data/Datasets_list.txt)):
 
 1. `Dataset_name` - this coloumn specifies preferred dataset name that will appear in any tables or plots in downstream analyses
 2. `Expression_matrix` - location and name of the corresponding read count matrix
@@ -123,7 +123,7 @@ To facilitate analyses and output files organisation, the **datasets file** is e
 
 ### Arguments
 
-**Script**: *[combineExprData.R](./readcount-analysis/combineExprData.R)*
+**Script**: *[combineExprDatasets.R](./readcount-analysis/combineExprDatasets.R)*
 
 Argument | Description
 ------------ | ------------
@@ -134,7 +134,7 @@ Argument | Description
 **Command-line use example**:
 
 ```
-Rscript combineExprData.R --projectDir $data/Combined_data --datasets Datasets_list.txt
+Rscript combineExprDatasets.R --projectDir $data/Combined_data --datasets Datasets_list.txt
 ```
 
 <br><br>
@@ -174,7 +174,7 @@ The input and output files will be organised following the folder structure belo
 
 ### Output files
 
-[The example command above](#arguments-1) will read *count matrices*, *target* and *outliers* files listed in *Datasets_list.txt* datasets file located within the *[data]/Combined_data* project folder. Based on the information about the input files the *[combineExprData.Rmd](./readcount-analysis/combineExprData.Rmd)* script will generate **[Datasets_list.txt.combineExprData.html](./readcount-analysis/Combined_data/Datasets_list.txt.combineExprData.html) report** with interactive summary plots and the following output files in the *[data]/Combined_data* project directory:
+[The example command above](#arguments-1) will read *count matrices*, *target* and *outliers* files listed in *Datasets_list.txt* datasets file located within the *[data]/Combined_data* project folder. Based on the information about the input files the *[combineExprDatasets.Rmd](./readcount-analysis/combineExprDatasets.Rmd)* script will generate **[Datasets_list.txt.combineExprData.html](./readcount-analysis/Combined_data/Datasets_list.txt.combineExprData.html) report** with interactive summary plots and the following output files in the *[data]/Combined_data* project directory:
 
 Output file | Description
 ------------ | -----------
@@ -199,7 +199,7 @@ Read count data combined from various resources, datasets or batches will be con
 
 ## Data distribution evaluation
 
-Use [combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R) script to investigate the expression data distribution patters of user-defined genes (max 10) in [combined expression data](#read-count-data-combination) derived from different samples. The script generates a report with interactive plots illustrating changes in the data introduced at individual processing steps and facilitate catching pontetial problems due to applied proecssing methods.
+Use [combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R) script to investigate changes to the read count data at various processing steps and to illustrate data distribution patters of user-defined genes across all samples in [combined expression dataset.](#read-count-data-combination). The script generates a report with interactive plots illustrating changes in the data introduced at individual processing steps and facilitate catching pontetial problems due to applied proecssing methods.
 
 The script allows to process the read count data using combonation of the following transformation and normalisation methods:
 
@@ -235,6 +235,7 @@ Argument | Description
 --ensembl | Is input data annotated using ensembl gene IDs? Available options are: *TRUE* (defualt) and *FALSE*
 --samples | ID of samples of interest (OPTIONAL)
 --results_name | Desired core name for the results folder
+--hide_code_btn | Hide the *Code* button allowing to show/hide code chunks in the final HTML report. Available options are: `TRUE` (default) and `FALSE` | No
 <br/>
 
 **Command-line use example**:

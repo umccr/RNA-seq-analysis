@@ -1,33 +1,45 @@
 ---
-title: "Investigate expression data"
+title: "Read count data processing"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    keep_md: yes
+    code_download: true
+    code_folding: hide
+    theme: readable
+    css: combinedExprDataDistribution.css
+    toc: true
+    toc_float: true
+  rmdformats::material:
+    highlight: kate
 params:
-  dataset: 'pdac'
-  exprDir: '/Users/kanwals/Documents/UMCCR/data/RNAseq-report/ExpressionData'
-  exprFile: 'UMCCR_PC.counts.matrix.txt.subset.txt'
-  annotFile: 'UMCCR_PC_Target_cleaned.txt'
+  datasets: '../data/test_data/test.datasets_list.txt'
+  report_dir: '../data/test_data'
   transform: 'CPM'
   norm: 'TMM'
   filter: TRUE
   log: TRUE
   genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
   ensembl: TRUE
-  samples: 'UMCCR_PDAC.Sample_10'
+  samples: 'Sample_10'
   results_name: 'test'
   scaling: 'gene-wise'
   ref_data_dir: '../data'
   ensembl_version: 86
-output:
-  html_document:
-    keep_md: yes
-    code_folding: hide
-    theme: readable
-#    toc: true
-#    toc_float: true
+  hide_code_btn: TRUE
 ---
 
-The aim of this report is investigate the expression data distribution patterns of user-defined genes (max 10) in combined expression data (**`r params$exprFile`**) derived from different samples. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`) and scaling (`r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score tansformation") } else { c("centering") }`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is to investigate changes to the read count data at various post-processing steps and to illustrate data distribution patterns of user-defined genes (***`r params$genes`***) across all samples in combined expression dataset.(`r if ( params$scaling == "gene-wise" ) { c("Z-score tansformation") } else { c("centering") }`) The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`) and scaling (`r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score tansformation") } else { c("centering") }`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+
+```{r code_display, echo = FALSE}
+##### Include or exclude the "Code" buttom allowing to "show"/"hide" code chunks from the report 
+if ( params$hide_code_btn ) {
+  writeLines(".btn { display: none ;", con = "combinedExprDataDistribution.css")
+} else {
+  writeLines(" ", con = "combinedExprDataDistribution.css")
+}
+```
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
@@ -76,7 +88,6 @@ combineDatasets <- function(ref_dataset) {
       ##### Add prexit to sample names
       rownames(targetFileTmp) <- paste(targetFileTmp[,"Dataset"], targetFileTmp[,"Sample_name"], sep = ".")
       targetFileTmp <- targetFileTmp[, -1]
-        
       targetFile <- rbind(targetFile, targetFileTmp)
     }
   }  
@@ -192,61 +203,6 @@ density2freq <- function(density) {
   return(freq)
 }
   
-
-##### Generate scatter plots for samples (highlighting the samples and genes of interest) to illustrate the effect of data normalization and z-score transformation/centering. Currently, this function works for one gene at a time.
-comparePlot <- function(genes, dataset1, dataset2, main_title, x_title, y_title, sampleName, plot_mode = "static") {
-  
-  ##### Used data for user-defined genes
-  dataset1 <- dataset1[ genes, ,drop=FALSE]
-  dataset2 <- dataset2[ genes, ,drop=FALSE]
- 
-  ##### Make sure that samples are in the same order
-  dataset2 <- dataset2[ , colnames(dataset1) ,drop=FALSE]
-  
-  #### Interactive genes distribution plot
-  ##### Create empty data frame
-  data.df <- data.frame(matrix(ncol = 4, nrow = 0))
-  colnames(data.df) <- c("gene", "sample", "dataset1", "dataset2")
-  
-  for (i in 1:nrow(dataset1)) {
-      data.df <- rbind(data.df, data.frame( gene = genes[i], sample = names(dataset1[ genes[i], ]), dataset1 = dataset1[ genes[i], ], dataset2 = dataset2[ genes[i], ]))
-  }
-  
-  ##### Extract expression for selected sample in the distributions dataframe
-  data.df.selected <- data.frame(matrix(ncol = 5, nrow = 0))
-  colnames(data.df.selected) <- c("data", "gene", "sample", "expr", "dens")
-  
-  for ( i in 1:length(sampleName) ) {
-    data.df.selected <- rbind(data.df.selected, data.df[sampleName[i] == data.df$sample, ])
-  }
-  
-  ##### Assign colours to distributions
-  genes.colour <- getGenesColours(unique(data.df$gene))
-  
-  ##### Assign colours to samples
-  sample.colour <- getSamplesColours(unique(data.df.selected$sample))
-
-  
-  ##### Generate interactive density plot
-  p <- plotly::plot_ly(data.df, x = ~dataset1, y = ~dataset2, type = 'scatter', color = ~gene, colors = genes.colour, text = data.df$sample, width = 00, height = 400) %>%
-    plotly::add_markers(y = data.df.selected$dataset2, x = data.df.selected$dataset1, 
-                name = data.df.selected$sample,
-                text = data.df.selected$sample,
-                mode = 'markers',
-                marker = list(size = 8, colors = data.df.selected$sample, color = rep(sample.colour, each = nrow(data.df.selected)/length(samples)), line = list(color = "grey", width = 2)),
-                showlegend = TRUE, inherit = FALSE) %>%
-    
-    ##### Add Loess smoothed line
-    plotly::add_lines(x = data.df$dataset1, y = ~fitted(loess(data.df$dataset2 ~ data.df$dataset1)),
-            line = list(color = 'grey'),
-            name = "Loess Smoother", opacity = 0.5, showlegend = TRUE) %>%
-    plotly::layout(title = main_title,
-           xaxis = list(title = x_title),
-           yaxis = list (title = y_title))
-  
-return( p )
-}
-
 ##### Assign colours to different groups
 getTargetsColours <- function(targets) {
   
@@ -324,14 +280,87 @@ colnames(data.subset_scree.df) <- c("PC", "Variances")
   return( list(pca.list, pca_plot, scree_plot) )
 }
 
+##### Generate box-plot for selected genes, highlighting samples of interest. Currently, this function works for one gene at a time.
+boxPlot <- function(genes, data, target, y_title) {
+
+  ##### Used data for user-defined genes
+  data <- data[ genes, ,drop=FALSE]
+  
+  ##### Assigne colours to targets and datasets
+  targets.colour <- getTargetsColours(target$Target)
+  
+  ##### Prepare data frame
+  data.df <- data.frame(target$Target, colnames(data), as.numeric(data))
+  colnames(data.df) <- c("Group","Sample", "Data")
+  
+  ##### The default order will be alphabetized unless specified as below
+  data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
+  p <- plot_ly(data.df, x = ~Sample, y = ~Data, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 800, height = 400) %>%
+    layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = y_title), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+  
+  return( p )
+}
+
+##### Generate scatter plots for samples (highlighting the samples and genes of interest) to illustrate the effect of data normalization and z-score transformation/centering. Currently, this function works for one gene at a time.
+comparePlot <- function(genes, dataset1, dataset2, main_title, x_title, y_title, sampleName) {
+  
+  ##### Used data for user-defined genes
+  dataset1 <- dataset1[ genes, ,drop=FALSE]
+  dataset2 <- dataset2[ genes, ,drop=FALSE]
+ 
+  ##### Make sure that samples are in the same order
+  dataset2 <- dataset2[ , colnames(dataset1) ,drop=FALSE]
+  
+  #### Interactive genes distribution plot
+  ##### Create empty data frame
+  data.df <- data.frame(matrix(ncol = 4, nrow = 0))
+  colnames(data.df) <- c("gene", "sample", "dataset1", "dataset2")
+  
+  for (i in 1:nrow(dataset1)) {
+      data.df <- rbind(data.df, data.frame( gene = genes[i], sample = names(dataset1[ genes[i], ]), dataset1 = dataset1[ genes[i], ], dataset2 = dataset2[ genes[i], ]))
+  }
+  
+  ##### Extract expression for selected sample in the distributions dataframe
+  data.df.selected <- data.frame(matrix(ncol = 5, nrow = 0))
+  colnames(data.df.selected) <- c("data", "gene", "sample", "expr", "dens")
+  
+  for ( i in 1:length(sampleName) ) {
+    data.df.selected <- rbind(data.df.selected, data.df[sampleName[i] == data.df$sample, ])
+  }
+  
+  ##### Assign colours to distributions
+  genes.colour <- getGenesColours(unique(data.df$gene))
+  
+  ##### Assign colours to samples
+  sample.colour <- getSamplesColours(unique(data.df.selected$sample))
+
+  ##### Generate interactive density plot
+  p <- plotly::plot_ly(data.df, x = ~dataset1, y = ~dataset2, type = 'scatter', color = ~gene, colors = genes.colour, text = data.df$sample, width = 00, height = 400) %>%
+    plotly::add_markers(y = data.df.selected$dataset2, x = data.df.selected$dataset1, 
+                name = data.df.selected$sample,
+                text = data.df.selected$sample,
+                mode = 'markers',
+                marker = list(size = 8, colors = data.df.selected$sample, color = rep(sample.colour, each = nrow(data.df.selected)/length(samples)), line = list(color = "grey", width = 2)),
+                showlegend = TRUE, inherit = FALSE) %>%
+    
+    ##### Add Loess smoothed line
+    plotly::add_lines(x = data.df$dataset1, y = ~fitted(loess(data.df$dataset2 ~ data.df$dataset1)),
+            line = list(color = 'grey'),
+            name = "Loess Smoother", opacity = 0.5, showlegend = TRUE) %>%
+    plotly::layout(title = main_title,
+           xaxis = list(title = x_title),
+           yaxis = list (title = y_title))
+  
+  return( p )
+}
+
 ##### Generate density and expression distribution plots for selected genes, highlighting samples of interest. Currently, this function works for one gene at a time.
-densityPlot <- function(genes, data, main_title, x_title, sampleName, distributions = NULL, plot_mode = "static") {
+densityPlot <- function(genes, data, main_title, x_title, sampleName, distributions = NULL) {
   
   ##### Used data for user-defined genes
   data <- data[ genes, ,drop=FALSE]
   
   ##### Transformed data for html report
-  #### Interactive genes distribution plot
   ##### Create empty data frame
   data.df <- data.frame(matrix(ncol = 4, nrow = 0))
   colnames(data.df) <- c("gene", "sample", "expr", "dens")
@@ -416,7 +445,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   sample.colour <- getSamplesColours(unique(data.df.selected$sample))
 
   ##### Generate interactive density plot
-  p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 1000, height = 300) %>%
+  p <- plotly::plot_ly(data.df, x = ~expr, y = ~dens, type = 'scatter', mode = 'lines', color = ~gene, colors = genes.colour, width = 800, height = 300) %>%
     plotly::add_markers(y = data.df.selected$dens, x = data.df.selected$expr, 
                 name = data.df.selected$sample,
                 text = data.df.selected$sample,
@@ -430,6 +459,16 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   
 return( p )
 }
+
+##### A wrapper to saveWidget which compensates for arguable BUG in saveWidget which requires `file` to be in current working directory (see post https://github.com/ramnathv/htmlwidgets/issues/299 )
+saveWidgetFix <- function ( widget, file, ...) {
+  wd<-getwd()
+  on.exit(setwd(wd))
+  outDir<-dirname(file)
+  file<-basename(file)
+  setwd(outDir);
+  htmlwidgets::saveWidget(widget,file=file,...)
+}
 ```
 
 ```{r load_libraries, warning=FALSE}
@@ -437,81 +476,137 @@ return( p )
 suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
-suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 suppressMessages(library(plotly))
 suppressMessages(library(scales))
 suppressMessages(library(truncnorm))
 suppressMessages(library(RColorBrewer))
 suppressMessages(library(limma))
+suppressMessages(library(htmltools))
+suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
-##### Load reference datasets
-##### Define the reference datasets based on user-defined input
-ref_dataset <- list( "pdac" = c(paste(params$ref_data_dir, "Datasets_list_PDAC.txt", sep="/"), "PDAC (UMCCR)", "PDAC (TCGA)"), "cervix" = c(paste(params$ref_data_dir, "Datasets_list_cervical_SCC.txt", sep="/"), "PDAC (UMCCR)", "CESC (TCGA)"), "bladder" = c(paste(params$ref_data_dir, "Datasets_list_bladder.txt", sep="/"), "PDAC (UMCCR)", "BLCA (TCGA)") )
+##### Read file with datasets information
+DatasetInput=read.table(params$datasets,sep="\t", as.is=TRUE, header=TRUE, row.names=1)
 
-dataset <- params$dataset
-int_cancer_group <- ref_dataset[[dataset]][2]
-ext_cancer_group <- ref_dataset[[dataset]][3]
+##### Extract info about target file for the first dataset
+fileInfo = strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
+targetFile <- read.table(paste(params$report_dir, DatasetInput[1,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
 
-##### Create a list with reference datasets
-ref_datasets <- c(dataset)
-ref_datasets.list <- vector("list", length(ref_datasets))
-names(ref_datasets.list) <- ref_datasets
+##### Make sure that there are no duplciated samples in the target file
+targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
+rownames(targetFile) <- targetFile[,"Sample_name"]
+targetFile <- cbind(targetFile[,"Target", drop = FALSE],rownames(DatasetInput[1,]))
+colnames(targetFile)[ncol(targetFile)] <- "Dataset"
 
-##### Read in reference datasets and merge them with UMCCR data. This part outputs a vector with first element containing the merged data and second element containing merged targets info
-ref_datasets.list[[dataset]] <- combineDatasets(ref_dataset=ref_dataset[[dataset]][1])
-names(ref_datasets.list[[dataset]]) <- c("combined_data", "sample_annot")
-
-##### Read in expression data and associated sample annotation files
-data <- ref_datasets.list[[dataset]][["combined_data"]]
-targetFile <- ref_datasets.list[[dataset]][["sample_annot"]]
-
-#### Check the number of datasets for pca plots
-runPCAchunk <- FALSE
-
-if ( length(unique(targetFile$Dataset)) > 1 ) {
-  
-  runPCAchunk <- TRUE
+if ( nrow(DatasetInput) > 1 ) {
+  for ( i in 2:nrow(DatasetInput) ) {
+    
+    ##### Create a temporary object to store info from the remaining target files
+    targetFileTmp <- read.table(paste(params$report_dir, DatasetInput[i,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
+    
+    ##### Make sure that there are no duplciated samples in the target file
+    targetFileTmp <- targetFileTmp[!duplicated(targetFileTmp[,"Sample_name"]),]
+    rownames(targetFileTmp) <- targetFileTmp[,"Sample_name"]
+    targetFileTmp <- cbind(targetFileTmp[,"Target", drop = FALSE],rownames(DatasetInput[i,]))
+    colnames(targetFileTmp)[ncol(targetFileTmp)] <- "Dataset"
+    
+    ##### Deal with replicates
+    if ( !is.na(match("Replicates", colnames(targetFile))) ) {
+      if ( any(!is.na(targetFile[,"Replicates"])) ) {
+        maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
+        targetFileTmp[,"Replicates"] <- targetFileTmp[,"Replicates"] + maxRep
+      }
+    }
+    targetFile <- rbind(targetFile, targetFileTmp)
+  }
 }
 
 ##### Make syntactically valid names
-colnames(data) <- make.names(colnames(data))
 rownames(targetFile) <- make.names(rownames(targetFile))
 
+##### Loop through the gene-by-sample expression matrices from different datasets and merge them into a matrix
+for (data_matrix in DatasetInput[ , "Expression_matrix" ] ) {
+  
+  ##### Create combined dataset variable if it doesn't exist yet
+  if (!exists("datasets")) {
+    datasets <- as.data.frame( read.table(gzfile(paste(params$report_dir, data_matrix, sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    
+    ##### list genes present in individal files
+    gene_list <- as.vector(datasets[,1])
+    
+    ##### Add data for the remaining samples   
+  } else if (exists("datasets")) {
+    dataset <-as.data.frame( read.table(gzfile(paste(params$report_dir, data_matrix, sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    
+    ##### list genes present in individal files
+    gene_list <- c( gene_list, as.vector(dataset[,1]) )
+    
+    ##### Merge the expression data and make sure that the genes order is the same
+    datasets <- merge( datasets, dataset, by=1, all = FALSE, sort= TRUE)
+    
+    ##### Remove per-sample data for merged samples to free some memory
+    rm(dataset)
+  }
+}
+
+##### Use gene IDs as rownames
+rownames(datasets) <- datasets[,1]
+datasets <- datasets[, -1]
+
+##### Make syntactically valid names
+colnames(datasets) <- make.names(colnames(datasets))
+
 ##### Make sure that the target file contains info only about samples present in the data matrix
-targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
+targetFile <- targetFile[ rownames(targetFile) %in% colnames(datasets),  ]
+
+##### Make sure that the samples order in the data matrix is the same as in the target file 
+datasets <- datasets[ , rownames(targetFile) ]
+
+##### Save datasets names
+datasetIDs <- rownames(DatasetInput)
+
+##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
+gene_list <- unique(gene_list)
+gene_list.missing <- gene_list[ gene_list %!in% rownames(datasets) ]
+
+##### Write list of missing genes into a file
+if ( length(gene_list.missing) > 0 ) {
+  write.table(prepare2write(gene_list.missing), file = paste0(params$report_dir, "/", params$results_name,".missing_genes.txt"), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+}
 
 #### Prepare input samples of interest
 if ( !is.na(params$samples) ) {
   
-  samples <- unique(unlist(strsplit(params$samples, split=',', fixed=TRUE)))
-
+  samples <- make.names(unique(unlist(strsplit(params$samples, split=',', fixed=TRUE))))
   ##### Change the target file to mark the sample of interest
   targetFile$Target[ rownames(targetFile) %in% samples ] <- "Queried sample(s)"
   
 } else {
-  
-  samples <- rownames(targetFile) 
+  samples <- rownames(targetFile)
 }
 
-##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
-if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
-  
-  data <- data[ , rownames(targetFile) ]
+##### Create a list with datasets and accompanying data
+dataset <- "combined"
+datasets.list <- vector("list", 1)
+names(datasets.list) <- dataset
 
-  ##### Save data subset into a file
-  write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
-}
+datasets.list[[dataset]][["combined_data"]] <- datasets
+datasets.list[[dataset]][["sample_annot"]] <- targetFile
+
+##### Get user-defined genes
+genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
 ```
 
-**`r if ( any( samples %!in% colnames(data) ) || any( samples %!in% colnames(data) ) ) { c("NOTE:\n") } else { c(" ") }`** 
+***
 
-`r if ( any( samples %!in% rownames(targetFile) ) ) { c(paste0("\nQueried sample(s) \"", samples[ samples %!in%rownames(targetFile) ], "\" are not present in the \"",  params$annotFile, "\" samples annotation file.\n\n")) }`
+`r if ( !is.na(params$samples) ) { c(paste0("\nThese sample(s) were queried and will be highlighted: **", paste0(params$samples, collapse = ", "), "**\n\n")) } else { c("No specific sample(s) were queried so all will be highlighted on the plots.") }`
 
-`r if ( any( samples %!in% colnames(data) ) ) { c(paste0("\nQueried sample(s) \"", samples[ samples %!in%colnames(data) ], "\" are not present in the \"", params$exprFile, "\" samples annotation file.\n\n")) }`
+`r if ( any( samples %!in% colnames(datasets) ) || any( samples %!in% rownames(targetFile) ) ) { c("\n**NOTE**: sample(s) listed below will be ignored in the analysis!\n") } else { c(" ") }`
 
-`r if ( any( samples %!in% colnames(data) ) || any( samples %!in% colnames(data) ) ) { c("These sample(s) will be ignored.\n\n") } else { c(" ") }`
+`r if ( any( samples %!in% rownames(targetFile) ) ) { c(paste0("\nQueried sample(s): <span style=\"color:#ff0000\">", paste0(samples[ samples %!in%rownames(targetFile) ], collapse = ", "), "</span> are not present in the samples annotation file.\n\n")) }`
+
+`r if ( any( samples %!in% colnames(datasets) ) ) { c(paste0("\nQueried sample(s) <span style=\"color:#ff0000\">", paste0(samples[ samples %!in%colnames(datasets) ], collapse = ", "), "</span> are not present in the read count data.\n\n")) }`
 
 ***
 
@@ -522,29 +617,30 @@ Bar-plot illustrating library size for each sample.
 ```{r library_size_plot, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
 suppressMessages(library(plotly))
 ##### Generate bar-plot for library size. The colours indicate sample groups, as provided in *Target* column in the sample annotation file
+data <- datasets.list[[dataset]][["combined_data"]]
+target <- datasets.list[[dataset]][["sample_annot"]]
 
 ##### Assigne colours to targets and datasets
-targets.colour <- getTargetsColours(targetFile$Target)
+targets.colour <- getTargetsColours(target$Target)
 
 ##### Prepare data frame
-data.df <- data.frame(targetFile$Target, colnames(data), as.numeric(colSums(data)*1e-6))
+data.df <- data.frame(target$Target, colnames(data), as.numeric(colSums(data)*1e-6))
 colnames(data.df) <- c("Group","Sample", "Library_size")
 
 ##### The default order will be alphabetized unless specified as below
 data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
-p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 1000, height = 400) %>%
+p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 800, height = 400) %>%
   layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
 
 ##### Print htmlwidget
 p
 
 ##### Save the bar-plot as html (PLOTLY)
-#htmlwidgets::saveWidget(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_RNAseq_libSize.html")), selfcontained = TRUE)
+saveWidgetFix(p, file = paste0(params$report_dir, "/", params$results_name,".RNAseq_libSize.html"))
+
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
 ```
-
-***
 
 ```{r gene_annot, comment = NA, message=FALSE, warning=FALSE, eval = params$ensembl}
 ##### Get genes annotation and genomic locations
@@ -569,10 +665,9 @@ rownames(gene_info) <- gene_info$ENSEMBL
 gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
 
 ##### Loop through combined datasets and annotate genes
-for ( dataset in names(ref_datasets.list) ) {
+for ( dataset in names(datasets.list) ) {
   
   ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
-  #data <- ref_datasets.list[[dataset]][["combined_data_processed"]]
   data.df <- as.data.frame(cbind(rownames(data), data))
   colnames(data.df)[1] <- "ENSEMBL"
   
@@ -584,16 +679,17 @@ for ( dataset in names(ref_datasets.list) ) {
   rownames(data.annot) <- data.annot$SYMBOL
   
   ##### Get data matrix with gene symbols
-  ref_datasets.list[[dataset]][["combined_data"]] <- apply(data.annot[, colnames(data)], 2, as.numeric)
-  rownames(ref_datasets.list[[dataset]][["combined_data"]]) <- data.annot$SYMBOL
-  ref_datasets.list[[dataset]][["gene_annot"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
+  datasets.list[[dataset]][["combined_data"]] <- apply(data.annot[, colnames(data)], 2, as.numeric)
+  rownames(datasets.list[[dataset]][["combined_data"]]) <- data.annot$SYMBOL
+  datasets.list[[dataset]][["gene_annot"]] <- data.annot[, c("SYMBOL", "GENEBIOTYPE", "ENSEMBL", "SEQNAME", "GENESEQSTART", "GENESEQEND")]
 }
-
 ```
 
-## Data transformation and filtering
+***
 
-The read count data is converted into **`r params$transform`** using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
+## Transformation and filtering
+
+The read count data is converted into **`r params$transform`** using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
 
 ```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
@@ -601,47 +697,49 @@ The read count data is converted into **`r params$transform`** using *[edgeR](ht
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million.
 
 ##### For counts data processing consider the investigated sample and internal reference cohort as one group  (regardless of the investigated patient tissie origin), and TCGA data (of any cancer type) as another group. This is to facilitate batch-effects (related with technical aspects) correction process
-target_mod <- ref_datasets.list[[dataset]][["sample_annot"]]
-#target_mod$Target <- gsub(params$sample_name, int_cancer_group, target_mod$Target)
-targets_mod.list <- unique(target_mod$Target)
+target_mod <- datasets.list[[dataset]][["sample_annot"]]
+targets_mod.list <- unique(target_mod$Dataset)
 
 ##### Create lists with processed data each group
 y <- vector("list", length(targets_mod.list))
 names(y) <- targets_mod.list
 
-for ( group in targets_mod.list ) {
+##### Keep info about samples with the lowest and greates counts for defined CPM threshold
+cpm.min <- round(min(as.numeric(colSums(datasets.list[[dataset]][["combined_data"]])*1e-6)), digits=0)
+cpm.max <- round(max(as.numeric(colSums(datasets.list[[dataset]][["combined_data"]])*1e-6)), digits=0)
+
+for ( subset in targets_mod.list ) {
   
-    target <- target_mod[ target_mod$Target==group, ]
-    data <- ref_datasets.list[[dataset]][["combined_data"]]
-    data <- data[ , target_mod$Target==group]
+    target <- target_mod[ target_mod$Dataset==subset, ]
+    data <- datasets.list[[dataset]][["combined_data"]]
+    data <- data[ , target_mod$Dataset==subset]
 
   ##### CPM transformation and filtering
   if ( params$filter && params$transform == "CPM" ) {
     
     ##### Create EdgeR DGEList object
-    y[[group]] <- edgeR::DGEList(counts=data,  group=target$Target)
+    y[[subset]] <- edgeR::DGEList(counts=data,  group=target$Dataset)
     
     ##### Remove genes with CPM of at least 1 in less than 10% of samples
-    #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
+    keep <- rowSums(cpm(y[[subset]])>1) >= ncol(data)/10
     
-    keep <- rowSums(cpm(y[[group]])>1) >= ncol(data)/10
-    y[[group]]$filtered <- y[[group]][keep, , keep.lib.sizes=FALSE]
-    
-    #cat(nrow(y$filtered$counts), "genes remained after filtering out of the", nrow(data), "genes in the input read count matrix\n\n")
+    ##### Keep the genes of interest too
+    keep[ names(keep) %in% genes ] <- TRUE
+    y[[subset]]$filtered <- y[[subset]][keep, , keep.lib.sizes=FALSE]
     
     ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
-    y[[group]]$samples["norm.factors"] <- edgeR::calcNormFactors(y[[group]], method = "none")$samples["norm.factors"]
-    y[[group]]$transformed <- edgeR::cpm(y[[group]], normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
-    y[[group]]$filtered.transformed <- edgeR::cpm(y[[group]]$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+    y[[subset]]$samples["norm.factors"] <- edgeR::calcNormFactors(y[[subset]], method = "none")$samples["norm.factors"]
+    y[[subset]]$transformed <- edgeR::cpm(y[[subset]], normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+    y[[subset]]$filtered.transformed <- edgeR::cpm(y[[subset]]$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
     
   ##### CPM transformation without filtering
   } else if ( !params$filter && params$transform == "CPM" ) {
     
     ##### Create EdgeR DGEList object
-    y[[group]] <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+    y[[subset]] <- edgeR::DGEList(counts=data,  group=targetFile$Dataset)
     
     ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
-    y[[group]]$transformed <- edgeR::cpm(y[[group]], normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+    y[[subset]]$transformed <- edgeR::cpm(y[[subset]], normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
     
   ##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
   ##### TPM transformation with filtering
@@ -657,27 +755,27 @@ for ( group in targets_mod.list ) {
     data <- data[ data.annot$ENSEMBL %!in% genes.no_length, ]
     
     ##### Create EdgeR DGEList object
-    y[[group]] <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+    y[[subset]] <- edgeR::DGEList(counts=data,  group=targetFile$Dataset)
     
     ##### Convert data into RPKM
-    y[[group]]$transformed <- edgeR::rpkm(y[[group]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+    y[[subset]]$transformed <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
     
-    ##### Remove genes with TPM of at least 0.2 in less than 10% of samples
-    keep <- rowSums(y[[group]]$transformed>0.2) >= ncol(y[[group]]$transformed)/10
-    y[[group]]$filtered <- y[[group]]$counts[keep, ]
-    y[[group]]$filtered.transformed <- y[[group]]$transformed[keep, ]
+    ##### Remove genes with TPM of at least 1 in less than 10% of samples
+    keep <- rowSums(y[[subset]]$transformed>1+0.25) >= ncol(y[[subset]]$transformed)/10
+    
+    ##### Keep the genes of interest too
+    keep[ names(keep) %in% genes ] <- TRUE
+    y[[subset]]$filtered <- y[[subset]]$counts[keep, ]
+    y[[subset]]$filtered.transformed <- y[[subset]]$transformed[keep, ]
     
     ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero and remove batch effect
     if ( params$log ) {
       
-      y[[group]]$transformed <- log2(tpm_from_rpkm(y[[group]]$transformed+0.25))
-      y[[group]]$filtered.transformed <- log2(tpm_from_rpkm(y[[group]]$filtered.transformed+0.25))
-    
+      y[[subset]]$transformed <- log2(tpm_from_rpkm(y[[subset]]$transformed+0.25))
+      y[[subset]]$filtered.transformed <- log2(tpm_from_rpkm(y[[subset]]$filtered.transformed+0.25))
     } else {
-      
-      y[[group]]$transformed <- tpm_from_rpkm(y[[group]]$transformed)
-      y[[group]]$filtered.transformed <- tpm_from_rpkm(y[[group]]$filtered.transformed)
-
+      y[[subset]]$transformed <- tpm_from_rpkm(y[[subset]]$transformed)
+      y[[subset]]$filtered.transformed <- tpm_from_rpkm(y[[subset]]$filtered.transformed)
     }
     
   ##### TPM transformation without filtering
@@ -693,25 +791,22 @@ for ( group in targets_mod.list ) {
     data <- data[ data.annot$ENSEMBL %!in% genes.no_length, ]
     
     ##### Create EdgeR DGEList object
-    y[[group]] <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+    y[[subset]] <- edgeR::DGEList(counts=data,  group=targetFile$subset)
     
     ##### Convert data into RPKM
-    y[[group]]$transformed <- edgeR::rpkm(y[[group]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+    y[[subset]]$transformed <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
     
     ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
     if ( params$log ) {
       
-      y[[group]]$transformed <- log2(tpm_from_rpkm(y[[group]]$transformed+0.25))
-    
+      y[[subset]]$transformed <- log2(tpm_from_rpkm(y[[subset]]$transformed+0.25))
     } else {
-      
-      y[[group]]$transformed <- tpm_from_rpkm(y[[group]]$transformed)
-      
+      y[[subset]]$transformed <- tpm_from_rpkm(y[[subset]]$transformed)
     }
   }
 }
 
-##### Now combine DGEList objects created for each group
+##### Now combine DGEList objects created for each dataset
 y[["comb"]]$transformed <- cbind(y[[targets_mod.list[1]]]$transformed, y[[targets_mod.list[2]]]$transformed)
 y[["comb"]]$samples <- rbind(y[[targets_mod.list[1]]]$samples, y[[targets_mod.list[2]]]$samples)
 
@@ -724,13 +819,46 @@ if ( params$filter ) {
   y[[targets_mod.list[1]]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed[ rownames(y[[targets_mod.list[1]]]$filtered.transformed) %in% genes_mod, ]
   y[[targets_mod.list[2]]]$filtered.transformed <- y[[targets_mod.list[2]]]$filtered.transformed[ rownames(y[[targets_mod.list[2]]]$filtered.transformed) %in% genes_mod, ]
  
-  
   y[["comb"]]$filtered <- cbind(y[[targets_mod.list[1]]]$filtered, y[[targets_mod.list[2]]]$filtered)
   y[["comb"]]$filtered.transformed <- cbind(y[[targets_mod.list[1]]]$filtered.transformed, y[[targets_mod.list[2]]]$filtered.transformed)
 }
 
 ```
 
+`r if ( params$transform == "CPM" ) { paste0("The CPM of 1 (cut-off for removing low expressed genes) corresponds to ", cpm.min, " reads in sample with the lowest sequencing depth, and ", cpm.max, " reads in sample with the greatest sequencing depth. The plot below presents the relation between read counts and the corresponding ", params$transform, " values in a sample with the lowest sequencing depth. The red vertical line indicates the threshold for filtering genes with low counts.") } else { paste0("The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the patient data. The red vertical line indicates the threshold for filtering genes with low counts.") }`
+
+```{r filtering_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, fig.show="hide", eval = params$filter}
+##### Plot read counts against transformed data
+suppressMessages(library(plotly))
+  
+##### Organise the data into data frame
+data.df <- as.data.frame(cbind( y[["comb"]]$transformed[,order(colSums(datasets.list[[dataset]][["combined_data"]]))[1]]+1, datasets.list[[dataset]][["combined_data"]][,order(colSums(datasets.list[[dataset]][["combined_data"]]))[1]]))
+names(data.df) <- c("Transformed", "Counts")
+  
+##### Keep only genes with read counts below the 99th percentile
+data.df <- data.df[ data.df$Counts < quantile(data.df$Counts, 0.99), ]
+  
+##### Keep only every 25th genes to reduce the size of the plot
+data.df <- data.df[ seq(1,nrow(data.df), by=25), ]
+  
+##### Generate plot for filtered data
+p <- plot_ly( data.df, x = ~Transformed, y = ~Counts, width = 800, height = 300, color = I('black'), marker = list(size = 5), type="scatter", mode = "markers", name = paste0(params$transform, " vs Counts") ) %>% 
+    add_trace(x = c(1, 1), y= c(0, max(data.df$Counts)), mode = "lines", color = I("red"), name = "Filtering threshold") %>%
+    
+    layout(title = "", xaxis = list(title = paste0(params$transform, "s")), yaxis = list(title = "Counts"), showlegend=TRUE)
+
+##### Print htmlwidget
+p
+
+##### Save interactive plot as html file
+saveWidgetFix(p, file = paste0(params$report_dir, "/", params$results_name,".counts_vs_transformed.html"))
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+Plot(s) below present `r params$transform` data distribution `r if ( params$filter ) { c(" before and after filtering genes with low counts.") } else { cat(".")}`
+ 
 ```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
 ##### Collect the most extreme density values for set the x-axis and y-axis boundaries
 den.x <- density(y[["comb"]]$transformed[,1])$x
@@ -770,7 +898,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5)
   par(mfrow=c(1,2))
   
   ##### Before filtering
@@ -810,7 +938,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5)
   ##### Without filtering
   plot(density(y[["comb"]]$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
   title(main="Transformed data (unfiltered)", xlab=params$transform)
@@ -827,7 +955,7 @@ if ( params$filter ) {
 
 ***
 
-## Data normalisation
+## Normalisation
 
 `r if ( tolower(params$norm) == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
 
@@ -836,22 +964,22 @@ if ( params$filter ) {
 ```{r data_normalisation, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
 
-#### For each group...
-for ( group in targets_mod.list ) {
+#### For each dataset...
+for ( subset in targets_mod.list ) {
   if ( params$transform == "CPM" ) {
     
     ##### Calculate normalization factors and  transformations from the raw-scale to CPM and normalisation using user-defined method
     if ( params$filter ) {
       
-      y[[group]]$noNorm <- y[[group]]$filtered.transformed
-      y[[group]]$filtered$samples["norm.factors"] <- edgeR::calcNormFactors(y[[group]]$filtered, method = params$norm)$samples["norm.factors"]
-      y[[group]]$norm <- edgeR::cpm(y[[group]]$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+      y[[subset]]$noNorm <- y[[subset]]$filtered.transformed
+      y[[subset]]$filtered$samples["norm.factors"] <- edgeR::calcNormFactors(y[[subset]]$filtered, method = params$norm)$samples["norm.factors"]
+      y[[subset]]$norm <- edgeR::cpm(y[[subset]]$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
     
     } else {
       
-      y[[group]]$noNorm <- y[[group]]$transformed
-      y[[group]]$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
-      y[[group]]$norm <- edgeR::cpm(y[[group]], normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+      y[[subset]]$noNorm <- y[[subset]]$transformed
+      y[[subset]]$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
+      y[[subset]]$norm <- edgeR::cpm(y[[subset]], normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
     }
     
   ##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
@@ -860,44 +988,42 @@ for ( group in targets_mod.list ) {
     ##### Normalisation using quantile method
     if ( params$filter ) {
       
-      y[[group]]$noNorm <- y[[group]]$filtered.transformed
-      y[[group]]$filtered.transformed <- data.matrix(y[[group]]$filtered.transformed) 
+      y[[subset]]$noNorm <- y[[subset]]$filtered.transformed
+      y[[subset]]$filtered.transformed <- data.matrix(y[[subset]]$filtered.transformed) 
       
       if ( tolower(params$norm) != "none" ) {
         
-        y[[group]]$norm  <- normalize.quantiles(y[[group]]$filtered.transformed, copy = TRUE)
-        colnames(y[[group]]$norm) <- colnames(y[[group]]$filtered.transformed)
-        rownames(y[[group]]$norm) <- rownames(y[[group]]$filtered.transformed)
+        y[[subset]]$norm  <- normalize.quantiles(y[[subset]]$filtered.transformed, copy = TRUE)
+        colnames(y[[subset]]$norm) <- colnames(y[[subset]]$filtered.transformed)
+        rownames(y[[subset]]$norm) <- rownames(y[[subset]]$filtered.transformed)
         
       } else {
-        
-        y[[group]]$norm  <- y[[group]]$filtered.transformed
+        y[[subset]]$norm  <- y[[subset]]$filtered.transformed
       }
     
     } else {
       
-      y[[group]]$noNorm <- y[[group]]$transformed
-      y[[group]]$transformed <- data.matrix(y[[group]]$transformed)
+      y[[subset]]$noNorm <- y[[subset]]$transformed
+      y[[subset]]$transformed <- data.matrix(y[[subset]]$transformed)
       
       if ( tolower(params$norm) != "none" ) {
         
-        y[[group]]$norm  <- normalize.quantiles(y[[group]]$transformed, copy = TRUE)
-        colnames(y[[group]]$norm) <- colnames(y[[group]]$transformed)
-        rownames(y[[group]]$norm) <- rownames(y[[group]]$transformed)
+        y[[subset]]$norm  <- normalize.quantiles(y[[subset]]$transformed, copy = TRUE)
+        colnames(y[[subset]]$norm) <- colnames(y[[subset]]$transformed)
+        rownames(y[[subset]]$norm) <- rownames(y[[subset]]$transformed)
         
       } else {
-        
-        y[[group]]$norm  <- y[[group]]$transformed
+        y[[subset]]$norm  <- y[[subset]]$transformed
       }
     }
   }
 }
 
-##### Combine DGEList objects created for each group
+##### Combine DGEList objects created for each dataset
 y[["comb"]]$noNorm <- cbind(y[[targets_mod.list[1]]]$noNorm, y[[targets_mod.list[2]]]$noNorm)
 y[["comb"]]$norm <- cbind(y[[targets_mod.list[1]]]$norm, y[[targets_mod.list[2]]]$norm)
 
-ref_datasets.list[[dataset]][["combined_data_processed"]] <- y[["comb"]]$norm
+datasets.list[[dataset]][["combined_data_processed"]] <- y[["comb"]]$norm
 
 ##### Set height scaling factor for plots containing normalised data plots
 if ( tolower(params$norm) != "none" ) {
@@ -925,7 +1051,7 @@ if ( tolower(params$norm) != "none" ) {
 }
     
 ##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
+pdf(paste0(params$report_dir, "/", params$results_name,".normalisation.pdf"), width=8, height=14)
 par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y[["comb"]]$noNorm)))/2, 5, 3, 2))
     
 ##### Unnormalised data
@@ -947,39 +1073,36 @@ invisible(dev.off())
 
 ```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE}
 ##### The strategy for correcting data for batch effects is to consider the investigated sample and internal reference cohort as one group (batch) (regardless of the investigated patient tissiu origin), and TCGA data (of any cancer type) as another batch. The objective is to remove as much as possible data variation due to technical factors.
-batches <- as.character(ref_datasets.list[[dataset]][["sample_annot"]]$Target)
-
-##### Change the sample dataset name to internal reference cohort
-batches[ match(params$sample_name, batches) ] <- int_cancer_group
+batches <- as.character(datasets.list[[dataset]][["sample_annot"]]$Dataset)
 
 ##### Perform batch-effect correctrion using limma
-ref_datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(ref_datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
+datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
 ```
 
-## `r if ( length(unique(targetFile$Dataset)) > 1) { c("Batch-effect Correction") }`
+## `r if ( length(unique(targetFile$Dataset)) > 1) { c("Batch-effects correction") }`
 
 ```{r pca_batch_effect, comment = NA, message=FALSE, warning=FALSE}
 suppressMessages(library(plotly))
 
 ##### Perform principal component analysis (PCA) using combined-only data and batch-effect corrected data
 ##### Loop through combined datasets and perform PCA
-for ( dataset in names(ref_datasets.list) ) {
+target <- datasets.list[[dataset]][["sample_annot"]]
   
-  target <- ref_datasets.list[[dataset]][["sample_annot"]]
-  
-  ref_datasets.list[[dataset]][["pca_combined_data_processed"]] <- pca(ref_datasets.list[[dataset]][["combined_data_processed"]], target)
-  ref_datasets.list[[dataset]][["pca_batch_effect_corrected"]] <- pca(ref_datasets.list[[dataset]][["batch_effect_corrected"]], target)
-}
+datasets.list[[dataset]][["pca_combined_data_processed"]] <- pca(datasets.list[[dataset]][["combined_data_processed"]], target)
+datasets.list[[dataset]][["pca_batch_effect_corrected"]] <- pca(datasets.list[[dataset]][["batch_effect_corrected"]], target)
+
 
 #### Before batch-effects correction
-ref_datasets.list[[dataset]][["pca_combined_data_processed"]][[2]]
+datasets.list[[dataset]][["pca_combined_data_processed"]][[2]]
 
 #### After batch-effects correction
-ref_datasets.list[[dataset]][["pca_batch_effect_corrected"]][[2]]
+datasets.list[[dataset]][["pca_batch_effect_corrected"]][[2]]
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
 ```
+
+***
 
 ## `r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score transformation") } else { c("Centering") }`
 
@@ -992,34 +1115,31 @@ Box-plot below presents `r if ( tolower(params$scaling) == "gene-wise" ) { c("z-
 if (tolower(params$scaling) == "gene-wise"){
   
   z_scaling <- "gene-wise"
-  y[["comb"]]$z <- t(scale(t(ref_datasets.list[[dataset]][["batch_effect_corrected"]])))
+  y[["comb"]]$z <- t(scale(t(datasets.list[[dataset]][["batch_effect_corrected"]])))
 } else {
-  
   z_scaling <- "sample-wise"
-  y[["comb"]]$z <- scale(ref_datasets.list[[dataset]][["batch_effect_corrected"]], scale = FALSE)
-  }
-    
+  y[["comb"]]$z <- scale(datasets.list[[dataset]][["batch_effect_corrected"]], scale = FALSE)
+}
 
 ##### Define axis title for scaled data
 if ( tolower(params$scaling) == "gene-wise" ) {
-  
-  scaled_title <- "Z-score"
+  scaled_title <- "z-score"
 } else { 
-  scaled_title <-  paste0("Centered ", params$transform)
+  scaled_title <-  paste0("centered ", params$transform)
 }
 ```
 
-```{r data_z_score_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12}
-##### Plot expression distribution of samples for unnormalised and normalised data
-par(mfrow=c(1,1), mar=c((max(nchar(colnames(y[["comb"]]$z)))+3)/2, 5, 3, 2))
-    
+```{r data_z_score_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Plot expression distribution of samples for Z-score data
+par(mfrow=c(1,1), mar=c(2, 5, 3, 2))
+
 boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
   title(main=paste0(scaled_title, " data"), ylab=scaled_title)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
     
 ##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", scaled_title, ".pdf")), width=8, height=7)
-par(mfrow=c(1,1), mar=c(max(nchar(colnames(y[["comb"]]$z)))/2, 5, 3, 2))
+pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".", scaled_title, ".pdf")), width=8, height=6)
+par(mfrow=c(1,1), mar=c(2, 5, 3, 2))
     
 boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
 title(main=paste0(scaled_title, " data"), ylab=scaled_title)
@@ -1029,14 +1149,13 @@ invisible(dev.off())
 
 ***
 
-## Data processing effects {.tabset}
-
-`r if ( tolower(params$norm) != "none" ) { c(paste0("Scatter-plots illustrating the effect of data normalisation and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformation") } else { c("centering") }, " data (", z_scaling, ") on the ", params$transform, " data. The ", params$transform, " and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score data") } else { c(paste0("centered ", params$transform, " values")) }, " , respectively, are plotted as a function of ", paste0("normalised ", params$transform, " (", params$norm, ")"), " values.")) } else { c(paste0("Scatter-plots illustrating the effect of data ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformation") } else { c("centering") }, " (", z_scaling, ") on the ", params$transform, " data. The ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-scores") } else { c(paste0("centered ", params$transform, "s")) }, " are plotted as a function of ", params$transform, " values.")) }`
+## Selected genes expression {.tabset}
 
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
-##### Subset data to include only user-defined genes
-genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
+##### Subset data
 y.sub <- y[["comb"]]
+datasets.list[[dataset]][["combined_data_sub"]] <- datasets.list[[dataset]][["combined_data"]]
+datasets.list[[dataset]][["combined_data_sub"]] <- datasets.list[[dataset]][["combined_data_sub"]][ rownames(datasets.list[[dataset]][["combined_data_sub"]]) %in% rownames(datasets.list[[dataset]][["combined_data_processed"]]), ]
 
 ##### Identify user-defined genes that were not present in the expression matrix
 if ( params$filter ) {
@@ -1055,6 +1174,7 @@ if ( params$filter ) {
   keep <- rownames(y[["comb"]]$transformed) %in% genes
   y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
 }
+
 y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
 y.sub$z <- y.sub$z[keep, , drop=FALSE]
   
@@ -1064,7 +1184,7 @@ if ( tolower(params$norm) != "none" ) {
 
 ##### Write list of genes into a file
 if ( length(genes) > 0 ) {
-    write.table(prepare2write(genes), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, ".genes.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+    write.table(prepare2write(genes), file = paste0(params$report_dir, "/", paste0(params$results_name, ".genes.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
   
   runChunk <- TRUE
 } else {
@@ -1074,953 +1194,257 @@ if ( length(genes) > 0 ) {
 ##### Write list of missing genes into a file
 if ( exists("genes.missing") && length(genes.missing) > 0 ) {
   
-  write.table(prepare2write(genes.missing), file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+  write.table(prepare2write(genes.missing), file = paste0(params$report_dir, "/", paste0(params$results_name, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
 ```
 
-**`r if ( !runChunk ) { c("None of the queried genes are not present in the input data.") } else { c("") }`**
-
-### `r if ( !is.na(genes[1]) ) { genes[1] }`
-
-```{r comparison_plot_1, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[1]
-plotsNo <- 1
+```{r prep_data_for_presenting, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+if ( params$filter ) {
+  transformed.data <- y[["comb"]]$filtered.transformed
+} else {
+  transformed.data <- y[["comb"]]$transformed
+}
 
 ##### Check if queried samples are present in the data matrix and target file. If no, then ignore them
 if ( !any( samples %in% rownames(targetFile) ) ) { 
-  
   samples <- rownames(targetFile)
-  
 } else if ( any( samples %!in% rownames(targetFile) ) ) { 
-  
   samples <- samples[ samples %in% rownames(targetFile) ]
-  
-} else if ( any( samples %!in% colnames(data) ) ) { 
-  
-  samples <- samples[ samples %in% colnames(data) ]
+} else if ( any( samples %!in% colnames(transformed.data) ) ) { 
+  samples <- samples[ samples %in% colnames(transformed.data) ]
 }
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
- ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
 ```
-
-### `r if ( !is.na(genes[2]) ) { genes[2] }`
-
-```{r comparison_plot_2, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[2]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
-  ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-### `r if ( !is.na(genes[3]) ) { genes[3] }`
-
-```{r comparison_plot_3, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[3]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
-  ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-### `r if ( !is.na(genes[4]) ) { genes[4] }`
-
-```{r comparison_plot_4, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[4]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
- ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-### `r if ( !is.na(genes[5]) ) { genes[5] }`
-
-```{r comparison_plot_5, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[5]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
- ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-### `r if ( !is.na(genes[6]) ) { genes[6] }`
-
-```{r comparison_plot_6, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[6]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
-  ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-### `r if ( !is.na(genes[7]) ) { genes[7] }`
-
-```{r comparison_plot_7, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[7]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
- ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-
-```
-
-***
-
-### `r if ( !is.na(genes[8]) ) { genes[8] }`
-
-```{r comparison_plot_8, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[8]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
-  ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-### `r if ( !is.na(genes[9]) ) { genes[9] }`
-
-```{r comparison_plot_9, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[9]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
-   ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-### `r if ( !is.na(genes[10]) ) { genes[10] }`
-
-```{r comparison_plot_10, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[10]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y[["comb"]]$filtered.transformed
-  } else {
-    transformed.data <- y[["comb"]]$transformed
-  }
-  
-   ##### For normalisation ON
-  if ( tolower(params$norm) != "none" ) {
-    
-    ##### For normalisation ON
-    ##### Check the effect of data Z-score transformation / centering
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo+1]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-      
-  ##### For normalisation OFF
-  } else {
-    
-    ##### Check the effect of data batch-effect correction
-    widges.list[[plotsNo]] <- comparePlot(genes=gene, dataset1=ref_datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
-    
-    ##### Check the effect of data Z-score transformation/centering
-    widges.list[[plotsNo+2]] <- comparePlot(genes=gene, dataset1=y[["comb"]]$z, dataset2=ref_datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  }
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-## Expression distribution patterns {.tabset}
 
 ### Plots {.tabset .tabset-fade}
 
-`r if ( tolower(params$norm) != "none" ) { c(paste0("Plot(s) illustrating ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") data distributions for selected gene(s)")) } else { c(paste0("Plot(s) illustrating ", params$transform, " and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") data distributions for selected gene(s)")) }` along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data).
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Bar-plots illustrating counts data, ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") ")) } else { c(paste0("Bar-plots illustrating counts data, ", params$transform, " and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") ")) }` values for each sample for selected gene(s).
 
-**`r if ( !runChunk ) { c("None of the queried genes are not present in the input data.") } else { c("") }`**
+```{r data_barplot_counts, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9, eval = runChunk, results="asis"}
+##### Generate bar-plot the each type of data
+suppressMessages(library(plotly))
 
-#### `r if ( !is.na(genes[1]) ) { genes[1] }`
-
-```{r expr_dist_plot_1, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
 ##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
+output_counts <- list()
+output_transform <- list()
+output_norm <- list()
+output_batch <- list()
+output_z <- list()
 
-gene <- genes[1]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
+##### For each gene generate corresponding set of plots
+for ( i in 1:length(genes) ) {
   
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
+  ##### Counts data
+  output_counts[[i]] <- boxPlot(genes=genes[i], data=datasets.list[[dataset]][["combined_data_sub"]], target=target, y_title="Counts" )
+  
+  ##### Transformed data
+  output_transform[[i]] <- boxPlot(genes=genes[i], data=transformed.data, target=target, y_title=params$transform)
     
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
   ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
+
+    output_norm[[i]] <- boxPlot(genes=genes[i], data=y.sub$norm, target=target, y_title=paste0("Normalised ", params$transform, " (", params$norm, ")")) 
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  
+  ##### Check the effect of data batch-effect correction
+  output_batch[[i]] <- boxPlot(genes=genes[i], data=datasets.list[[dataset]][["batch_effect_corrected"]], target=target, y_title="Batch-effects corrected") 
+    
+  ##### Z-transformed data
+  output_z[[i]] <- boxPlot(genes=genes[i], data=y.sub$z, target=target, y_title=scaled_title)
 }
 
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[2]) ) { genes[2] }`
-
-```{r expr_dist_plot_2, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[2]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
+##### Now once the plots are ready show them in separate tabs
+for( i in 1:length(genes) ){
+  cat("\n#### ", genes[i], "\n")
+  cat(renderTags(output_counts[[i]])$html)
+  cat(renderTags(output_transform[[i]])$html)
   
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
   if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
+    cat(renderTags(output_norm[[i]])$html)
   }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  cat(renderTags(output_batch[[i]])$html)
+  cat(renderTags(output_z[[i]])$html)
+  cat("\n***\n")
 }
 
-##### Print a list of htmlwidgets
-widges.list
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
 ```
-
-***
-
-#### `r if ( !is.na(genes[3]) ) { genes[3] }`
-
-```{r expr_dist_plot_3, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[3]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[4]) ) { genes[4] }`
-
-```{r expr_dist_plot_4, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[4]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[5]) ) { genes[5] }`
-
-```{r expr_dist_plot_5, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[5]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[6]) ) { genes[6] }`
-
-```{r expr_dist_plot_6, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[6]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[7]) ) { genes[7] }`
-
-```{r expr_dist_plot_7, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[7]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[8]) ) { genes[8] }`
-
-```{r expr_dist_plot_8, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[8]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[9]) ) { genes[9] }`
-
-```{r expr_dist_plot_9, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[9]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
-
-#### `r if ( !is.na(genes[10]) ) { genes[10] }`
-
-```{r expr_dist_plot_10, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk}
-##### Create a list for htmlwidgets
-widges.list <- htmltools::tagList()
-
-gene <- genes[10]
-plotsNo <- 1
-
-##### Plot expression distribution in transfromed and normalised data for selected genes
-if ( !is.na(gene) ) {
-  
-  if ( params$filter ) {
-    transformed.data <- y.sub$filtered.transformed
-  } else {
-    transformed.data <- y.sub$transformed
-  }
-    
-  widges.list[[plotsNo]] <- densityPlot(genes=gene, data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-  
-  ##### Normalised data 
-  if ( tolower(params$norm) != "none" ) {
-    
-    plotsNo <- plotsNo + 1
-    
-    #### Interactive gene distribution plot
-    widges.list[[plotsNo]] <- densityPlot(genes=gene, data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
-  }
-  widges.list[[plotsNo+1]] <- densityPlot(genes=gene, data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
-}
-
-##### Print a list of htmlwidgets
-widges.list
-```
-
-***
 
 ### Table
 
-Table with `r params$transform` data values for each sample for selected genes.
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Tables with counts data, ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") ")) } else { c(paste0("Tables with counts data, ", params$transform, " and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") ")) }` values for each sample for selected gene(s).
 
-**`r if ( runChunk ) { c("Transformed data") } else { c("Queried genes are not present in the input data.") }`**
+`r if ( runChunk ) { c("**Counts data**") } else { c("**Queried genes are not present in the input data!**") }`
 
-```{r expr_dist_table_trans, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+```{r data_table_counts, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+##### Generate a table with expression values for selected genes
+DT::datatable( data = round(t(datasets.list[[dataset]][["combined_data_sub"]][genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::formatStyle( columns = names(t(datasets.list[[dataset]][["combined_data_sub"]])), `font-size` = '12px', 'text-align' = 'center' )
+```
+
+`r if ( runChunk ) { c("**Transformed data**") } else { c(" ") }`
+
+```{r data_table_transform, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Generate a table with expression values for selected genes
 if ( params$filter ) {
-  
- if ( nrow(y.sub$filtered.transformed) < 11 ) {
     
-    DT::datatable( data = round(t(y.sub$filtered.transformed[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
-      DT::formatStyle( columns = names(t(y.sub$filtered.transformed)), `font-size` = '12px', 'text-align' = 'center' )
-    
-  } else {
-    cat(paste0(nrow(y.sub$filtered.transformed), " genes were selected. The tables is available for not more than 10 genes!"))
-  }
+  DT::datatable( data = round(t(y.sub$filtered.transformed[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::formatStyle( columns = names(t(y.sub$filtered.transformed)), `font-size` = '12px', 'text-align' = 'center' )
 
 } else {
-  
-  if ( nrow(y.sub$transformed) < 11 ) {
     
-    DT::datatable( data = round(t(y.sub$transformed[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
-      DT::formatStyle( columns = names(t(y.sub$transformed)), `font-size` = '12px', 'text-align' = 'center' )
-    
-  } else {
-    cat(paste0(nrow(y.sub$transformed), " genes were selected. The tables is available for not more than 10 genes!"))
-  }
+  DT::datatable( data = round(t(y.sub$transformed[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::formatStyle( columns = names(t(y.sub$transformed)), `font-size` = '12px', 'text-align' = 'center' )
 }
 ```
 
-**`r if ( tolower(params$norm) != "none" && runChunk ) { c("Normalised data") }`**
+`r if ( tolower(params$norm) != "none" && runChunk ) { c("**Normalised data**") } else { c(" ") }`
 
-```{r expr_dist_table_normalised, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = runChunk}
+```{r data_table_normalised, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = runChunk}
 ##### Generate a table with expression values for selected genes
 if ( tolower(params$norm) != "none" ) {
+    
+  DT::datatable( data = round(t(y.sub$norm[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::formatStyle( columns = names(t(y.sub$norm)), `font-size` = '12px', 'text-align' = 'center' )
+}
+```
+
+`r if ( runChunk ) { c("**Z-score data**") } else { c(" ") }`
+
+```{r data_table_z, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+##### Generate a table with expression values for selected genes
+DT::datatable( data = round(t(y.sub$z[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::formatStyle( columns = names(t(y.sub$z)), `font-size` = '12px', 'text-align' = 'center' )
+
+```
+
+***
+
+## Data processing effects {.tabset}
+
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Scatter-plots illustrating the effect of transformation, normalisation and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformation") } else { c("centering") }, " (", z_scaling, ") on the ", params$transform, " data.")) } else { c(paste0("Scatter-plots illustrating the effect of transformation ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformation") } else { c("centering") }, " (", z_scaling, ") on the ", params$transform, " data.")) }`
+
+`r if ( !runChunk ) { c("**None of the queried genes are not present in the input data**.") } else { c("") }`
+
+```{r comparison_plots, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk, results="asis"}
+##### Plot expression distribution in transfromed and normalised data for selected genes
+##### Create a list for htmlwidgets
+output_transform <- list()
+output_norm <- list()
+output_batch <- list()
+output_z <- list()
+
+##### For each gene generate corresponding set of plots
+for ( i in 1:length(genes) ) {
   
-  if ( nrow(y.sub$norm) < 11 ) {
+  ##### For normalisation ON
+  if ( tolower(params$norm) != "none" ) {
     
-    DT::datatable( data = round(t(y.sub$norm[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
-      DT::formatStyle( columns = names(t(y.sub$norm)), `font-size` = '12px', 'text-align' = 'center' )
+    ##### Check the effect of data transformation
+    output_transform[[i]] <- comparePlot(genes=genes[i], dataset1=datasets.list[[dataset]][["combined_data_sub"]], dataset2=y[["comb"]]$norm, main_title="", x_title="Counts", y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
     
+    ##### Check the effect of data normalisation
+    output_norm[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
+    
+    ##### Check the effect of data batch-effect correction
+    output_batch[[i]] <- comparePlot(genes=genes[i], dataset1=datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+      
+    ##### Check the effect of data Z-score transformation/centering
+    output_z[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$z, dataset2=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
+  
+  ##### For normalisation OFF
   } else {
-    cat(paste0(nrow(y.sub$norm), " genes were selected. The tables is available for not more than 10 genes!"))
+    
+    ##### Check the effect of data batch-effect correction
+    output_batch[[i]] <- comparePlot(genes=genes[i], dataset1=datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    
+    ##### Check the effect of data Z-score transformation/centering
+    output_z[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$z, dataset2=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
+  }
+}
+
+##### Now once the plots are ready show them in separate tabs
+for( i in 1:length(genes) ){
+  
+  ##### For normalisation ON
+  if ( tolower(params$norm) != "none" ) {
+    cat("\n### ", genes[i], "\n")
+    cat(renderTags(output_transform[[i]])$html)
+    cat(renderTags(output_norm[[i]])$html)
+    cat(renderTags(output_batch[[i]])$html)
+    cat(renderTags(output_z[[i]])$html)
+    cat("\n***\n")
+    
+  ##### For normalisation OFF
+  } else {
+    cat("\n### ", genes[i], "\n")
+    cat(renderTags(output_transform[[i]])$html)
+    cat(renderTags(output_batch[[i]])$html)
+    cat(renderTags(output_z[[i]])$html)
+    cat("\n***\n")
   }
 }
 ```
 
-**`r if ( runChunk ) { c("Z-score data") }`**
+***
 
-```{r expr_dist_table_z, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
-##### Generate a table with expression values for selected genes
-if ( nrow(y.sub$z) < 11 ) {
+## Expression distributions {.tabset}
+
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Plots illustrating counts data, ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") data distributions for selected gene(s)")) } else { c(paste0("Plots illustrating counts data, ", params$transform, " and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") data distributions for selected gene(s)")) }` along with simulated normal, binomial (p=0.25 and p=0.75) and bimodal distributions (computed based on the input data).
+
+`r if ( !runChunk ) { c("**None of the queried genes are not present in the input data**.") } else { c("") }`
+
+```{r prep_data_for_plotting_distr, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+if ( params$filter ) {
+  transformed.data <- y.sub$filtered.transformed
+} else {
+  transformed.data <- y.sub$transformed
+}
+```
+
+```{r expr_dist_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 5*(norm.height+1), eval = runChunk, results="asis"}
+##### Plot expression distribution in transfromed and normalised data for selected genes
+##### Create a list for htmlwidgets
+output_counts <- list()
+output_transform <- list()
+output_norm <- list()
+output_batch <- list()
+output_z <- list()
+
+##### For each gene generate corresponding set of plots
+for ( i in 1:length(genes) ) {
+  
+  ##### Counts data
+  output_counts[[i]] <- densityPlot(genes=genes[i], data=datasets.list[[dataset]][["combined_data_sub"]], main_title="", x_title="Counts", sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+  
+  ##### Transformed data
+  output_transform[[i]] <- densityPlot(genes=genes[i], data=transformed.data, main_title="", x_title=params$transform, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
     
-  DT::datatable( data = round(t(y.sub$z[genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
-      DT::formatStyle( columns = names(t(y.sub$z)), `font-size` = '12px', 'text-align' = 'center' )
+  ##### Normalised data 
+  if ( tolower(params$norm) != "none" ) {
+
+    output_norm[[i]] <- densityPlot(genes=genes[i], data=y.sub$norm, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
+  }
+  
+  ##### Check the effect of data batch-effect correction
+  output_batch[[i]] <- densityPlot(genes=genes[i], data=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title="Batch-effects corrected", sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
     
-  } else {
-  cat(paste0(nrow(y.sub$z), " genes were selected. The tables is available for not more than 10 genes!"))
+  ##### Z-transformed data
+  output_z[[i]] <- densityPlot(genes=genes[i], data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
+}
+
+##### Now once the plots are ready show them in separate tabs
+for( i in 1:length(genes) ){
+  cat("\n### ", genes[i], "\n")
+  cat(renderTags(output_counts[[i]])$html)
+  cat(renderTags(output_transform[[i]])$html)
+  
+  if ( tolower(params$norm) != "none" ) {
+    cat(renderTags(output_norm[[i]])$html)
+  }
+  cat(renderTags(output_batch[[i]])$html)
+  cat(renderTags(output_z[[i]])$html)
+  cat("\n***\n")
 }
 ```
 
@@ -2034,8 +1458,8 @@ if ( nrow(y.sub$z) < 11 ) {
 
 ```{r params_info, comment = NA}
 for ( i in 1:length(params) ) {
+
   cat(paste("Parameter: ", names(params)[i], "\nValue: ", paste(unlist(params[i]), collapse = ","), "\n\n", sep=""))
-  
 }
 ```
 
@@ -2043,10 +1467,21 @@ for ( i in 1:length(params) ) {
 </details>
 
 <details>
-<summary>Session info</summary>
+<summary>Reporter details</summary>
 <font size="2">
 
-```{r sessioninfo, comment = NA}
+```{r reporter_details, comment = NA}
+cat(paste0("The report was generated by \"", Sys.info()[ "user"], "\" using \"",  Sys.info()[ "nodename"], "\" node and \"",  Sys.info()[ "sysname"], "\" operating system."))
+```
+
+</font>
+</details>
+
+<details>
+<summary>Session information</summary>
+<font size="2">
+
+```{r session_info, comment = NA}
 devtools::session_info()
 ```
 
