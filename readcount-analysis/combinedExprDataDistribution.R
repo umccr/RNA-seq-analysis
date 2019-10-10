@@ -116,4 +116,4 @@ if ( !file.exists(report_dir) ) {
 rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = report_dir, params = list(datasets = opt$datasets, report_dir = report_dir, transform = opt$transform, norm = opt$norm, filter = opt$filter, log = opt$log, scaling = opt$scaling, genes = opt$genes, ensembl = opt$ensembl, samples = opt$samples,  results_name = opt$results_name, hide_code_btn = opt$hide_code_btn))
 
 ##### Remove the assocaited folder with plots that are imbedded in the HTML report
-unlink(paste0(opt$report_dir, "/", opt$results_name, "_files"), recursive = TRUE)
+unlink(paste0(report_dir, "/", opt$results_name, "_files"), recursive = TRUE)

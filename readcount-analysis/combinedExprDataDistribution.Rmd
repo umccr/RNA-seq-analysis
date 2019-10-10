@@ -1274,7 +1274,7 @@ detach("package:plotly", unload=FALSE)
 
 `r if ( tolower(params$norm) != "none" ) { c(paste0("Tables with counts data, ", params$transform, ", normalised ", params$transform, " (", params$norm, ") and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") ")) } else { c(paste0("Tables with counts data, ", params$transform, " and ", if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }, " (", z_scaling, ") ")) }` values for each sample for selected gene(s).
 
-`r if ( runChunk ) { c("**Counts data**") } else { c("**Queried genes are not present in the input data!**") }`
+`r if ( runChunk ) { c("**Counts**") } else { c("**Queried genes are not present in the input data!**") }`
 
 ```{r data_table_counts, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Generate a table with expression values for selected genes
@@ -1282,7 +1282,7 @@ DT::datatable( data = round(t(datasets.list[[dataset]][["combined_data_sub"]][ge
     DT::formatStyle( columns = names(t(datasets.list[[dataset]][["combined_data_sub"]])), `font-size` = '12px', 'text-align' = 'center' )
 ```
 
-`r if ( runChunk ) { c("**Transformed data**") } else { c(" ") }`
+`r if ( runChunk ) { c(paste0("**", params$transform, "**")) } else { c(" ") }`
 
 ```{r data_table_transform, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Generate a table with expression values for selected genes
@@ -1298,7 +1298,7 @@ if ( params$filter ) {
 }
 ```
 
-`r if ( tolower(params$norm) != "none" && runChunk ) { c("**Normalised data**") } else { c(" ") }`
+`r if ( tolower(params$norm) != "none" && runChunk ) { paste0("**Normalised ", params$transform, " (", params$norm, ")**") } else { c(" ") }`
 
 ```{r data_table_normalised, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = runChunk}
 ##### Generate a table with expression values for selected genes
@@ -1309,7 +1309,16 @@ if ( tolower(params$norm) != "none" ) {
 }
 ```
 
-`r if ( runChunk ) { c("**Z-score data**") } else { c(" ") }`
+`r if ( runChunk ) { c("**Batch-effects corrected**") } else { c(" ") }`
+
+```{r data_table_batch_corrected, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+##### Generate a table with expression values for selected genes
+DT::datatable( data = round(t(datasets.list[[dataset]][["batch_effect_corrected"]][genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
+    DT::formatStyle( columns = names(t(datasets.list[[dataset]][["batch_effect_corrected"]])), `font-size` = '12px', 'text-align' = 'center' )
+
+```
+
+`r if ( runChunk ) { c(paste0("**", scaled_title, "**")) } else { c(" ") }`
 
 ```{r data_table_z, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
 ##### Generate a table with expression values for selected genes
