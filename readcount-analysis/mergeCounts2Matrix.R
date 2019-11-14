@@ -104,7 +104,7 @@ file_list <- list.files()
 file_list.missing <- targets$File_name[ targets$File_name %!in% file_list ]
 
 if ( length(file_list.missing) > 0 ) {
-  write.table(prepare2write(file_list.missing), file = paste0(projectDir, "/", outFile, ".mergeCounts2Matrix.missing_files.txt" ), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+  write.table(file_list.missing, file = paste0(projectDir, "/", outFile, ".mergeCounts2Matrix.missing_files.txt" ), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
 
 ##### Keep only files listed in the target file
