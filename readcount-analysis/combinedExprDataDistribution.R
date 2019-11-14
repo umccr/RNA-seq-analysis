@@ -19,6 +19,7 @@
 #   datasets:     List of datasets to be combined
 #   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (defualt) and "TPM"
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data. "None" (default) is available for both transformation methods
+#   batch_rm:     Remove batch-associated effects between datasets. Available options are: "TRUE" (default) and "FALSE"
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
 #   scaling:      Apply z-score transformation, either row-wise (across samples) or column-wise (across genes in a sample). Available options are: "sample-wise" (across samples, default) or "gene-wise" (across genes)
@@ -53,6 +54,8 @@ option_list = list(
               help="Transformation method to be used when converting read counts"),
   make_option("--norm", action="store", default="TMM", type='character',
               help="Normalisation method"),
+  make_option("--batch_rm", action="store", default=TRUE, type='logical',
+              help="Remove batch-associated effects between datasets"),
   make_option("--filter", action="store", default=TRUE, type='logical',
               help="Filtering out low expressed genes"),
   make_option("--log", action="store", default=TRUE, type='logical',
@@ -113,7 +116,7 @@ if ( !file.exists(report_dir) ) {
 }
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = report_dir, params = list(datasets = opt$datasets, report_dir = report_dir, transform = opt$transform, norm = opt$norm, filter = opt$filter, log = opt$log, scaling = opt$scaling, genes = opt$genes, ensembl = opt$ensembl, samples = opt$samples,  results_name = opt$results_name, hide_code_btn = opt$hide_code_btn))
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = report_dir, params = list(datasets = opt$datasets, report_dir = report_dir, transform = opt$transform, norm = opt$norm, batch_rm = opt$batch_rm, filter = opt$filter, log = opt$log, scaling = opt$scaling, genes = opt$genes, ensembl = opt$ensembl, samples = opt$samples,  results_name = opt$results_name, hide_code_btn = opt$hide_code_btn))
 
 ##### Remove the assocaited folder with plots that are imbedded in the HTML report
 unlink(paste0(report_dir, "/", opt$results_name, "_files"), recursive = TRUE)
