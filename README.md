@@ -40,12 +40,12 @@ To facilitate downstream analyses and files organisation, the output files will 
 
 **Script**: *[mergeCounts2Matrix.R](./readcount-analysis/mergeCounts2Matrix.R)*
 
-Argument | Description
------------- | ------------
---projectDir | Project directory. This is where the merged matrix will be saved
---target | Name and location of the target file. The target file is expected to have four columns: (1) Sample\_name, (2) File\_name, (3) Target and (4) Replicates
---inDir | Directory containing per-sample expression files. Note that only files listed in the target file will be used to generate the merged matrix. No header is expected. The sample names in the merged matrix will be added based on the sample names in the target file
---outFile | Core name for the merged matrix output file, to which ".counts.matrix.txt" suffix will be added 
+Argument | Description | Required
+------------ | ------------ | ------------
+--projectDir | Project directory. This is where the merged matrix will be saved | **Yes**
+--target | Name and location of the target file. The target file is expected to have four columns: (1) Sample\_name, (2) File\_name, (3) Target and (4) Replicates | **Yes**
+--inDir | Directory containing per-sample expression files. Note that only files listed in the target file will be used to generate the merged matrix. No header is expected. The sample names in the merged matrix will be added based on the sample names in the target file | **Yes**
+--outFile | Core name for the merged matrix output file, to which ".counts.matrix.txt" suffix will be added | No
 <br/>
 
 **Command line use example**:
@@ -125,10 +125,10 @@ To facilitate analyses and output files organisation, the **datasets file** is e
 
 **Script**: *[combineExprDatasets.R](./readcount-analysis/combineExprDatasets.R)*
 
-Argument | Description
------------- | ------------
---projectDir | Project directory. This is where the datasets file is expected and where the merged matrix will be saved
---datasets | Name of the datasets file listing info about datasets to combine 
+Argument | Description | Required
+------------ | ------------ | ------------
+--projectDir | Project directory. This is where the datasets file is expected and where the merged matrix will be saved | **Yes**
+--datasets | Name of the datasets file listing info about datasets to combine | **Yes**
 <br/>
 
 **Command-line use example**:
@@ -199,7 +199,7 @@ Read count data combined from various resources, datasets or batches will be con
 
 ## Data distribution evaluation
 
-Use [combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R) script to investigate changes to the read count data at various processing steps and to illustrate data distribution patters of user-defined genes across all samples in [combined expression dataset.](#read-count-data-combination). The script generates a report with interactive plots illustrating changes in the data introduced at individual processing steps and facilitate catching pontetial problems due to applied proecssing methods.
+Use [combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R) script to investigate changes to the read count data at various processing steps and to illustrate data distribution patters of user-defined genes across all samples in [combined expression dataset](#read-count-data-combination). The script generates a report with interactive plots illustrating changes in the data introduced at individual processing steps and facilitate catching pontetial problems due to applied proecssing methods.
 
 The script allows to process the read count data using combonation of the following transformation and normalisation methods:
 
@@ -218,23 +218,28 @@ CPM is depth-normalised counts whereas TPM is length normalised (and then normal
 
 *[combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R)* script collects user-defined parameters and pass them to *[combinedExprDataDistribution.Rmd](./readcount-analysis/combinedExprDataDistribution.Rmd)*, which generates html report with interactive plots and tables.
 
+###### Note
+
+The script is able to combined different datasets but not more than **two datasets**!
+
 ### Arguments
 
 **Script**: *[combinedExprDataDistribution.R](./readcount-analysis/combinedExprDataDistribution.R)*
 
-Argument | Description
------------- | ------------
---exprDir | Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
---exprFile | File with expression data (read counts)
---annotFile | Samples annotation file with four columns: (1) *Sample_name*, (2) *File_name* (may be balnk), (3) *Target* and (4) *Replicates* (may be balnk)
---transform | Transformation method to be used when converting read counts. Available options are: *CPM* (defualt) and *TPM*
---norm | Normalisation method. *TMM*, *TMMwzp*, *RLE* and *upperquartile* methods are available for *CPM-transformed* data and *quantile* normalisation is used for *TPM-transformed* data. *None* (default) is available for both transformation methods
---filter | Filtering out low expressed genes. Available options are: *TRUE* (defualt) and *FALSE*
---log | Log (base 2) transform data before normalisation. Available options are: *TRUE* (defualt) and *FALSE*
---genes | List of genes to be considered. Up to 10 genes are allowed, each separated by comma
---ensembl | Is input data annotated using ensembl gene IDs? Available options are: *TRUE* (defualt) and *FALSE*
---samples | ID of samples of interest (OPTIONAL)
---results_name | Desired core name for the results folder
+Argument | Description | Required
+------------ | ------------ | ------------
+--exprDir | Directory with expression data. This is where the combined expression matrix and accompanying files will be saved | **Yes**
+--exprFile | File with expression data (read counts) | **Yes**
+--annotFile | Samples annotation file with four columns: (1) *Sample_name*, (2) *File_name* (may be balnk), (3) *Target* and (4) *Replicates* (may be balnk) | **Yes**
+--transform | Transformation method to be used when converting read counts. Available options are: *CPM* (defualt) and *TPM* | No
+--norm | Normalisation method. *TMM*, *TMMwzp*, *RLE* and *upperquartile* methods are available for *CPM-transformed* data and *quantile* normalisation is used for *TPM-transformed* data. *None* (default) is available for both transformation methods | No
+--batch_rm | Remove batch-associated effects between datasets. Available options are: `TRUE` (default) and `FALSE`  | No
+--filter | Filtering out low expressed genes. Available options are: *TRUE* (defualt) and *FALSE* | No
+--log | Log (base 2) transform data before normalisation. Available options are: *TRUE* (defualt) and *FALSE* | No
+--genes | List of genes to be considered. Up to 10 genes are allowed, each separated by comma | No
+--ensembl | Is input data annotated using ensembl gene IDs? Available options are: *TRUE* (defualt) and *FALSE* | No
+--samples | ID of samples of interest (OPTIONAL) | No
+--results_name | Desired core name for the results folder | No
 --hide_code_btn | Hide the *Code* button allowing to show/hide code chunks in the final HTML report. Available options are: `TRUE` (default) and `FALSE` | No
 <br/>
 
