@@ -14,15 +14,16 @@ output:
   rmdformats::material:
     highlight: kate
 params:
-  datasets: '../data/test_data/test.datasets_list.txt'
-  report_dir: '../data/test_data'
+  datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset2/TCGA_PAAD_datasets_list.txt'
+  report_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset2'
   transform: 'CPM'
   norm: 'TMM'
+  batch_rm: TRUE
   filter: TRUE
   log: TRUE
   genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
   ensembl: TRUE
-  samples: 'Sample_10'
+  samples: 'TCGA-3A-A9I9-01A-11R-A38C-07'
   results_name: 'test'
   scaling: 'gene-wise'
   ref_data_dir: '../data'
@@ -30,7 +31,7 @@ params:
   hide_code_btn: TRUE
 ---
 
-The aim of this report is to investigate changes to the read count data at various post-processing steps and to illustrate data distribution patterns of user-defined genes (***`r params$genes`***) across all samples in combined expression dataset.(`r if ( params$scaling == "gene-wise" ) { c("Z-score tansformation") } else { c("centering") }`) The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`) and scaling (`r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score tansformation") } else { c("centering") }`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+The aim of this report is to investigate changes to the read count data at various post-processing steps and to illustrate data distribution patterns of user-defined genes (***`r params$genes`***) across all samples in combined expression dataset. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`) and scaling (`r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score tansformation") } else { c("centering") }`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
 ```{r code_display, echo = FALSE}
 ##### Include or exclude the "Code" buttom allowing to "show"/"hide" code chunks from the report 
@@ -202,21 +203,6 @@ density2freq <- function(density) {
   freq = length(density)/sum(density) * density
   return(freq)
 }
-  
-##### Assign colours to different groups
-getTargetsColours <- function(targets) {
-  
-##### Predefined selection of colours for groups
-targets.colours <- c("powderblue", "red", "gray50")
-  
-  f.targets <- factor(targets)
-  vec.targets <- targets.colours[1:length(levels(f.targets))]
-  targets.colour <- rep(0,length(f.targets))
-  for(i in 1:length(f.targets))
-    targets.colour[i] <- vec.targets[ f.targets[i]==unique(f.targets)]
-  
-  return( list(vec.targets, targets.colour) )
-}
 
 ##### Assign colours to different datasets
 getDatasetsColours <- function(datasets) {
@@ -259,9 +245,6 @@ pca <- function(data, targets) {
   ##### Create a list with dataframe and samples colouring info
   pca.list <- list(data.subset_pca.df, importance_pca, targets.colour, datasets.colour)
   names(pca.list) <- c("pca.df", "importance_pca", "targets", "datasets")
-  
-  ##### Change the targets levels order
-  data.subset_pca.df$Target <- factor(data.subset_pca.df$Target, levels = unique(data.subset_pca.df$Target))
   
   ##### Generate PCA 2-D plot
   pca_plot <- plot_ly(data.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targets$Target, rownames(data.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 800, height = 400) %>%
@@ -370,7 +353,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   }
   
   ##### Generate values to generate various distributions
-  if ( !is.null(distributions) && length(genes) == 1) {
+  if ( !is.null(distributions) && length(genes) == 1 ) {
     
     ##### Use the density values obtained from the expression values
     expr.sorted <- sort(data[ genes, ])
@@ -384,7 +367,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
     
     ##### Generate y-values to mirror distributions of interest
     ##### Generate y-values for normal distribution. Useful resource https://stats.idre.ucla.edu/r/modules/probabilities-and-distributions/
-    if ( "normal" %in% tolower(distributions)) {
+    if ( "normal" %in% tolower(distributions) ) {
       
       ##### Generate y-values for normal distribution
       data.y <- dnorm(data.x, mean = mean(data.x), sd = (max(data.x)-mean(data.x))/5)
@@ -408,11 +391,11 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
       data.df.dist <- rbind(data.df.dist, data.frame(gene="Binomial distribution (p=0.75)", sample = names(sort(data[ genes, ])), expr=data.x, dens=density2freq(data.y)))
     }
     
-    if ("bimodal" %in% tolower(distributions)){
+    if ( "bimodal" %in% tolower(distributions) ){
       
       ##### Draw n/2 samples from a normal distributions with one median and another n/2 samples from a second normal distribution with a different median. Useful link                  https://stats.stackexchange.com/questions/355344/simulating-a-bimodal-distribution-in-the-range-of-15-in-r
-      data.x1 <- seq(min(expr.sorted), median(expr.sorted), length.out = ncol(data)/2)
-      data.x2 <- seq(median(expr.sorted), max(expr.sorted), length.out = ncol(data)/2)
+      data.x1 <- seq(min(expr.sorted), median(expr.sorted), length.out = round(ncol(data)/2, digits=0))
+      data.x2 <- seq(median(expr.sorted), max(expr.sorted), length.out = ceiling(ncol(data)/2))
       
       ##### Combine both normal distributions to generate a bimodal distribution
       data.x <- c(data.x1, data.x2)
@@ -710,9 +693,9 @@ cpm.max <- round(max(as.numeric(colSums(datasets.list[[dataset]][["combined_data
 
 for ( subset in targets_mod.list ) {
   
-    target <- target_mod[ target_mod$Dataset==subset, ]
-    data <- datasets.list[[dataset]][["combined_data"]]
-    data <- data[ , target_mod$Dataset==subset]
+  target <- target_mod[ target_mod$Dataset==subset, ]
+  data <- datasets.list[[dataset]][["combined_data"]]
+  data <- data[ , target_mod$Dataset==subset]
 
   ##### CPM transformation and filtering
   if ( params$filter && params$transform == "CPM" ) {
@@ -813,14 +796,21 @@ y[["comb"]]$samples <- rbind(y[[targets_mod.list[1]]]$samples, y[[targets_mod.li
 if ( params$filter ) {
   
   ##### Keep only genes present in all sets
-  genes_mod <- intersect(rownames(y[[targets_mod.list[1]]]$filtered), rownames(y[[targets_mod.list[2]]]$filtered))
-  y[[targets_mod.list[1]]]$filtered <- y[[targets_mod.list[1]]]$filtered[ rownames(y[[targets_mod.list[1]]]$filtered) %in% genes_mod, ]
-  y[[targets_mod.list[2]]]$filtered <- y[[targets_mod.list[2]]]$filtered[ rownames(y[[targets_mod.list[2]]]$filtered) %in% genes_mod, ]
-  y[[targets_mod.list[1]]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed[ rownames(y[[targets_mod.list[1]]]$filtered.transformed) %in% genes_mod, ]
-  y[[targets_mod.list[2]]]$filtered.transformed <- y[[targets_mod.list[2]]]$filtered.transformed[ rownames(y[[targets_mod.list[2]]]$filtered.transformed) %in% genes_mod, ]
- 
-  y[["comb"]]$filtered <- cbind(y[[targets_mod.list[1]]]$filtered, y[[targets_mod.list[2]]]$filtered)
-  y[["comb"]]$filtered.transformed <- cbind(y[[targets_mod.list[1]]]$filtered.transformed, y[[targets_mod.list[2]]]$filtered.transformed)
+  if ( length(targets_mod.list) == 2 ) {
+  
+    genes_mod <- intersect(rownames(y[[targets_mod.list[1]]]$filtered$counts), rownames(y[[targets_mod.list[2]]]$filtered))
+    y[[targets_mod.list[1]]]$filtered <- y[[targets_mod.list[1]]]$filtered[ rownames(y[[targets_mod.list[1]]]$filtered) %in% genes_mod, ]
+    y[[targets_mod.list[2]]]$filtered <- y[[targets_mod.list[2]]]$filtered[ rownames(y[[targets_mod.list[2]]]$filtered) %in% genes_mod, ]
+    y[[targets_mod.list[1]]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed[ rownames(y[[targets_mod.list[1]]]$filtered.transformed) %in% genes_mod, ]
+    y[[targets_mod.list[2]]]$filtered.transformed <- y[[targets_mod.list[2]]]$filtered.transformed[ rownames(y[[targets_mod.list[2]]]$filtered.transformed) %in% genes_mod, ]
+   
+    y[["comb"]]$filtered <- cbind(y[[targets_mod.list[1]]]$filtered, y[[targets_mod.list[2]]]$filtered)
+    y[["comb"]]$filtered.transformed <- cbind(y[[targets_mod.list[1]]]$filtered.transformed, y[[targets_mod.list[2]]]$filtered.transformed)
+    
+  } else {
+    y[["comb"]]$filtered <- y[[targets_mod.list[1]]]$filtered
+    y[["comb"]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed
+  }
 }
 
 ```
@@ -898,7 +888,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5)
+  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5, pointsize = 8)
   par(mfrow=c(1,2))
   
   ##### Before filtering
@@ -938,7 +928,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5)
+  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5, pointsize = 8)
   ##### Without filtering
   plot(density(y[["comb"]]$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
   title(main="Transformed data (unfiltered)", xlab=params$transform)
@@ -1040,18 +1030,18 @@ par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
 ##### Unnormalised data
 boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
   title(main="Unnormalised data", ylab=params$transform)
-legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent", cex=0.7)
     
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
       
   boxplot(y[["comb"]]$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform, xlab = "")
-  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent", cex=0.7)
 }
     
 ##### Save the plot as pdf file
-pdf(paste0(params$report_dir, "/", params$results_name,".normalisation.pdf"), width=8, height=14)
+pdf(paste0(params$report_dir, "/", params$results_name,".normalisation.pdf"), width=8, height=14, pointsize = 6)
 par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y[["comb"]]$noNorm)))/2, 5, 3, 2))
     
 ##### Unnormalised data
@@ -1069,28 +1059,36 @@ if ( tolower(params$norm) != "none" ) {
 invisible(dev.off())
 ```
 
-***
-
 ```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE}
 ##### The strategy for correcting data for batch effects is to consider the investigated sample and internal reference cohort as one group (batch) (regardless of the investigated patient tissiu origin), and TCGA data (of any cancer type) as another batch. The objective is to remove as much as possible data variation due to technical factors.
 batches <- as.character(datasets.list[[dataset]][["sample_annot"]]$Dataset)
 
 ##### Perform batch-effect correctrion using limma
-datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
+if ( length(unique(batches)) > 1 ) {
+  datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
+  
+  batch_rm_status <- params$batch_rm
+} else {
+  datasets.list[[dataset]][["batch_effect_corrected"]] <- datasets.list[[dataset]][["combined_data_processed"]]
+  batch_rm_status <- FALSE
+}
 ```
 
-## `r if ( length(unique(targetFile$Dataset)) > 1) { c("Batch-effects correction") }`
+`r if ( batch_rm_status ) { c("***") }`
 
-```{r pca_batch_effect, comment = NA, message=FALSE, warning=FALSE}
+`r if ( batch_rm_status ) { c("## Batch-effects correction") }`
+
+`r if ( batch_rm_status ) { c("Scatter-plots of the first 2 principal components (PCs) constituting the primary source of variation in the data before and after batch effects correction. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.") }`
+
+```{r pca_batch_effect, comment = NA, message=FALSE, warning=FALSE, eval=batch_rm_status}
 suppressMessages(library(plotly))
 
 ##### Perform principal component analysis (PCA) using combined-only data and batch-effect corrected data
 ##### Loop through combined datasets and perform PCA
 target <- datasets.list[[dataset]][["sample_annot"]]
   
-datasets.list[[dataset]][["pca_combined_data_processed"]] <- pca(datasets.list[[dataset]][["combined_data_processed"]], target)
-datasets.list[[dataset]][["pca_batch_effect_corrected"]] <- pca(datasets.list[[dataset]][["batch_effect_corrected"]], target)
-
+datasets.list[[dataset]][["pca_combined_data_processed"]] <- pca(data=datasets.list[[dataset]][["combined_data_processed"]], targets=target)
+datasets.list[[dataset]][["pca_batch_effect_corrected"]] <- pca(data=datasets.list[[dataset]][["batch_effect_corrected"]], targets=target)
 
 #### Before batch-effects correction
 datasets.list[[dataset]][["pca_combined_data_processed"]][[2]]
@@ -1127,24 +1125,51 @@ if ( tolower(params$scaling) == "gene-wise" ) {
 } else { 
   scaled_title <-  paste0("centered ", params$transform)
 }
+
+##### Write combined data into a file
+write.table(prepare2write(y[["comb"]]$z), file = paste0(params$report_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
+
+##### Write list genes into a file
+write.table(prepare2write(rownames(y[["comb"]]$z)), file = paste0(params$report_dir, "/", params$results_name,".combined_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
 ```
 
-```{r data_z_score_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+```{r data_z_score_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
 ##### Plot expression distribution of samples for Z-score data
 par(mfrow=c(1,1), mar=c(2, 5, 3, 2))
 
 boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
   title(main=paste0(scaled_title, " data"), ylab=scaled_title)
-legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent", cex=0.8)
     
 ##### Save the plot as pdf file
-pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".", scaled_title, ".pdf")), width=8, height=6)
+pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".", scaled_title, ".pdf")), width=8, height=6, pointsize = 6)
 par(mfrow=c(1,1), mar=c(2, 5, 3, 2))
     
 boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
 title(main=paste0(scaled_title, " data"), ylab=scaled_title)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
 invisible(dev.off())
+```
+
+***
+
+## Principal component analysis
+
+Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data.
+
+Scatter-plot of the first 2 principal components (PCs) constituting the primary source of variation in `r if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }` data. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.
+
+```{r pca_no_batch_effect, comment = NA, message=FALSE, warning=FALSE}
+suppressMessages(library(plotly))
+
+##### Perform principal component analysis (PCA) using combined-only data
+##### Loop through combined datasets and perform PCA
+target <- datasets.list[[dataset]][["sample_annot"]]
+  
+pca(data=y[["comb"]]$z, targets=target)[[2]]
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
 ```
 
 ***
@@ -1193,7 +1218,6 @@ if ( length(genes) > 0 ) {
 
 ##### Write list of missing genes into a file
 if ( exists("genes.missing") && length(genes.missing) > 0 ) {
-  
   write.table(prepare2write(genes.missing), file = paste0(params$report_dir, "/", paste0(params$results_name, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
 ```
@@ -1246,7 +1270,9 @@ for ( i in 1:length(genes) ) {
   }
   
   ##### Check the effect of data batch-effect correction
-  output_batch[[i]] <- boxPlot(genes=genes[i], data=datasets.list[[dataset]][["batch_effect_corrected"]], target=target, y_title="Batch-effects corrected") 
+  if ( any(runChunk && batch_rm_status) ) {
+    output_batch[[i]] <- boxPlot(genes=genes[i], data=datasets.list[[dataset]][["batch_effect_corrected"]], target=target, y_title="Batch-effects corrected") 
+  }
     
   ##### Z-transformed data
   output_z[[i]] <- boxPlot(genes=genes[i], data=y.sub$z, target=target, y_title=scaled_title)
@@ -1261,7 +1287,11 @@ for( i in 1:length(genes) ){
   if ( tolower(params$norm) != "none" ) {
     cat(renderTags(output_norm[[i]])$html)
   }
-  cat(renderTags(output_batch[[i]])$html)
+  
+  if ( any(runChunk && batch_rm_status) ) {
+    cat(renderTags(output_batch[[i]])$html)
+  }
+  
   cat(renderTags(output_z[[i]])$html)
   cat("\n***\n")
 }
@@ -1309,9 +1339,9 @@ if ( tolower(params$norm) != "none" ) {
 }
 ```
 
-`r if ( runChunk ) { c("**Batch-effects corrected**") } else { c(" ") }`
+`r if ( any(runChunk && batch_rm_status) ) { c("**Batch-effects corrected**") } else { c(" ") }`
 
-```{r data_table_batch_corrected, comment = NA, message=FALSE, warning=FALSE, eval = runChunk}
+```{r data_table_batch_corrected, comment = NA, message=FALSE, warning=FALSE, eval = any(runChunk && batch_rm_status)}
 ##### Generate a table with expression values for selected genes
 DT::datatable( data = round(t(datasets.list[[dataset]][["batch_effect_corrected"]][genes,]), digits = 1), filter="none", rownames = TRUE, extensions = c('Buttons','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: left; color:grey; font-size:100% ;'), escape = FALSE) %>%
     DT::formatStyle( columns = names(t(datasets.list[[dataset]][["batch_effect_corrected"]])), `font-size` = '12px', 'text-align' = 'center' )
@@ -1355,20 +1385,36 @@ for ( i in 1:length(genes) ) {
     ##### Check the effect of data normalisation
     output_norm[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$norm, dataset2=transformed.data, main_title="", x_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), y_title=params$transform, sampleName=samples )
     
-    ##### Check the effect of data batch-effect correction
-    output_batch[[i]] <- comparePlot(genes=genes[i], dataset1=datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    if ( batch_rm_status ) {
       
-    ##### Check the effect of data Z-score transformation/centering
+      ##### Check the effect of data batch-effect correction
+      output_batch[[i]] <- comparePlot(genes=genes[i], dataset1=datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="", x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+      
+      ##### Check the effect of data Z-score transformation/centering
     output_z[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$z, dataset2=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
-  
+    
+    } else {
+      
+      ##### Check the effect of data Z-score transformation/centering
+    output_z[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$z, dataset2=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    }
+      
   ##### For normalisation OFF
   } else {
     
-    ##### Check the effect of data batch-effect correction
-    output_batch[[i]] <- comparePlot(genes=genes[i], dataset1=datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+    if ( batch_rm_status ) {
+      
+      ##### Check the effect of data batch-effect correction
+      output_batch[[i]] <- comparePlot(genes=genes[i], dataset1=datasets.list[[dataset]][["batch_effect_corrected"]], dataset2=transformed.data, main_title="",  x_title=paste0("Batch-effects corrected ", params$transform), y_title=paste0("Normalised ", params$transform, " (", params$norm, ")"), sampleName=samples )
+      
+      ##### Check the effect of data Z-score transformation/centering
+      output_z[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$z, dataset2=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
     
-    ##### Check the effect of data Z-score transformation/centering
-    output_z[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$z, dataset2=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title=paste0("Batch-effects corrected ", params$transform), sampleName=samples )
+    } else {
+    
+      ##### Check the effect of data Z-score transformation/centering
+      output_z[[i]] <- comparePlot(genes=genes[i], dataset1=y[["comb"]]$z, dataset2=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title=scaled_title, y_title="Counts", sampleName=samples )
+    }
   }
 }
 
@@ -1380,7 +1426,11 @@ for( i in 1:length(genes) ){
     cat("\n### ", genes[i], "\n")
     cat(renderTags(output_transform[[i]])$html)
     cat(renderTags(output_norm[[i]])$html)
-    cat(renderTags(output_batch[[i]])$html)
+    
+    if ( batch_rm_status ) {
+      cat(renderTags(output_batch[[i]])$html)
+    }
+    
     cat(renderTags(output_z[[i]])$html)
     cat("\n***\n")
     
@@ -1388,7 +1438,10 @@ for( i in 1:length(genes) ){
   } else {
     cat("\n### ", genes[i], "\n")
     cat(renderTags(output_transform[[i]])$html)
-    cat(renderTags(output_batch[[i]])$html)
+    
+    if ( batch_rm_status ) {
+      cat(renderTags(output_batch[[i]])$html)
+    }
     cat(renderTags(output_z[[i]])$html)
     cat("\n***\n")
   }
@@ -1436,7 +1489,9 @@ for ( i in 1:length(genes) ) {
   }
   
   ##### Check the effect of data batch-effect correction
-  output_batch[[i]] <- densityPlot(genes=genes[i], data=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title="Batch-effects corrected", sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
+  if ( batch_rm_status ) {
+    output_batch[[i]] <- densityPlot(genes=genes[i], data=datasets.list[[dataset]][["batch_effect_corrected"]], main_title="", x_title="Batch-effects corrected", sampleName=samples, distributions = c("normal", "binomial", "bimodal") ) 
+  }
     
   ##### Z-transformed data
   output_z[[i]] <- densityPlot(genes=genes[i], data=y.sub$z, main_title="", x_title=scaled_title, sampleName=samples, distributions = c("normal", "binomial",  "bimodal") )
@@ -1451,7 +1506,10 @@ for( i in 1:length(genes) ){
   if ( tolower(params$norm) != "none" ) {
     cat(renderTags(output_norm[[i]])$html)
   }
-  cat(renderTags(output_batch[[i]])$html)
+  
+  if ( batch_rm_status ) {
+    cat(renderTags(output_batch[[i]])$html)
+  }
   cat(renderTags(output_z[[i]])$html)
   cat("\n***\n")
 }
