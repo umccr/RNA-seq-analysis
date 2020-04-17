@@ -14,8 +14,8 @@ output:
   rmdformats::material:
     highlight: kate
 params:
-  datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset2/TCGA_PAAD_datasets_list.txt'
-  report_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset2'
+  datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset/TCGA_PAAD_datasets_list.txt'
+  report_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
   transform: 'CPM'
   norm: 'TMM'
   batch_rm: TRUE
@@ -1072,6 +1072,12 @@ if ( length(unique(batches)) > 1 ) {
   datasets.list[[dataset]][["batch_effect_corrected"]] <- datasets.list[[dataset]][["combined_data_processed"]]
   batch_rm_status <- FALSE
 }
+
+##### Write combined data into a file
+write.table(prepare2write(datasets.list[[dataset]][["batch_effect_corrected"]]), file = paste0(params$report_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
+
+##### Write list genes into a file
+write.table(prepare2write(rownames(datasets.list[[dataset]][["batch_effect_corrected"]])), file = paste0(params$report_dir, "/", params$results_name,".combined_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
 ```
 
 `r if ( batch_rm_status ) { c("***") }`
@@ -1126,11 +1132,11 @@ if ( tolower(params$scaling) == "gene-wise" ) {
   scaled_title <-  paste0("centered ", params$transform)
 }
 
-##### Write combined data into a file
-write.table(prepare2write(y[["comb"]]$z), file = paste0(params$report_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
+##### Write combined and re-scaled data into a file
+write.table(prepare2write(y[["comb"]]$z), file = paste0(params$report_dir, "/", paste0(params$results_name, ".combined.z.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
 
 ##### Write list genes into a file
-write.table(prepare2write(rownames(y[["comb"]]$z)), file = paste0(params$report_dir, "/", params$results_name,".combined_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
+write.table(prepare2write(rownames(y[["comb"]]$z)), file = paste0(params$report_dir, "/", params$results_name,".combined.z_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
 ```
 
 ```{r data_z_score_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
