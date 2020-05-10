@@ -90,6 +90,8 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
 
   ##### Save data subset into a file
   write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+} else {
+  data <- data[ , rownames(targetFile) ]
 }
 ```
 
