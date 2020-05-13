@@ -482,26 +482,32 @@ rownames(targetFile) <- targetFile[,"Sample_name"]
 targetFile <- cbind(targetFile[,"Target", drop = FALSE],rownames(DatasetInput[1,]))
 colnames(targetFile)[ncol(targetFile)] <- "Dataset"
 
+##### Create a list of target file for individual datasets
+targetFile.list <- vector("list", nrow(DatasetInput))
+names(targetFile.list) <- rownames(DatasetInput)
+
+targetFile.list[[1]] <- targetFile
+
 if ( nrow(DatasetInput) > 1 ) {
   for ( i in 2:nrow(DatasetInput) ) {
     
     ##### Create a temporary object to store info from the remaining target files
-    targetFileTmp <- read.table(paste(params$report_dir, DatasetInput[i,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
+    targetFile.list[[i]] <- read.table(paste(params$report_dir, DatasetInput[i,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
     
     ##### Make sure that there are no duplciated samples in the target file
-    targetFileTmp <- targetFileTmp[!duplicated(targetFileTmp[,"Sample_name"]),]
-    rownames(targetFileTmp) <- targetFileTmp[,"Sample_name"]
-    targetFileTmp <- cbind(targetFileTmp[,"Target", drop = FALSE],rownames(DatasetInput[i,]))
-    colnames(targetFileTmp)[ncol(targetFileTmp)] <- "Dataset"
+    targetFile.list[[i]] <- targetFile.list[[i]][!duplicated(targetFile.list[[i]][,"Sample_name"]),]
+    rownames(targetFile.list[[i]]) <- targetFile.list[[i]][,"Sample_name"]
+    targetFile.list[[i]] <- cbind(targetFile.list[[i]][,"Target", drop = FALSE],rownames(DatasetInput[i,]))
+    colnames(targetFile.list[[i]])[ncol(targetFile.list[[i]])] <- "Dataset"
     
     ##### Deal with replicates
     if ( !is.na(match("Replicates", colnames(targetFile))) ) {
       if ( any(!is.na(targetFile[,"Replicates"])) ) {
         maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
-        targetFileTmp[,"Replicates"] <- targetFileTmp[,"Replicates"] + maxRep
+        targetFile.list[[i]][,"Replicates"] <- targetFile.list[[i]][,"Replicates"] + maxRep
       }
     }
-    targetFile <- rbind(targetFile, targetFileTmp)
+    targetFile <- rbind(targetFile, targetFile.list[[i]])
   }
 }
 
@@ -509,18 +515,30 @@ if ( nrow(DatasetInput) > 1 ) {
 rownames(targetFile) <- make.names(rownames(targetFile))
 
 ##### Loop through the gene-by-sample expression matrices from different datasets and merge them into a matrix
-for (data_matrix in DatasetInput[ , "Expression_matrix" ] ) {
+for ( i in 1:nrow(DatasetInput) ) {
   
   ##### Create combined dataset variable if it doesn't exist yet
   if (!exists("datasets")) {
-    datasets <- as.data.frame( read.table(gzfile(paste(params$report_dir, data_matrix, sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    datasets <- as.data.frame( read.table(gzfile(paste(params$report_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    
+    ##### Make sure that the target file contains info only about samples present in the data matrix
+    targetFile.list[[i]] <- targetFile.list[[i]][ rownames(targetFile.list[[i]]) %in% colnames(datasets),  ]
+    
+    ##### Make sure that the samples order in the data matrix is the same as in the target file 
+    datasets <- cbind(datasets[,1], datasets[ , rownames(targetFile.list[[i]]), drop = FALSE ])
     
     ##### list genes present in individal files
     gene_list <- as.vector(datasets[,1])
     
     ##### Add data for the remaining samples   
   } else if (exists("datasets")) {
-    dataset <-as.data.frame( read.table(gzfile(paste(params$report_dir, data_matrix, sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    dataset <-as.data.frame( read.table(gzfile(paste(params$report_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    
+    ##### Make sure that the target file contains info only about samples present in the data matrix
+    targetFile.list[[i]] <- targetFile.list[[i]][ rownames(targetFile.list[[i]]) %in% colnames(dataset),  ]
+  
+    ##### Make sure that the samples order in the data matrix is the same as in the target file 
+    dataset <- cbind(dataset[,1], dataset[ , rownames(targetFile.list[[i]]), drop = FALSE ])
     
     ##### list genes present in individal files
     gene_list <- c( gene_list, as.vector(dataset[,1]) )
@@ -704,7 +722,7 @@ for ( subset in targets_mod.list ) {
     y[[subset]] <- edgeR::DGEList(counts=data,  group=target$Dataset)
     
     ##### Remove genes with CPM of at least 1 in less than 10% of samples
-    keep <- rowSums(cpm(y[[subset]])>1) >= ncol(data)/10
+    keep <- rowSums(edgeR::cpm(y[[subset]])>1) >= ncol(data)/10
     
     ##### Keep the genes of interest too
     keep[ names(keep) %in% genes ] <- TRUE
@@ -1008,6 +1026,8 @@ for ( subset in targets_mod.list ) {
     }
   }
 }
+
+##### Make sure that the all datasets have the same genes
 
 ##### Combine DGEList objects created for each dataset
 y[["comb"]]$noNorm <- cbind(y[[targets_mod.list[1]]]$noNorm, y[[targets_mod.list[2]]]$noNorm)
