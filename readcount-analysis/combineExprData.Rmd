@@ -1,5 +1,5 @@
 ---
-title: "Combined expression data from mutliple samples"
+title: "Combined expression data from multiple samples"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
