@@ -62,88 +62,6 @@ geneMatrix2write <- function (x) {
   return(x2write)
 }
 
-##### Combine sample expression profile with reference datasets. This function outputs a vector with first element containing the merged data and second element containing merged targets info
-combineDatasets <- function(ref_dataset) {
-  
-  ##### Read file with reference datasets information
-  DatasetInput <- read.table(ref_dataset, sep="\t", as.is=TRUE, header=TRUE, row.names=1)
-  
-  ##### Extract info about target file for the first dataset
-  fileInfo <- strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
-  targetFile <- read.table(DatasetInput[1,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
-  targetFile <- cbind(targetFile[,1:4],rownames(DatasetInput[1,]))
-  colnames(targetFile)[ncol(targetFile)] <- "Dataset"
-  
-  ##### Add prexit to sample names
-  rownames(targetFile) <- paste(targetFile[,"Dataset"], targetFile[,"Sample_name"], sep = ".")
-  targetFile <- targetFile[, -1]
-  
-  if ( nrow(DatasetInput) > 1 ) {
-    for ( i in 2:nrow(DatasetInput) ) {
-        
-      ##### Create a temporary object to store info from the remaining target files
-      targetFileTmp <- read.table(DatasetInput[i,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
-      targetFileTmp <- cbind(targetFileTmp[,1:4],rownames(DatasetInput[i,]))
-      colnames(targetFileTmp)[ncol(targetFileTmp)] <- "Dataset"
-      
-      ##### Add prexit to sample names
-      rownames(targetFileTmp) <- paste(targetFileTmp[,"Dataset"], targetFileTmp[,"Sample_name"], sep = ".")
-      targetFileTmp <- targetFileTmp[, -1]
-      targetFile <- rbind(targetFile, targetFileTmp)
-    }
-  }  
-  
-  ##### Make syntactically valid names
-  rownames(targetFile) <- make.names(rownames(targetFile))
-  
-  ##### Read read count file and combine it with remaining reference datasets
-  datasets.comb <- as.data.frame( read.table(DatasetInput[ , "Expression_matrix" ][1], header=TRUE, sep="\t", row.names=NULL) )
-  
-  ##### Add prexit to sample names
-  colnames(datasets.comb) <- paste(levels(targetFile[,"Dataset"])[1], colnames(datasets.comb), sep = ".")
-      
-  ##### list genes present in the read count file
-  gene_list <- as.vector(datasets.comb[,1])
-      
-  ##### Loop through the expression data from different datasets and merge them into one matrix
-  if ( nrow(DatasetInput) > 1 ) {
-    for ( i in 2:nrow(DatasetInput) ) {
-    
-      data_matrix <- DatasetInput[ , "Expression_matrix" ][i]
-      
-      ##### Add data from the reference datasets
-      dataset <- as.data.frame( read.table(data_matrix, header=TRUE, sep="\t", row.names=NULL) )
-      
-      ##### Add prexit to sample names
-      colnames(dataset) <- paste(levels(targetFile[,"Dataset"])[i], colnames(dataset), sep = ".")
-      
-      ##### list genes present in individal files
-      gene_list <- c( gene_list, as.vector(dataset[,1]) )
-      
-      ##### Merge the expression datasets and make sure that the genes order is the same
-      datasets.comb <- merge( datasets.comb, dataset, by=1, all = FALSE, sort= TRUE)
-        
-      ##### Remove per-sample data for merged samples to free some memory
-      rm(dataset)
-    }
-  }
-  
-  ##### Use gene IDs as rownames
-  rownames(datasets.comb) <- datasets.comb[,1]
-  datasets.comb <- datasets.comb[, -1]
-  
-  ##### Make syntactically valid names
-  colnames(datasets.comb) <- make.names(colnames(datasets.comb))
-  
-  ##### Make sure that the target file contains info only about samples present in the data matrix
-  targetFile <- targetFile[ rownames(targetFile) %in% colnames(datasets.comb),  ]
-  
-  ##### Make sure that the samples order in the data matrix is the same as in the target file 
-  datasets.comb <- datasets.comb[ , rownames(targetFile) ]
-  
-  return( list(datasets.comb, targetFile) )
-}
-
 ##### Assign colours to different groups
 getTargetsColours <- function(targets) {
   
@@ -300,7 +218,7 @@ comparePlot <- function(genes, dataset1, dataset2, main_title, x_title, y_title,
   colnames(data.df) <- c("gene", "sample", "dataset1", "dataset2")
   
   for (i in 1:nrow(dataset1)) {
-      data.df <- rbind(data.df, data.frame( gene = genes[i], sample = names(dataset1[ genes[i], ]), dataset1 = dataset1[ genes[i], ], dataset2 = dataset2[ genes[i], ]))
+      data.df <- rbind( data.df, data.frame( gene = genes[i], sample = names(dataset1[ genes[i], ]), dataset1 = as.numeric(dataset1[ genes[i], ]), dataset2 = as.numeric(dataset2[ genes[i], ])) )
   }
   
   ##### Extract expression for selected sample in the distributions dataframe
@@ -349,14 +267,14 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
   colnames(data.df) <- c("gene", "sample", "expr", "dens")
   
   for (i in 1:nrow(data)) {
-      data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(data[ genes[i], ]), expr = sort(data[ genes[i], ]), dens = density2freq(density(data[i,], n=ncol(data))$y)))
+      data.df <- rbind(data.df, data.frame(gene = genes[i], sample = names(data[ genes[i], ]), expr = sort(as.numeric(data[ genes[i], ])), dens = density2freq(density(as.numeric(data[i,]), n=ncol(data))$y)))
   }
   
   ##### Generate values to generate various distributions
   if ( !is.null(distributions) && length(genes) == 1 ) {
     
     ##### Use the density values obtained from the expression values
-    expr.sorted <- sort(data[ genes, ])
+    expr.sorted <- as.numeric(sort(data[ genes, ]))
     
     ##### Get min and max values based on the expression data
     data.x <- seq(min(expr.sorted), max(expr.sorted), length.out = ncol(data))
@@ -395,7 +313,7 @@ densityPlot <- function(genes, data, main_title, x_title, sampleName, distributi
       
       ##### Draw n/2 samples from a normal distributions with one median and another n/2 samples from a second normal distribution with a different median. Useful link                  https://stats.stackexchange.com/questions/355344/simulating-a-bimodal-distribution-in-the-range-of-15-in-r
       data.x1 <- seq(min(expr.sorted), median(expr.sorted), length.out = round(ncol(data)/2, digits=0))
-      data.x2 <- seq(median(expr.sorted), max(expr.sorted), length.out = ceiling(ncol(data)/2))
+      data.x2 <- seq(median(expr.sorted), max(expr.sorted), length.out = floor(ncol(data)/2))
       
       ##### Combine both normal distributions to generate a bimodal distribution
       data.x <- c(data.x1, data.x2)
@@ -488,26 +406,37 @@ names(targetFile.list) <- rownames(DatasetInput)
 
 targetFile.list[[1]] <- targetFile
 
+##### List datasets with only one sample available
+Dataset.skip <- NULL
+  
 if ( nrow(DatasetInput) > 1 ) {
   for ( i in 2:nrow(DatasetInput) ) {
     
     ##### Create a temporary object to store info from the remaining target files
     targetFile.list[[i]] <- read.table(paste(params$report_dir, DatasetInput[i,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
     
-    ##### Make sure that there are no duplciated samples in the target file
-    targetFile.list[[i]] <- targetFile.list[[i]][!duplicated(targetFile.list[[i]][,"Sample_name"]),]
-    rownames(targetFile.list[[i]]) <- targetFile.list[[i]][,"Sample_name"]
-    targetFile.list[[i]] <- cbind(targetFile.list[[i]][,"Target", drop = FALSE],rownames(DatasetInput[i,]))
-    colnames(targetFile.list[[i]])[ncol(targetFile.list[[i]])] <- "Dataset"
+    ##### Make sure that there are > 1 samples in each dataset. Otherwise discard them
+    if ( nrow(targetFile.list[[i]]) > 2 ) {
     
-    ##### Deal with replicates
-    if ( !is.na(match("Replicates", colnames(targetFile))) ) {
-      if ( any(!is.na(targetFile[,"Replicates"])) ) {
-        maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
-        targetFile.list[[i]][,"Replicates"] <- targetFile.list[[i]][,"Replicates"] + maxRep
+      ##### Make sure that there are no duplciated samples in the target file
+      targetFile.list[[i]] <- targetFile.list[[i]][!duplicated(targetFile.list[[i]][,"Sample_name"]),]
+      rownames(targetFile.list[[i]]) <- targetFile.list[[i]][,"Sample_name"]
+      targetFile.list[[i]] <- cbind(targetFile.list[[i]][,"Target", drop = FALSE],rownames(DatasetInput[i,]))
+      colnames(targetFile.list[[i]])[ncol(targetFile.list[[i]])] <- "Dataset"
+      
+      ##### Deal with replicates
+      if ( !is.na(match("Replicates", colnames(targetFile))) ) {
+        if ( any(!is.na(targetFile[,"Replicates"])) ) {
+          maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
+          targetFile.list[[i]][,"Replicates"] <- targetFile.list[[i]][,"Replicates"] + maxRep
+        }
       }
+      targetFile <- rbind(targetFile, targetFile.list[[i]])
+      
+    } else {
+      Dataset.skip <- c( Dataset.skip, names(targetFile.list)[i] )
+      DatasetInput <- DatasetInput[-i,]
     }
-    targetFile <- rbind(targetFile, targetFile.list[[i]])
   }
 }
 
@@ -529,6 +458,7 @@ for ( i in 1:nrow(DatasetInput) ) {
     
     ##### list genes present in individal files
     gene_list <- as.vector(datasets[,1])
+    gene_list.missing <- NULL
     
     ##### Add data for the remaining samples   
   } else if (exists("datasets")) {
@@ -543,6 +473,10 @@ for ( i in 1:nrow(DatasetInput) ) {
     ##### list genes present in individal files
     gene_list <- c( gene_list, as.vector(dataset[,1]) )
     
+    ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
+    gene_list <- unique(gene_list)
+    gene_list.missing <- gene_list[ gene_list %!in% dataset[,1] ]
+                                  
     ##### Merge the expression data and make sure that the genes order is the same
     datasets <- merge( datasets, dataset, by=1, all = FALSE, sort= TRUE)
     
@@ -566,10 +500,6 @@ datasets <- datasets[ , rownames(targetFile) ]
 
 ##### Save datasets names
 datasetIDs <- rownames(DatasetInput)
-
-##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
-gene_list <- unique(gene_list)
-gene_list.missing <- gene_list[ gene_list %!in% rownames(datasets) ]
 
 ##### Write list of missing genes into a file
 if ( length(gene_list.missing) > 0 ) {
@@ -603,11 +533,17 @@ genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
 
 `r if ( !is.na(params$samples) ) { c(paste0("\nThese sample(s) were queried and will be highlighted: **", paste0(params$samples, collapse = ", "), "**\n\n")) } else { c("No specific sample(s) were queried so all will be highlighted on the plots.") }`
 
+
+`r if ( !is.null("Dataset.skip") ) { c(paste0("\n**NOTE**: The following dataset(s) will be ignored in the analysis since only one sample is available: <span style=\"color:#ff0000\">", paste(Dataset.skip, collapse = ", "), "</span>!\n")) } else { c(" ") }`
+
+
 `r if ( any( samples %!in% colnames(datasets) ) || any( samples %!in% rownames(targetFile) ) ) { c("\n**NOTE**: sample(s) listed below will be ignored in the analysis!\n") } else { c(" ") }`
 
 `r if ( any( samples %!in% rownames(targetFile) ) ) { c(paste0("\nQueried sample(s): <span style=\"color:#ff0000\">", paste0(samples[ samples %!in%rownames(targetFile) ], collapse = ", "), "</span> are not present in the samples annotation file.\n\n")) }`
 
 `r if ( any( samples %!in% colnames(datasets) ) ) { c(paste0("\nQueried sample(s) <span style=\"color:#ff0000\">", paste0(samples[ samples %!in%colnames(datasets) ], collapse = ", "), "</span> are not present in the read count data.\n\n")) }`
+
+`r c(paste0("In total **", ncol(datasets.list[[dataset]][["combined_data"]]), "** samples were analysed."))`
 
 ***
 
@@ -709,6 +645,7 @@ names(y) <- targets_mod.list
 cpm.min <- round(min(as.numeric(colSums(datasets.list[[dataset]][["combined_data"]])*1e-6)), digits=0)
 cpm.max <- round(max(as.numeric(colSums(datasets.list[[dataset]][["combined_data"]])*1e-6)), digits=0)
 
+
 for ( subset in targets_mod.list ) {
   
   target <- target_mod[ target_mod$Dataset==subset, ]
@@ -727,6 +664,7 @@ for ( subset in targets_mod.list ) {
     ##### Keep the genes of interest too
     keep[ names(keep) %in% genes ] <- TRUE
     y[[subset]]$filtered <- y[[subset]][keep, , keep.lib.sizes=FALSE]
+    
     
     ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
     y[[subset]]$samples["norm.factors"] <- edgeR::calcNormFactors(y[[subset]], method = "none")$samples["norm.factors"]
@@ -808,29 +746,33 @@ for ( subset in targets_mod.list ) {
 }
 
 ##### Now combine DGEList objects created for each dataset
-y[["comb"]]$transformed <- cbind(y[[targets_mod.list[1]]]$transformed, y[[targets_mod.list[2]]]$transformed)
-y[["comb"]]$samples <- rbind(y[[targets_mod.list[1]]]$samples, y[[targets_mod.list[2]]]$samples)
+y[["comb"]]$transformed <- y[[targets_mod.list[1]]]$transformed
+y[["comb"]]$samples <- y[[targets_mod.list[1]]]$samples
 
 if ( params$filter ) {
   
-  ##### Keep only genes present in all sets
-  if ( length(targets_mod.list) == 2 ) {
-  
-    genes_mod <- intersect(rownames(y[[targets_mod.list[1]]]$filtered$counts), rownames(y[[targets_mod.list[2]]]$filtered))
-    y[[targets_mod.list[1]]]$filtered <- y[[targets_mod.list[1]]]$filtered[ rownames(y[[targets_mod.list[1]]]$filtered) %in% genes_mod, ]
-    y[[targets_mod.list[2]]]$filtered <- y[[targets_mod.list[2]]]$filtered[ rownames(y[[targets_mod.list[2]]]$filtered) %in% genes_mod, ]
-    y[[targets_mod.list[1]]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed[ rownames(y[[targets_mod.list[1]]]$filtered.transformed) %in% genes_mod, ]
-    y[[targets_mod.list[2]]]$filtered.transformed <- y[[targets_mod.list[2]]]$filtered.transformed[ rownames(y[[targets_mod.list[2]]]$filtered.transformed) %in% genes_mod, ]
-   
-    y[["comb"]]$filtered <- cbind(y[[targets_mod.list[1]]]$filtered, y[[targets_mod.list[2]]]$filtered)
-    y[["comb"]]$filtered.transformed <- cbind(y[[targets_mod.list[1]]]$filtered.transformed, y[[targets_mod.list[2]]]$filtered.transformed)
-    
-  } else {
-    y[["comb"]]$filtered <- y[[targets_mod.list[1]]]$filtered
-    y[["comb"]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed
-  }
+  y[["comb"]]$filtered <- y[[targets_mod.list[1]]]$filtered$counts
+  y[["comb"]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed
 }
 
+for ( i in 2:length(targets_mod.list) ) {
+
+  y[["comb"]]$transformed <- merge(y[["comb"]]$transformed, y[[targets_mod.list[i]]]$transformed, by="row.names", all = FALSE, sort= FALSE)
+  rownames(y[["comb"]]$transformed) <- y[["comb"]]$transformed[,"Row.names"]
+  y[["comb"]]$transformed <- y[["comb"]]$transformed[,-1]
+  
+  if ( params$filter ) {
+    y[["comb"]]$filtered <- merge(y[["comb"]]$filtered, y[[targets_mod.list[i]]]$filtered$counts, by="row.names", all = FALSE, sort= FALSE)
+    rownames(y[["comb"]]$filtered) <- y[["comb"]]$filtered[,"Row.names"]
+    y[["comb"]]$filtered <- y[["comb"]]$filtered[,-1]
+  
+    y[["comb"]]$filtered.transformed <- merge(y[["comb"]]$filtered.transformed, y[[targets_mod.list[i]]]$filtered.transformed, by="row.names", all = FALSE, sort= FALSE)
+    rownames(y[["comb"]]$filtered.transformed) <- y[["comb"]]$filtered.transformed[,"Row.names"]
+    y[["comb"]]$filtered.transformed <- y[["comb"]]$filtered.transformed[,-1]
+  }
+  
+  y[["comb"]]$samples <- rbind(y[["comb"]]$samples, y[[targets_mod.list[i]]]$samples)
+}
 ```
 
 `r if ( params$transform == "CPM" ) { paste0("The CPM of 1 (cut-off for removing low expressed genes) corresponds to ", cpm.min, " reads in sample with the lowest sequencing depth, and ", cpm.max, " reads in sample with the greatest sequencing depth. The plot below presents the relation between read counts and the corresponding ", params$transform, " values in a sample with the lowest sequencing depth. The red vertical line indicates the threshold for filtering genes with low counts.") } else { paste0("The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the patient data. The red vertical line indicates the threshold for filtering genes with low counts.") }`
@@ -848,7 +790,7 @@ data.df <- data.df[ data.df$Counts < quantile(data.df$Counts, 0.99), ]
   
 ##### Keep only every 25th genes to reduce the size of the plot
 data.df <- data.df[ seq(1,nrow(data.df), by=25), ]
-  
+
 ##### Generate plot for filtered data
 p <- plot_ly( data.df, x = ~Transformed, y = ~Counts, width = 800, height = 300, color = I('black'), marker = list(size = 5), type="scatter", mode = "markers", name = paste0(params$transform, " vs Counts") ) %>% 
     add_trace(x = c(1, 1), y= c(0, max(data.df$Counts)), mode = "lines", color = I("red"), name = "Filtering threshold") %>%
@@ -1027,11 +969,20 @@ for ( subset in targets_mod.list ) {
   }
 }
 
-##### Make sure that the all datasets have the same genes
+##### Now combine DGEList objects created for each dataset
+y[["comb"]]$noNorm <- y[[targets_mod.list[1]]]$noNorm
+y[["comb"]]$norm <- y[[targets_mod.list[1]]]$norm
 
-##### Combine DGEList objects created for each dataset
-y[["comb"]]$noNorm <- cbind(y[[targets_mod.list[1]]]$noNorm, y[[targets_mod.list[2]]]$noNorm)
-y[["comb"]]$norm <- cbind(y[[targets_mod.list[1]]]$norm, y[[targets_mod.list[2]]]$norm)
+for ( i in 2:length(targets_mod.list) ) {
+
+  y[["comb"]]$noNorm <- merge(y[["comb"]]$noNorm, y[[targets_mod.list[i]]]$noNorm, by="row.names", all = FALSE, sort= TRUE)
+  rownames(y[["comb"]]$noNorm) <- y[["comb"]]$noNorm[,"Row.names"]
+  y[["comb"]]$noNorm <- y[["comb"]]$noNorm[,-1]
+  
+  y[["comb"]]$norm <- merge(y[["comb"]]$norm, y[[targets_mod.list[i]]]$norm, by="row.names", all = FALSE, sort= TRUE)
+  rownames(y[["comb"]]$norm) <- y[["comb"]]$norm[,"Row.names"]
+  y[["comb"]]$norm <- y[["comb"]]$norm[,-1]
+}
 
 datasets.list[[dataset]][["combined_data_processed"]] <- y[["comb"]]$norm
 
@@ -1205,7 +1156,7 @@ detach("package:plotly", unload=FALSE)
 ```{r data_subset, comment = NA, message=FALSE, warning=FALSE}
 ##### Subset data
 y.sub <- y[["comb"]]
-datasets.list[[dataset]][["combined_data_sub"]] <- datasets.list[[dataset]][["combined_data"]]
+datasets.list[[dataset]][["combined_data_sub"]] <- as.data.frame(datasets.list[[dataset]][["combined_data"]])
 datasets.list[[dataset]][["combined_data_sub"]] <- datasets.list[[dataset]][["combined_data_sub"]][ rownames(datasets.list[[dataset]][["combined_data_sub"]]) %in% rownames(datasets.list[[dataset]][["combined_data_processed"]]), ]
 
 ##### Identify user-defined genes that were not present in the expression matrix
@@ -1226,6 +1177,7 @@ if ( params$filter ) {
   y.sub$transformed <- y.sub$transformed[keep, , drop=FALSE]
 }
 
+keep <- rownames(y.sub$noNorm) %in% genes
 y.sub$noNorm <- y.sub$noNorm[keep, , drop=FALSE]
 y.sub$z <- y.sub$z[keep, , drop=FALSE]
   
