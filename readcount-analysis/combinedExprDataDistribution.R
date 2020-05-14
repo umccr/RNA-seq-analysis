@@ -17,14 +17,14 @@
 #	 Command line use example: Rscript  combinedExprDataDistribution.R --datasets ../data/test_data/test.datasets_list.txt --transform CPM --norm TMM --filter TRUE --log TRUE --genes MKI67,KRAS --ensembl TRUE --sample Sample_10,Sample_14  --results_name test
 #
 #   datasets:     List of datasets to be combined
-#   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (defualt) and "TPM"
+#   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (default) and "TPM"
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data. "None" (default) is available for both transformation methods
 #   batch_rm:     Remove batch-associated effects between datasets. Available options are: "TRUE" (default) and "FALSE"
-#   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
-#   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
+#   filter:       Filtering out low expressed genes. Available options are: "TRUE" (default) and "FALSE"
+#   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   scaling:      Apply z-score transformation, either row-wise (across samples) or column-wise (across genes in a sample). Available options are: "sample-wise" (across samples, default) or "gene-wise" (across genes)
 #   genes:        List of genes to be considered. Up to 10 genes are allowed, each separated by comma. 
-#   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (defualt) and "FALSE"
+#   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (default) and "FALSE"
 #   samples (optional):  ID of samples of interest
 #   results_name: Desired core name for the results folder
 #   hide_code_btn: Hide the "Code" button allowing to show/hide code chunks in the final HTML report. Available options are: "TRUE" (default) and "FALSE"

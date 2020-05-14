@@ -18,11 +18,11 @@
 #
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)
-#   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk), (3) "Target" and (4) "Replicates" (may be balnk)
-#   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (defualt) and "TPM"
+#   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be blank), (3) "Target" and (4) "Replicates" (may be blank)
+#   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (default) and "TPM"
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "quantile" normalisation is used for TPM-transformed data. "None" (default) is available for both transformation methods
-#   filter:       Filtering out low expressed genes. Available options are: "TRUE" (defualt) and "FALSE"
-#   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (defualt) and "FALSE"
+#   filter:       Filtering out low expressed genes. Available options are: "TRUE" (default) and "FALSE"
+#   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   results_name: Desired core name for the results folder
 #
 ################################################################################
