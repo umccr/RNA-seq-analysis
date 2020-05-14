@@ -131,26 +131,37 @@ names(targetFile.list) <- rownames(DatasetInput)
 
 targetFile.list[[1]] <- targetFile
 
+##### List datasets with only one sample available
+Dataset.skip <- NULL
+
 if ( nrow(DatasetInput) > 1 ) {
   for ( i in 2:nrow(DatasetInput) ) {
     
     ##### Create a temporary object to store info from the remaining target files
     targetFile.list[[i]] <- read.table(DatasetInput[i,"Target_file"], sep="\t", as.is=TRUE, header=TRUE)[,c(1:2)]
     
-    ##### Make sure that there are no duplciated samples in the target file
-    targetFile.list[[i]] <- targetFile.list[[i]][!duplicated(targetFile.list[[i]][,"Sample_name"]),]
-    rownames(targetFile.list[[i]]) <- targetFile.list[[i]][,"Sample_name"]
-    targetFile.list[[i]] <- cbind(targetFile.list[[i]][,"Target", drop = FALSE],rownames(DatasetInput[i,]))
-    colnames(targetFile.list[[i]])[ncol(targetFile.list[[i]])] <- "Dataset"
-    
-    ##### Deal with replicates
-    if ( !is.na(match("Replicates", colnames(targetFile))) ) {
-      if ( any(!is.na(targetFile[,"Replicates"])) ) {
-        maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
-        targetFile.list[[i]][,"Replicates"] <- targetFile.list[[i]][,"Replicates"] + maxRep
+    ##### Make sure that there are > 1 samples in each dataset. Otherwise discard them
+    if ( nrow(targetFile.list[[i]]) > 2 ) {
+      
+      ##### Make sure that there are no duplciated samples in the target file
+      targetFile.list[[i]] <- targetFile.list[[i]][!duplicated(targetFile.list[[i]][,"Sample_name"]),]
+      rownames(targetFile.list[[i]]) <- targetFile.list[[i]][,"Sample_name"]
+      targetFile.list[[i]] <- cbind(targetFile.list[[i]][,"Target", drop = FALSE],rownames(DatasetInput[i,]))
+      colnames(targetFile.list[[i]])[ncol(targetFile.list[[i]])] <- "Dataset"
+      
+      ##### Deal with replicates
+      if ( !is.na(match("Replicates", colnames(targetFile))) ) {
+        if ( any(!is.na(targetFile[,"Replicates"])) ) {
+          maxRep <- max(targetFile[!is.na(targetFile[,"Replicates"]),"Replicates"])
+          targetFile.list[[i]][,"Replicates"] <- targetFile.list[[i]][,"Replicates"] + maxRep
+        }
       }
+      targetFile <- rbind(targetFile, targetFile.list[[i]])
+      
+    } else {
+      Dataset.skip <- c( Dataset.skip, names(targetFile.list)[i] )
+      DatasetInput <- DatasetInput[-i,]
     }
-    targetFile <- rbind(targetFile, targetFile.list[[i]])
   }
 }
 
@@ -172,6 +183,7 @@ for ( i in 1:nrow(DatasetInput) ) {
     
     ##### list genes present in individal files
     gene_list <- as.vector(datasets[,1])
+    gene_list.missing <- NULL
     
     ##### Add data for the remaining samples   
   } else if (exists("datasets")) {
@@ -185,6 +197,10 @@ for ( i in 1:nrow(DatasetInput) ) {
     
     ##### list genes present in individal files
     gene_list <- c( gene_list, as.vector(dataset[,1]) )
+    
+    ##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
+    gene_list <- unique(gene_list)
+    gene_list.missing <- gene_list[ gene_list %!in% dataset[,1] ]
     
     ##### Merge the expression data and make sure that the genes order is the same
     datasets <- merge( datasets, dataset, by=1, all = FALSE, sort= TRUE)
@@ -210,15 +226,13 @@ datasets <- datasets[ , rownames(targetFile) ]
 ##### Save datasets names
 datasetIDs <- rownames(DatasetInput)
 
-##### Identify genes that were not present across all per-sampel files and were ommited in the merged matrix
-gene_list <- unique(gene_list)
-gene_list.missing <- gene_list[ gene_list %!in% rownames(datasets) ]
-
 ##### Write list of missing genes into a file
 if ( length(gene_list.missing) > 0 ) {
   write.table(prepare2write(gene_list.missing), file = paste0(params$projectDir, "/", paste(datasetIDs, collapse="_"),".missing_genes.txt"), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
 ```
+
+`r if ( !is.null("Dataset.skip") ) { c(paste0("\n**NOTE**: The following dataset(s) will be ignored in the analysis since only one sample is available: <span style=\"color:#ff0000\">", paste(Dataset.skip, collapse = ", "), "</span>!\n")) } else { c(" ") }`
 
 ## Remove outliers
 
