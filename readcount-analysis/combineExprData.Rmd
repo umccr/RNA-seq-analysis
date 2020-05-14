@@ -95,6 +95,8 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
 }
 ```
 
+`r c(paste0("In total **", ncol(data), "** samples were analysed."))`
+
 ***
 
 ## Library size
