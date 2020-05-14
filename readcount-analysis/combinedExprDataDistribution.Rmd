@@ -1142,7 +1142,24 @@ Principal component analysis (PCA) transforms the data into a coordinate system 
 
 Scatter-plot of the first 2 principal components (PCs) constituting the primary source of variation in `r if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }` data. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.
 
-```{r pca_2D_no_batch_effect, comment = NA, message=FALSE, warning=FALSE}
+`r if ( tolower(params$norm) != "none") { paste0("**Normalised ", params$transform, " (", params$norm, ")**") } else { c(" ") }`
+
+```{r pca_2D_normalised, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = tolower(params$norm) != "none"}
+suppressMessages(library(plotly))
+
+##### Perform principal component analysis (PCA) using combined-only data
+##### Loop through combined datasets and perform PCA
+target <- datasets.list[[dataset]][["sample_annot"]]
+  
+pca(data=y[["comb"]]$norm, targets=target, dim=2)[[2]]
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+`r c(paste0("**", scaled_title, "**"))`
+
+```{r pca_2D_scaled, comment = NA, message=FALSE, warning=FALSE}
 suppressMessages(library(plotly))
 
 ##### Perform principal component analysis (PCA) using combined-only data
@@ -1161,7 +1178,25 @@ detach("package:plotly", unload=FALSE)
 
 Scatter-plot of the first 3 principal components (PCs) constituting the primary source of variation in `r if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }` data. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.
 
-```{r pca_3D_no_batch_effect, comment = NA, message=FALSE, warning=FALSE}
+`r if ( tolower(params$norm) != "none") { paste0("**Normalised ", params$transform, " (", params$norm, ")**") } else { c(" ") }`
+
+```{r pca_3D_normalised, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval = tolower(params$norm) != "none"}
+suppressMessages(library(plotly))
+
+##### Perform principal component analysis (PCA) using combined-only data
+##### Loop through combined datasets and perform PCA
+target <- datasets.list[[dataset]][["sample_annot"]]
+  
+pca(data=y[["comb"]]$norm, targets=target, dim=3)[[2]]
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+
+`r c(paste0("**", scaled_title, "**"))`
+
+```{r pca_3D_scaled, comment = NA, message=FALSE, warning=FALSE}
 suppressMessages(library(plotly))
 
 ##### Perform principal component analysis (PCA) using combined-only data
