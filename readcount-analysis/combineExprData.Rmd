@@ -480,9 +480,9 @@ invisible(dev.off())
 
 ## Exploratory data analysis {.tabset .tabset-fade}
 
-Principal component analysis (PCA) was performed to reduce the dimensionality of data to visually assess similarities and differences between samples. This exploratory analysis facilitates identification of the key factors affecting the variability in the expression data. The colours indicate sample groups.
-
 ### PCA {.tabset .tabset-fade}
+
+Principal component analysis (PCA) was performed to reduce the dimensionality of data to visually assess similarities and differences between samples. This exploratory analysis facilitates identification of the key factors affecting the variability in the expression data. The colours indicate sample groups.
 
 #### 2D plot
 
@@ -671,10 +671,10 @@ ha = HeatmapAnnotation(df = targetFile[, "Target", drop = FALSE], col = list(Tar
 
 
 ##### Cluster genes
-hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D")
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
 
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D")
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
 if ( length(unique(targetFile$Target)) > 1 ) {
