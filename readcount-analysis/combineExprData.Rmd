@@ -6,18 +6,18 @@ params:
   exprDir: 
   exprFile: 
   annotFile: 
-  transform: 
-  filter: 
-  norm: 
+  transform: 'TPM'
+  filter: TRUE
+  norm: 'sizeFactors'
   log: TRUE
   results_name: 
-  ensembl_version: 86
+  ensembl_version: 75
 output:
   html_document:
     keep_md: yes
     code_folding: hide
-#    toc: true
-#    toc_float: true
+    toc: true
+    toc_float: true
 ---
 
 Results from combining expression data (**`r params$exprFile`**) from different samples. This includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
@@ -74,6 +74,8 @@ saveWidgetFix <- function ( widget, file, ...) {
 ### Load libraries
 suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
+suppressMessages(library(ComplexHeatmap))
+suppressMessages(library(preprocessCore))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 ```
 
@@ -151,9 +153,9 @@ The read count data is converted into **`r params$transform`**s using *[edgeR](h
 if ( params$filter && params$transform == "CPM" ) {
   
   ##### Create EdgeR DGEList object
-  y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+  y <- edgeR::DGEList(counts=data)
   
-  ##### Remove genes with CPM of at least 1 in less than 10% of samples
+  ##### Keep genes with CPM of at least 1 in more than 10% of samples
   #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
   
   keep <- rowSums(cpm(y)>1) >= ncol(data)/10
@@ -162,7 +164,6 @@ if ( params$filter && params$transform == "CPM" ) {
   #cat(nrow(y$filtered$counts), "genes remained after filtering out of the", nrow(data), "genes in the input read count matrix\n\n")
   
   ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
-  y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = "none")$samples["norm.factors"]
   y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
   y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
   
@@ -181,7 +182,6 @@ if ( params$filter && params$transform == "CPM" ) {
   
   ##### Get genes lengths
   edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
-  
   gene.length <- lengthOf(edb, filter = GeneIdFilter(rownames(data)))
   
   ##### Check for which genes the lenght info is not available and remove them from the data
@@ -189,15 +189,23 @@ if ( params$filter && params$transform == "CPM" ) {
   data <- data[ rownames(data) %!in% genes.no_length, ]
   
   ##### Create EdgeR DGEList object
-  y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+  y <- edgeR::DGEList(counts=data)
   
   ##### Convert data into RPKM
   y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
   
-  ##### Remove genes with TPM of at least 0.2 in less than 10% of samples
+  ##### Keep genes with TPM of at least 0.2 in more than 10% of samples
   keep <- rowSums(y$transformed>0.2) >= ncol(y$transformed)/10
   y$filtered <- y$counts[keep, ]
   y$filtered.transformed <- y$transformed[keep, ]
+
+  if ( params$norm == "sizeFactors" ) {
+    sizeFactors <- edgeR::equalizeLibSizes(y, dispersion=NULL, log=FALSE)
+    y$norm <- edgeR::rpkm(sizeFactors$pseudo.counts, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+    
+    ##### Keep genes with TPM of at least 0.2 in more than 10% of samples
+    y$norm <- y$norm[keep, ]
+  }
   
   ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
   if ( params$log ) {
@@ -205,8 +213,11 @@ if ( params$filter && params$transform == "CPM" ) {
     y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
     y$filtered.transformed <- log2(tpm_from_rpkm(y$filtered.transformed+0.25))
   
-  } else {
+    if ( params$norm == "sizeFactors" ) {
+      y$norm <- log2(tpm_from_rpkm(y$norm+0.25))
+    }
     
+  } else {
     y$transformed <- tpm_from_rpkm(y$transformed)
     y$filtered.transformed <- tpm_from_rpkm(y$filtered.transformed)
   }
@@ -216,7 +227,6 @@ if ( params$filter && params$transform == "CPM" ) {
   
   ##### Get genes lengths
   edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
-  
   gene.length <- lengthOf(edb, filter = GeneIdFilter(rownames(data)))
   
   ##### Check for which genes the lenght info is not available and remove them from the data
@@ -224,18 +234,25 @@ if ( params$filter && params$transform == "CPM" ) {
   data <- data[ rownames(data) %!in% genes.no_length, ]
   
   ##### Create EdgeR DGEList object
-  y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+  y <- edgeR::DGEList(counts=data)
   
   ##### Convert data into RPKM
   y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+  
+  if ( params$norm == "sizeFactors" ) {
+    y$norm <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=TRUE, log=FALSE)
+  }
   
   ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
   if ( params$log ) {
     
     y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
-  
-  } else {
     
+    if ( params$norm == "sizeFactors" ) {
+      y$norm <- log2(tpm_from_rpkm(y$norm+0.25))
+    }
+    
+  } else {
     y$transformed <- tpm_from_rpkm(y$transformed)
   }
 }
@@ -367,34 +384,35 @@ if ( params$transform == "CPM" ) {
   ##### Normalisation using quantile method
   if ( params$filter ) {
     
-    y$noNorm <- y$filtered.transformed
     y$filtered.transformed <- data.matrix(y$filtered.transformed) 
+    y$noNorm <- y$filtered.transformed
     
-    if ( tolower(params$norm) != "none" ) {
-      
-      y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
-      colnames(y$norm) <- colnames(y$filtered.transformed)
-      rownames(y$norm) <- rownames(y$filtered.transformed)
-      
-    } else {
-      
-      y$norm  <- y$filtered.transformed
-    }
-  
+    if ( params$norm != "sizeFactors" ) {
+      if ( tolower(params$norm) != "none" ) {
+        
+        y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
+        colnames(y$norm) <- colnames(y$filtered.transformed)
+        rownames(y$norm) <- rownames(y$filtered.transformed)
+        
+      } else {
+        y$norm  <- y$filtered.transformed
+      }
+    } 
   } else {
     
     y$noNorm <- y$transformed
     y$transformed <- data.matrix(y$transformed)
     
-    if ( tolower(params$norm) != "none" ) {
-      
-      y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
-      colnames(y$norm) <- colnames(y$transformed)
-      rownames(y$norm) <- rownames(y$transformed)
-      
-    } else {
-      
-      y$norm  <- y$transformed
+    if ( params$norm != "sizeFactors" ) {
+      if ( tolower(params$norm) != "none" ) {
+        
+        y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
+        colnames(y$norm) <- colnames(y$transformed)
+        rownames(y$norm) <- rownames(y$transformed)
+        
+      } else {
+        y$norm  <- y$transformed
+      }
     }
   }
 }
@@ -464,9 +482,9 @@ invisible(dev.off())
 
 Principal component analysis (PCA) was performed to reduce the dimensionality of data to visually assess similarities and differences between samples. This exploratory analysis facilitates identification of the key factors affecting the variability in the expression data. The colours indicate sample groups.
 
-### PCA plot {.tabset .tabset-fade}
+### PCA {.tabset .tabset-fade}
 
-#### 2D
+#### 2D plot
 
 Scatter plot of the first 2 principal components (PCs) constituting the primary source of variation in the data.
 
@@ -500,7 +518,7 @@ saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(pa
 
 ***
 
-#### 3D
+#### 3D plot
 
 Scatter plot of the first 3 principal components (PCs) constituting the primary source of variation in the data.
 
@@ -517,7 +535,7 @@ saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params
 
 ***
 
-### Pariwise PCA plot
+#### Pariwise plot
 
 Scatter plots for all combinations between the first 5 principal components (PCs) to help determine which PCs explain the biological and/or potential batch effects.
 
@@ -558,7 +576,7 @@ saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params
 
 ***
 
-### Scree plot
+#### Scree plot
 
 Scree plot presenting the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance. 
 
@@ -580,6 +598,98 @@ saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
+```
+
+***
+
+### Heatmap
+
+Heatmap presenting **300 genes** (*x-axis*) with the highest expression variance across all samples (*y-axis*).
+
+```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
+##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
+data <- y$norm
+data.df <- as.data.frame(cbind(rownames(data), data))
+colnames(data.df)[1] <- "ENSEMBL"
+
+##### Get genes annotation and genomic locations
+edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+##### Get keytypes for gene SYMBOL
+keys <- keys(edb, keytype="GENEID")
+  
+##### Get genes genomic coordiantes
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENENAME"), keytype="GENEID")
+names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+  
+##### Limit genes annotation to those genes for which sample expression measurments are available
+gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
+  
+##### Remove rows with duplicated ENSEMBL IDs
+gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+rownames(gene_info) <- gene_info$ENSEMBL
+  
+##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+  
+##### Merge genes genomic coordinates info with their annotation and expression data
+data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+rownames(data.annot) <- data.annot$ENSEMBL
+
+##### Keep only genes fo which gene symbol is available
+data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
+rownames(data.annot) <- data.annot$SYMBOL
+  
+##### Get data matrix with gene symbols
+data <- apply(data.annot[, colnames(data)], 2, as.numeric)
+rownames(data) <- data.annot$SYMBOL
+
+##### Clean the space
+rm(data.df, edb, keys)
+```
+
+```{r heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+##### Keep 300 genes with the highest expression variance across samples
+rsd<-apply(data,1,sd)
+
+if ( nrow(data) < 300 ) {
+
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:300]
+}
+
+##### Subset genes
+data.h <- data.frame(data[sel,])
+
+##### Prepare heatmap annotation (samples)
+Target.col  <- targets.colour[[1]]
+names(Target.col) <- sort(unique(targetFile$Target))
+
+ha = HeatmapAnnotation(df = targetFile[, "Target", drop = FALSE], col = list(Target = Target.col ) )
+
+
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D")
+
+##### Generate heatmap (complexHeatmap)
+if ( length(unique(targetFile$Target)) > 1 ) {
+  row_split <- length(unique(targetFile$Target))
+  column_split <- length(unique(targetFile$Target))
+} else {
+  row_split <- NULL
+  column_split <- NULL
+}
+
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+  
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+dev.off()
 ```
 
 ***
