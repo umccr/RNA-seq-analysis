@@ -775,7 +775,8 @@ for ( subset in targets_mod.list ) {
     y[[subset]]$transformed <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
     
     if ( params$norm == "sizeFactors" ) {
-      y[[subset]]$norm <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=TRUE, log=FALSE)
+      sizeFactors <- edgeR::equalizeLibSizes(y[[subset]], dispersion=NULL, log=FALSE)
+      y[[subset]]$norm <- edgeR::rpkm(sizeFactors$pseudo.counts, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
     }
     
     ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero

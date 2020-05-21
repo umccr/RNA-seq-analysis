@@ -242,7 +242,8 @@ if ( params$filter && params$transform == "CPM" ) {
   y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
   
   if ( params$norm == "sizeFactors" ) {
-    y$norm <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=TRUE, log=FALSE)
+    sizeFactors <- edgeR::equalizeLibSizes(y, dispersion=NULL, log=FALSE)
+    y$norm <- edgeR::rpkm(sizeFactors$pseudo.counts, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
   }
   
   ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
