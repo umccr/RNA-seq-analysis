@@ -692,6 +692,19 @@ Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_c
 dev.off()
 ```
 
+```{r heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+suppressMessages(library(heatmaply))
+
+##### Generate heatmap (PLOTLY)
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+
+##### Save the heatmap as html (PLOTLY)
+saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap.html")), selfcontained = TRUE)
+
+detach("package:heatmaply", unload=FALSE)
+```
+
 ***
 
 ##
