@@ -130,7 +130,7 @@ colnames(data.df) <- c("Group","Sample", "Library_size")
 
 ##### The default order will be alphabetized unless specified as below
 data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
-p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 1000, height = 400) %>%
+p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 800, height = 400) %>%
   layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
 
 ##### Print htmlwidget
