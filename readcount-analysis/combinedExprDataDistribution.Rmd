@@ -144,6 +144,19 @@ pca <- function(data, targets, dim) {
   rsd <- apply(data,1,sd)
   data.subset <- data[rsd>0,]
   
+  ##### Keep 300 genes with the highest expression variance across samples
+  rsd<-apply(data.subset,1,sd)
+  
+  if ( nrow(data.subset) < 300 ) {
+  
+      sel<-order(rsd, decreasing=TRUE)[1:nrow(data.subset)]
+  } else {
+      sel<-order(rsd, decreasing=TRUE)[1:300]
+  }
+
+  ##### Subset genes
+  data.subset <- data.frame(data.subset[sel,])
+
   ##### Perform PCA
   data.subset_pca <- prcomp(t(data.subset), scale=FALSE)
   
@@ -1176,7 +1189,7 @@ invisible(dev.off())
 
 ### PCA {.tabset .tabset-fade}
 
-Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data.
+Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **300 genes** with the highest expression variance across all samples were use for PCA.
 
 #### 2D plot
 
@@ -1251,7 +1264,7 @@ detach("package:plotly", unload=FALSE)
 
 ### Heatmap
 
-Heatmap presenting **300 genes** (*x-axis*) with the highest expression variance across all samples (*y-axis*).
+Heatmap presenting **300 genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
 
 `r if ( tolower(params$norm) != "none") { paste0("**Normalised ", params$transform, " (", params$norm, ")**") } else { c(" ") }`
 

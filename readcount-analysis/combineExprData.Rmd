@@ -482,7 +482,7 @@ invisible(dev.off())
 
 ### PCA {.tabset .tabset-fade}
 
-Principal component analysis (PCA) was performed to reduce the dimensionality of data to visually assess similarities and differences between samples. This exploratory analysis facilitates identification of the key factors affecting the variability in the expression data. The colours indicate sample groups.
+Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **300 genes** with the highest expression variance across all samples were use for PCA.
 
 #### 2D plot
 
@@ -493,6 +493,16 @@ suppressMessages(library(plotly))
 ##### Keep only genes with variance > 0 across all samples
 rsd <- apply(y$norm,1,sd)
 y$norm.subset <- y$norm[rsd>0,]
+
+if ( nrow(y$norm.subset) < 300 ) {
+
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(y$norm.subset)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:300]
+}
+
+##### Subset genes
+y$norm.subset <- data.frame(y$norm.subset[sel,])
 
 ##### Perform PCA
 y$norm.subset_pca <- prcomp(t(y$norm.subset), scale=FALSE)
@@ -604,11 +614,11 @@ detach("package:plotly", unload=FALSE)
 
 ### Heatmap
 
-Heatmap presenting **300 genes** (*x-axis*) with the highest expression variance across all samples (*y-axis*).
+Heatmap presenting **300 genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
 
 ```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
 ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
-data <- y$norm
+data <- y$norm.subset
 data.df <- as.data.frame(cbind(rownames(data), data))
 colnames(data.df)[1] <- "ENSEMBL"
 
@@ -650,8 +660,9 @@ rm(data.df, edb, keys)
 ```
 
 ```{r heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
-##### Keep 300 genes with the highest expression variance across samples
-rsd<-apply(data,1,sd)
+##### Keep only genes with variance > 0 across all samples
+rsd <- apply(data,1,sd)
+data <- data[rsd>0,]
 
 if ( nrow(data) < 300 ) {
 
@@ -666,15 +677,13 @@ data.h <- data.frame(data[sel,])
 ##### Prepare heatmap annotation (samples)
 Target.col  <- targets.colour[[1]]
 names(Target.col) <- sort(unique(targetFile$Target))
-
 ha = HeatmapAnnotation(df = targetFile[, "Target", drop = FALSE], col = list(Target = Target.col ) )
 
-
 ##### Cluster genes
-hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+hc <- hclust(as.dist(1-cor(data, method="pearson")), method="ward.D2")
 
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+hr <- hclust(as.dist(dist(data, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
 if ( length(unique(targetFile$Target)) > 1 ) {
@@ -685,7 +694,7 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+Heatmap(data, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
   
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
@@ -696,7 +705,7 @@ dev.off()
 suppressMessages(library(heatmaply))
 
 ##### Generate heatmap (PLOTLY)
-p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+p <- heatmaply(data.frame(data), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
