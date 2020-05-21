@@ -1305,6 +1305,7 @@ Heatmap presenting **300 genes** (*y-axis*) with the highest expression variance
 ##### Keep 300 genes with the highest expression variance across samples
 data <- y[["comb"]]$norm
 rsd<-apply(data,1,sd)
+data <- data[rsd>0,]
 
 if ( nrow(data) < 300 ) {
 
@@ -1362,6 +1363,7 @@ saveWidgetFix(p, file = paste0(params$report_dir, "/", paste0(params$results_nam
 ##### Keep 300 genes with the highest expression variance across samples
 data <- y[["comb"]]$z
 rsd<-apply(data,1,sd)
+data <- data[rsd>0,]
 
 if ( nrow(data) < 300 ) {
 
