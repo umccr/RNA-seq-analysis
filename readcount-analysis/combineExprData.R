@@ -23,6 +23,7 @@
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "sizeFactors" and "quantile" normalisation are used for TPM-transformed data. "None" (default) is available for both transformation methods
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (default) and "FALSE"
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
+#   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
 #   results_name: Desired core name for the results folder
 #
 ################################################################################
@@ -58,6 +59,8 @@ option_list = list(
               help="Filtering out low expressed genes"),
   make_option(c("-l", "--log"), action="store", default=NA, type='character',
               help="Log (base 2) transform data before normalisation"),
+  make_option(c("-g", "--top_genes"), action="store", default=400, type='numeric',
+              help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),
   make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
               help="Prefix for the results files names")
 )
@@ -124,4 +127,4 @@ if ( !is.na(opt$results_name) ) {
 }
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), results_name = opt$results_name))
+rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), top_genes = as.numeric(opt$top_genes), results_name = opt$results_name))

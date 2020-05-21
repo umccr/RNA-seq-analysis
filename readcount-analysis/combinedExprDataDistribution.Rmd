@@ -22,6 +22,7 @@ params:
   filter: TRUE
   log: TRUE
   genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
+  top_genes: 400
   ensembl: TRUE
   samples: 'TCGA-3A-A9I9-01A-11R-A38C-07'
   results_name: 'test'
@@ -144,14 +145,14 @@ pca <- function(data, targets, dim) {
   rsd <- apply(data,1,sd)
   data.subset <- data[rsd>0,]
   
-  ##### Keep 300 genes with the highest expression variance across samples
+  ##### Keep top genes with the highest expression variance across samples
   rsd<-apply(data.subset,1,sd)
   
-  if ( nrow(data.subset) < 300 ) {
+  if ( nrow(data.subset) < params$top_genes ) {
   
       sel<-order(rsd, decreasing=TRUE)[1:nrow(data.subset)]
   } else {
-      sel<-order(rsd, decreasing=TRUE)[1:300]
+      sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
   }
 
   ##### Subset genes
@@ -1222,7 +1223,7 @@ invisible(dev.off())
 
 ### PCA {.tabset .tabset-fade}
 
-Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **300 genes** with the highest expression variance across all samples were use for PCA.
+Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **`r params$top_genes` genes** with the highest expression variance across all samples were use for PCA.
 
 #### 2D plot
 
@@ -1297,21 +1298,21 @@ detach("package:plotly", unload=FALSE)
 
 ### Heatmap
 
-Heatmap presenting **300 genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
+Heatmap presenting **`r params$top_genes` genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
 
 `r if ( tolower(params$norm) != "none") { paste0("**Normalised ", params$transform, " (", params$norm, ")**") } else { c(" ") }`
 
 ```{r heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
-##### Keep 300 genes with the highest expression variance across samples
+##### Keep top genes with the highest expression variance across samples
 data <- y[["comb"]]$norm
 rsd<-apply(data,1,sd)
 data <- data[rsd>0,]
 
-if ( nrow(data) < 300 ) {
+if ( nrow(data) < params$top_genes ) {
 
     sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
 } else {
-    sel<-order(rsd, decreasing=TRUE)[1:300]
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
 }
 
 ##### Subset genes
@@ -1360,16 +1361,16 @@ saveWidgetFix(p, file = paste0(params$report_dir, "/", paste0(params$results_nam
 `r c(paste0("**", scaled_title, "**"))`
 
 ```{r heatmap_scaled, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
-##### Keep 300 genes with the highest expression variance across samples
+##### Keep top genes with the highest expression variance across samples
 data <- y[["comb"]]$z
 rsd<-apply(data,1,sd)
 data <- data[rsd>0,]
 
-if ( nrow(data) < 300 ) {
+if ( nrow(data) < params$top_genes ) {
 
     sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
 } else {
-    sel<-order(rsd, decreasing=TRUE)[1:300]
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
 }
 
 ##### Subset genes

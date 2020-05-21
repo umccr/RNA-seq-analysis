@@ -24,6 +24,7 @@
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   scaling:      Apply z-score transformation, either row-wise (across samples) or column-wise (across genes in a sample). Available options are: "sample-wise" (across samples, default) or "gene-wise" (across genes)
 #   genes:        List of genes to be considered. Up to 10 genes are allowed, each separated by comma. 
+#   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
 #   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (default) and "FALSE"
 #   samples (optional):  ID of samples of interest
 #   results_name: Desired core name for the results folder
@@ -64,6 +65,8 @@ option_list = list(
               help="Scaling for z-score transformation (sample-wise or gene-wise"),
   make_option("--genes", action="store", default=NA, type='character',
               help="List of genes to be considered"),
+  make_option(c("--top_genes"), action="store", default=400, type='numeric',
+              help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),  
   make_option("--ensembl", action="store", default=TRUE, type='logical',
               help="Are genes annotated using ensembl IDs?"),
   make_option("--samples", action="store", default=NA, type='character',
@@ -116,7 +119,7 @@ if ( !file.exists(report_dir) ) {
 }
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = report_dir, params = list(datasets = opt$datasets, report_dir = report_dir, transform = opt$transform, norm = opt$norm, batch_rm = opt$batch_rm, filter = opt$filter, log = opt$log, scaling = opt$scaling, genes = opt$genes, ensembl = opt$ensembl, samples = opt$samples,  results_name = opt$results_name, hide_code_btn = opt$hide_code_btn))
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = report_dir, params = list(datasets = opt$datasets, report_dir = report_dir, transform = opt$transform, norm = opt$norm, batch_rm = opt$batch_rm, filter = opt$filter, log = opt$log, scaling = opt$scaling, genes = opt$genes, top_genes = as.numeric(opt$top_genes), ensembl = opt$ensembl, samples = opt$samples,  results_name = opt$results_name, hide_code_btn = opt$hide_code_btn))
 
 ##### Remove the assocaited folder with plots that are imbedded in the HTML report
 unlink(paste0(report_dir, "/", opt$results_name, "_files"), recursive = TRUE)

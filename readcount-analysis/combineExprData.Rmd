@@ -11,6 +11,7 @@ params:
   norm: 'sizeFactors'
   log: TRUE
   results_name: 
+  top_genes: 400
   ensembl_version: 75
 output:
   html_document:
@@ -515,7 +516,7 @@ if ( length(lib_size_plot) == 1 ) {
 
 ### PCA {.tabset .tabset-fade}
 
-Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **300 genes** with the highest expression variance across all samples were use for PCA.
+Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **`r params$top_genes` genes** with the highest expression variance across all samples were use for PCA.
 
 #### 2D plot
 
@@ -527,11 +528,11 @@ suppressMessages(library(plotly))
 rsd <- apply(y$norm,1,sd)
 y$norm.subset <- y$norm[rsd>0,]
 
-if ( nrow(y$norm.subset) < 300 ) {
+if ( nrow(y$norm.subset) < params$top_genes ) {
 
     sel<-order(rsd, decreasing=TRUE)[1:nrow(y$norm.subset)]
 } else {
-    sel<-order(rsd, decreasing=TRUE)[1:300]
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
 }
 
 ##### Subset genes
@@ -647,7 +648,7 @@ detach("package:plotly", unload=FALSE)
 
 ### Heatmap
 
-Heatmap presenting **300 genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
+Heatmap presenting **`r params$top_genes` genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
 
 ```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
 ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
@@ -697,11 +698,11 @@ rm(data.df, edb, keys)
 rsd <- apply(data,1,sd)
 data <- data[rsd>0,]
 
-if ( nrow(data) < 300 ) {
+if ( nrow(data) < params$top_genes ) {
 
     sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
 } else {
-    sel<-order(rsd, decreasing=TRUE)[1:300]
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
 }
 
 ##### Subset genes
