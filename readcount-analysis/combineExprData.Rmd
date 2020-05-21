@@ -77,6 +77,7 @@ suppressMessages(library(edgeR))
 suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
+suppressMessages(library(htmltools))
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
@@ -474,6 +475,38 @@ invisible(dev.off())
 # ##### Save the box-plot as html
 # saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.html")))
 ########################################################
+```
+
+```{r library_size_norm_plot, comment = NA, message=FALSE, warning=FALSE, echo = TRUE, fig.width = 8, fig.height = 3, results="asis"}
+suppressMessages(library(plotly))
+
+lib_size_plot <- list()
+
+##### Generate bar-plot for library size again if sizeFactors normalisation was used to see if it works
+if ( params$norm == "sizeFactors" ) {
+
+  ##### Prepare data frame
+  data.df <- data.frame(colnames(y$norm), as.numeric(colSums(y$norm)*1e-6))
+  colnames(data.df) <- c("Sample", "Library_size")
+    
+  ##### The default order will be alphabetized unless specified as below
+  data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
+  lib_size_plot[[1]] <- plot_ly(data.df, x = ~Sample, y = ~Library_size, type = 'bar', width = 800, height = 400) %>%
+    layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, showlegend=FALSE)
+}
+
+if ( length(lib_size_plot) == 1 ) {
+  cat("\n<details>\n")
+  cat("\n<summary>Normalised library size plot</summary>\n")
+  cat("<font size=\"2\">\n")
+  cat(renderTags(lib_size_plot[[1]])$html)
+  
+  cat("\n</font>\n")
+  cat("\n</details>\n")
+  
+  ##### Save the bar-plot as html (PLOTLY)
+  saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_library_size_norm.html")), selfcontained = TRUE)
+}
 ```
 
 ***
