@@ -16,8 +16,8 @@ output:
 params:
   datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset/TCGA_PAAD_datasets_list.txt'
   report_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
-  transform: 'CPM'
-  norm: 'TMM'
+  transform: 'TPM'
+  norm: 'sizeFactors'
   batch_rm: TRUE
   filter: TRUE
   log: TRUE
@@ -27,7 +27,7 @@ params:
   results_name: 'test'
   scaling: 'gene-wise'
   ref_data_dir: '../data'
-  ensembl_version: 86
+  ensembl_version: 75
   hide_code_btn: TRUE
 ---
 
@@ -385,6 +385,7 @@ suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
 suppressMessages(library(plotly))
+suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(scales))
 suppressMessages(library(truncnorm))
 suppressMessages(library(RColorBrewer))
@@ -396,6 +397,12 @@ suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_versi
 ```{r load_data, message=FALSE, warning=FALSE}
 ##### Read file with datasets information
 DatasetInput=read.table(params$datasets,sep="\t", as.is=TRUE, header=TRUE, row.names=1)
+
+if ( nrow(DatasetInput) == 1 ) {
+  
+  names(DatasetInput)[1:ncol(DatasetInput)-1] <- names(DatasetInput)[2:ncol(DatasetInput)]
+  DatasetInput <- DatasetInput[, -c(ncol(DatasetInput))]
+}
 
 ##### Extract info about target file for the first dataset
 fileInfo = strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
@@ -538,7 +545,7 @@ genes <- unique(unlist(strsplit(params$genes, split=',', fixed=TRUE)))
 `r if ( !is.na(params$samples) ) { c(paste0("\nThese sample(s) were queried and will be highlighted: **", paste0(params$samples, collapse = ", "), "**\n\n")) } else { c("No specific sample(s) were queried so all will be highlighted on the plots.") }`
 
 
-`r if ( !is.null("Dataset.skip") ) { c(paste0("\n**NOTE**: The following dataset(s) will be ignored in the analysis since only one sample is available: <span style=\"color:#ff0000\">", paste(Dataset.skip, collapse = ", "), "</span>!\n")) } else { c(" ") }`
+`r if ( !is.null(Dataset.skip) ) { c(paste0("\n**NOTE**: The following dataset(s) will be ignored in the analysis since only one sample is available: <span style=\"color:#ff0000\">", paste(Dataset.skip, collapse = ", "), "</span>!\n")) } else { c(" ") }`
 
 
 `r if ( any( samples %!in% colnames(datasets) ) || any( samples %!in% rownames(targetFile) ) ) { c("\n**NOTE**: sample(s) listed below will be ignored in the analysis!\n") } else { c(" ") }`
@@ -679,7 +686,7 @@ for ( subset in targets_mod.list ) {
   } else if ( !params$filter && params$transform == "CPM" ) {
     
     ##### Create EdgeR DGEList object
-    y[[subset]] <- edgeR::DGEList(counts=data,  group=targetFile$Dataset)
+    y[[subset]] <- edgeR::DGEList(counts=data,  group=target$Dataset)
     
     ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero and remove batch effect
     y[[subset]]$transformed <- edgeR::cpm(y[[subset]], normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
@@ -698,7 +705,7 @@ for ( subset in targets_mod.list ) {
     data <- data[ data.annot$ENSEMBL %!in% genes.no_length, ]
     
     ##### Create EdgeR DGEList object
-    y[[subset]] <- edgeR::DGEList(counts=data,  group=targetFile$Dataset)
+    y[[subset]] <- edgeR::DGEList(counts=data,  group=target$Dataset)
     
     ##### Convert data into RPKM
     y[[subset]]$transformed <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
@@ -708,14 +715,27 @@ for ( subset in targets_mod.list ) {
     
     ##### Keep the genes of interest too
     keep[ names(keep) %in% genes ] <- TRUE
-    y[[subset]]$filtered <- y[[subset]]$counts[keep, ]
+    y[[subset]]$filtered <- y[[subset]][keep, ]
     y[[subset]]$filtered.transformed <- y[[subset]]$transformed[keep, ]
+    
+    if ( params$norm == "sizeFactors" ) {
+      sizeFactors <- edgeR::equalizeLibSizes(y[[subset]], dispersion=NULL, log=FALSE)
+      y[[subset]]$norm <- edgeR::rpkm(sizeFactors$pseudo.counts, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+      
+      ##### Keep genes with TPM of at least 0.2 in more than 10% of samples
+      y[[subset]]$norm <- y[[subset]]$norm[keep, ]
+    }
     
     ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero and remove batch effect
     if ( params$log ) {
       
       y[[subset]]$transformed <- log2(tpm_from_rpkm(y[[subset]]$transformed+0.25))
       y[[subset]]$filtered.transformed <- log2(tpm_from_rpkm(y[[subset]]$filtered.transformed+0.25))
+      
+      if ( params$norm == "sizeFactors" ) {
+        y[[subset]]$norm <- log2(tpm_from_rpkm(y[[subset]]$norm+0.25))
+      }
+      
     } else {
       y[[subset]]$transformed <- tpm_from_rpkm(y[[subset]]$transformed)
       y[[subset]]$filtered.transformed <- tpm_from_rpkm(y[[subset]]$filtered.transformed)
@@ -735,14 +755,24 @@ for ( subset in targets_mod.list ) {
     
     ##### Create EdgeR DGEList object
     y[[subset]] <- edgeR::DGEList(counts=data,  group=targetFile$subset)
+    y[[subset]] <- edgeR::DGEList(counts=data,  group=target$Dataset)
     
     ##### Convert data into RPKM
     y[[subset]]$transformed <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+    
+    if ( params$norm == "sizeFactors" ) {
+      y[[subset]]$norm <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=TRUE, log=FALSE)
+    }
     
     ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
     if ( params$log ) {
       
       y[[subset]]$transformed <- log2(tpm_from_rpkm(y[[subset]]$transformed+0.25))
+      
+      if ( params$norm == "sizeFactors" ) {
+        y[[subset]]$norm <- log2(tpm_from_rpkm(y[[subset]]$norm+0.25))
+      }
+      
     } else {
       y[[subset]]$transformed <- tpm_from_rpkm(y[[subset]]$transformed)
     }
@@ -759,23 +789,25 @@ if ( params$filter ) {
   y[["comb"]]$filtered.transformed <- y[[targets_mod.list[1]]]$filtered.transformed
 }
 
-for ( i in 2:length(targets_mod.list) ) {
-
-  y[["comb"]]$transformed <- merge(y[["comb"]]$transformed, y[[targets_mod.list[i]]]$transformed, by="row.names", all = FALSE, sort= FALSE)
-  rownames(y[["comb"]]$transformed) <- y[["comb"]]$transformed[,"Row.names"]
-  y[["comb"]]$transformed <- y[["comb"]]$transformed[,-1]
+if ( length(targets_mod.list) > 1 ) {
+  for ( i in 2:length(targets_mod.list) ) {
   
-  if ( params$filter ) {
-    y[["comb"]]$filtered <- merge(y[["comb"]]$filtered, y[[targets_mod.list[i]]]$filtered$counts, by="row.names", all = FALSE, sort= FALSE)
-    rownames(y[["comb"]]$filtered) <- y[["comb"]]$filtered[,"Row.names"]
-    y[["comb"]]$filtered <- y[["comb"]]$filtered[,-1]
-  
-    y[["comb"]]$filtered.transformed <- merge(y[["comb"]]$filtered.transformed, y[[targets_mod.list[i]]]$filtered.transformed, by="row.names", all = FALSE, sort= FALSE)
-    rownames(y[["comb"]]$filtered.transformed) <- y[["comb"]]$filtered.transformed[,"Row.names"]
-    y[["comb"]]$filtered.transformed <- y[["comb"]]$filtered.transformed[,-1]
+    y[["comb"]]$transformed <- merge(y[["comb"]]$transformed, y[[targets_mod.list[i]]]$transformed, by="row.names", all = FALSE, sort= FALSE)
+    rownames(y[["comb"]]$transformed) <- y[["comb"]]$transformed[,"Row.names"]
+    y[["comb"]]$transformed <- y[["comb"]]$transformed[,-1]
+    
+    if ( params$filter ) {
+      y[["comb"]]$filtered <- merge(y[["comb"]]$filtered, y[[targets_mod.list[i]]]$filtered$counts, by="row.names", all = FALSE, sort= FALSE)
+      rownames(y[["comb"]]$filtered) <- y[["comb"]]$filtered[,"Row.names"]
+      y[["comb"]]$filtered <- y[["comb"]]$filtered[,-1]
+    
+      y[["comb"]]$filtered.transformed <- merge(y[["comb"]]$filtered.transformed, y[[targets_mod.list[i]]]$filtered.transformed, by="row.names", all = FALSE, sort= FALSE)
+      rownames(y[["comb"]]$filtered.transformed) <- y[["comb"]]$filtered.transformed[,"Row.names"]
+      y[["comb"]]$filtered.transformed <- y[["comb"]]$filtered.transformed[,-1]
+    }
+    
+    y[["comb"]]$samples <- rbind(y[["comb"]]$samples, y[[targets_mod.list[i]]]$samples)
   }
-  
-  y[["comb"]]$samples <- rbind(y[["comb"]]$samples, y[[targets_mod.list[i]]]$samples)
 }
 ```
 
@@ -945,14 +977,16 @@ for ( subset in targets_mod.list ) {
       y[[subset]]$noNorm <- y[[subset]]$filtered.transformed
       y[[subset]]$filtered.transformed <- data.matrix(y[[subset]]$filtered.transformed) 
       
-      if ( tolower(params$norm) != "none" ) {
-        
-        y[[subset]]$norm  <- normalize.quantiles(y[[subset]]$filtered.transformed, copy = TRUE)
-        colnames(y[[subset]]$norm) <- colnames(y[[subset]]$filtered.transformed)
-        rownames(y[[subset]]$norm) <- rownames(y[[subset]]$filtered.transformed)
-        
-      } else {
-        y[[subset]]$norm  <- y[[subset]]$filtered.transformed
+      if ( params$norm != "sizeFactors" ) {
+        if ( tolower(params$norm) != "none" ) {
+          
+          y[[subset]]$norm  <- normalize.quantiles(y[[subset]]$filtered.transformed, copy = TRUE)
+          colnames(y[[subset]]$norm) <- colnames(y[[subset]]$filtered.transformed)
+          rownames(y[[subset]]$norm) <- rownames(y[[subset]]$filtered.transformed)
+          
+        } else {
+          y[[subset]]$norm  <- y[[subset]]$filtered.transformed
+        }
       }
     
     } else {
@@ -960,14 +994,16 @@ for ( subset in targets_mod.list ) {
       y[[subset]]$noNorm <- y[[subset]]$transformed
       y[[subset]]$transformed <- data.matrix(y[[subset]]$transformed)
       
-      if ( tolower(params$norm) != "none" ) {
-        
-        y[[subset]]$norm  <- normalize.quantiles(y[[subset]]$transformed, copy = TRUE)
-        colnames(y[[subset]]$norm) <- colnames(y[[subset]]$transformed)
-        rownames(y[[subset]]$norm) <- rownames(y[[subset]]$transformed)
-        
-      } else {
-        y[[subset]]$norm  <- y[[subset]]$transformed
+      if ( params$norm != "sizeFactors" ) {
+        if ( tolower(params$norm) != "none" ) {
+          
+          y[[subset]]$norm  <- normalize.quantiles(y[[subset]]$transformed, copy = TRUE)
+          colnames(y[[subset]]$norm) <- colnames(y[[subset]]$transformed)
+          rownames(y[[subset]]$norm) <- rownames(y[[subset]]$transformed)
+          
+        } else {
+          y[[subset]]$norm  <- y[[subset]]$transformed
+        }
       }
     }
   }
@@ -977,15 +1013,17 @@ for ( subset in targets_mod.list ) {
 y[["comb"]]$noNorm <- y[[targets_mod.list[1]]]$noNorm
 y[["comb"]]$norm <- y[[targets_mod.list[1]]]$norm
 
-for ( i in 2:length(targets_mod.list) ) {
-
-  y[["comb"]]$noNorm <- merge(y[["comb"]]$noNorm, y[[targets_mod.list[i]]]$noNorm, by="row.names", all = FALSE, sort= TRUE)
-  rownames(y[["comb"]]$noNorm) <- y[["comb"]]$noNorm[,"Row.names"]
-  y[["comb"]]$noNorm <- y[["comb"]]$noNorm[,-1]
+if ( length(targets_mod.list) > 1 ) {
+  for ( i in 2:length(targets_mod.list) ) {
   
-  y[["comb"]]$norm <- merge(y[["comb"]]$norm, y[[targets_mod.list[i]]]$norm, by="row.names", all = FALSE, sort= TRUE)
-  rownames(y[["comb"]]$norm) <- y[["comb"]]$norm[,"Row.names"]
-  y[["comb"]]$norm <- y[["comb"]]$norm[,-1]
+    y[["comb"]]$noNorm <- merge(y[["comb"]]$noNorm, y[[targets_mod.list[i]]]$noNorm, by="row.names", all = FALSE, sort= TRUE)
+    rownames(y[["comb"]]$noNorm) <- y[["comb"]]$noNorm[,"Row.names"]
+    y[["comb"]]$noNorm <- y[["comb"]]$noNorm[,-1]
+    
+    y[["comb"]]$norm <- merge(y[["comb"]]$norm, y[[targets_mod.list[i]]]$norm, by="row.names", all = FALSE, sort= TRUE)
+    rownames(y[["comb"]]$norm) <- y[["comb"]]$norm[,"Row.names"]
+    y[["comb"]]$norm <- y[["comb"]]$norm[,-1]
+  }
 }
 
 datasets.list[[dataset]][["combined_data_processed"]] <- y[["comb"]]$norm
@@ -1134,11 +1172,13 @@ invisible(dev.off())
 
 ***
 
-## Principal component analysis {.tabset .tabset-fade}
+## Exploratory data analysis {.tabset .tabset-fade}
+
+### PCA {.tabset .tabset-fade}
 
 Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data.
 
-### 2D plot
+#### 2D plot
 
 Scatter-plot of the first 2 principal components (PCs) constituting the primary source of variation in `r if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }` data. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.
 
@@ -1174,7 +1214,7 @@ detach("package:plotly", unload=FALSE)
 
 ***
 
-### 3D plot
+#### 3D plot
 
 Scatter-plot of the first 3 principal components (PCs) constituting the primary source of variation in `r if ( tolower(params$scaling) == "gene-wise" ) { c("z-score transformed") } else { c("centered") }` data. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.
 
@@ -1207,6 +1247,118 @@ pca(data=y[["comb"]]$z, targets=target, dim=3)[[2]]
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
+```
+
+### Heatmap
+
+Heatmap presenting **300 genes** (*x-axis*) with the highest expression variance across all samples (*y-axis*).
+
+`r if ( tolower(params$norm) != "none") { paste0("**Normalised ", params$transform, " (", params$norm, ")**") } else { c(" ") }`
+
+```{r heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+##### Keep 300 genes with the highest expression variance across samples
+data <- y[["comb"]]$norm
+rsd<-apply(data,1,sd)
+
+if ( nrow(data) < 300 ) {
+
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:300]
+}
+
+##### Subset genes
+data.h <- data.frame(data[sel,])
+
+##### Prepare heatmap annotation (samples)
+Target.col  <- targets.colour[[1]]
+names(Target.col) <- sort(unique(targetFile$Target))
+
+ha = HeatmapAnnotation(df = targetFile[, "Target", drop = FALSE], col = list(Target = Target.col ) )
+
+
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+
+##### Generate heatmap (complexHeatmap)
+if ( length(unique(targetFile$Target)) > 1 ) {
+  row_split <- length(unique(targetFile$Target))
+  column_split <- length(unique(targetFile$Target))
+} else {
+  row_split <- NULL
+  column_split <- NULL
+}
+
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+  
+pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap.pdf")), width = 8, height = 8)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+dev.off()
+```
+
+```{r heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+suppressMessages(library(heatmaply))
+
+##### Generate heatmap (PLOTLY)
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+
+##### Save the heatmap as html (PLOTLY)
+saveWidgetFix(p, file = paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap.html")), selfcontained = TRUE)
+```
+
+`r c(paste0("**", scaled_title, "**"))`
+
+```{r heatmap_scaled, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+##### Keep 300 genes with the highest expression variance across samples
+data <- y[["comb"]]$z
+rsd<-apply(data,1,sd)
+
+if ( nrow(data) < 300 ) {
+
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:300]
+}
+
+##### Subset genes
+data.h <- data.frame(data[sel,])
+
+
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+
+##### Generate heatmap (complexHeatmap)
+if ( length(unique(targetFile$Target)) > 1 ) {
+  row_split <- length(unique(targetFile$Target))
+  column_split <- length(unique(targetFile$Target))
+} else {
+  row_split <- NULL
+  column_split <- NULL
+}
+
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+  
+pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap_scaled.pdf")), width = 8, height = 8)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+dev.off()
+```
+
+```{r heatmap_scaled_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+##### Generate heatmap (PLOTLY)
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+
+##### Save the heatmap as html (PLOTLY)
+saveWidgetFix(p, file = paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap_scaled.html")), selfcontained = TRUE)
+
+detach("package:heatmaply", unload=FALSE)
 ```
 
 ***
