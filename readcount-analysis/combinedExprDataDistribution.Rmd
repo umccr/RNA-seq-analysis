@@ -1055,14 +1055,14 @@ if ( tolower(params$norm) != "none" ) {
 par(mfrow=c(2,1), mar=c(2, 5, 3, 2))
     
 ##### Unnormalised data
-boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
+boxplot(y[["comb"]]$noNorm, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = "n")
   title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent", cex=0.7)
     
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
       
-  boxplot(y[["comb"]]$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
+  boxplot(y[["comb"]]$norm, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = "n")
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform, xlab = "")
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent", cex=0.7)
 }
@@ -1072,14 +1072,14 @@ pdf(paste0(params$report_dir, "/", params$results_name,".normalisation.pdf"), wi
 par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y[["comb"]]$noNorm)))/2, 5, 3, 2))
     
 ##### Unnormalised data
-boxplot(y[["comb"]]$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
+boxplot(y[["comb"]]$noNorm, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = "n")
 title(main="Unnormalised data", ylab=params$transform)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
       
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
       
-  boxplot(y[["comb"]]$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
+  boxplot(y[["comb"]]$norm, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = "n")
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent",box.col="transparent")
 }
@@ -1203,7 +1203,7 @@ write.table(prepare2write(rownames(y[["comb"]]$z)), file = paste0(params$report_
 ##### Plot expression distribution of samples for Z-score data
 par(mfrow=c(1,1), mar=c(2, 5, 3, 2))
 
-boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
+boxplot(y[["comb"]]$z, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = "n")
   title(main=paste0(scaled_title, " data"), ylab=scaled_title)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent", cex=0.8)
     
@@ -1211,7 +1211,7 @@ legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour
 pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".", scaled_title, ".pdf")), width=8, height=6, pointsize = 6)
 par(mfrow=c(1,1), mar=c(2, 5, 3, 2))
     
-boxplot(y[["comb"]]$z, las=2, col=targets.colour[[2]], main="", pch=".", las=3, xaxt = "n")
+boxplot(y[["comb"]]$z, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = "n")
 title(main=paste0(scaled_title, " data"), ylab=scaled_title)
     legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
 invisible(dev.off())

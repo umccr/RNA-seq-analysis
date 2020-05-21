@@ -423,14 +423,14 @@ if ( params$transform == "CPM" ) {
 par(mfrow=c(2,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
   
 ##### Unnormalised data
-boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+boxplot(y$noNorm, col=targets.colour[[2]], main="", pch=".", las=2)
 title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
   
-  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+  boxplot(y$norm, col=targets.colour[[2]], main="", pch=".", las=2)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
 }
@@ -440,14 +440,14 @@ pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_nor
 par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
 ##### Unnormalised data
-boxplot(y$noNorm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+boxplot(y$noNorm, col=targets.colour[[2]], main="", pch=".", las=2)
 title(main="Unnormalised data", ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
   
-  boxplot(y$norm, las=2, col=targets.colour[[2]], main="", pch=".", las=3)
+  boxplot(y$norm, col=targets.colour[[2]], main="", pch=".", las=2)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
 }
