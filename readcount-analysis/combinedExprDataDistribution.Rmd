@@ -724,8 +724,8 @@ for ( subset in targets_mod.list ) {
     ##### Convert data into RPKM
     y[[subset]]$transformed <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
     
-    ##### Remove genes with TPM of at least 1 in less than 10% of samples
-    keep <- rowSums(y[[subset]]$transformed>1+0.25) >= ncol(y[[subset]]$transformed)/10
+    ##### Remove genes with TPM of at least 0.2 in less than 10% of samples
+    keep <- rowSums(y[[subset]]$transformed>0.2) >= ncol(y[[subset]]$transformed)/10
     
     ##### Keep the genes of interest too
     keep[ names(keep) %in% genes ] <- TRUE
