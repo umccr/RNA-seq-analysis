@@ -6,13 +6,18 @@ params:
   exprDir: 
   exprFile: 
   annotFile: 
+  annotFeatures: 'Target'
   transform: 'TPM'
   filter: TRUE
+  filter_perc: 10
   norm: 'sizeFactors'
   log: TRUE
   results_name: 
   top_genes: 400
-  ensembl_version: 75
+  goi: 'none'
+  seed: 99999999
+  grch_version: 38
+  ensembl_version: 86
 output:
   html_document:
     keep_md: yes
@@ -23,24 +28,55 @@ output:
 
 Results from combining expression data (**`r params$exprFile`**) from different samples. This includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
+
+```{r seed}
+##### Set the seed
+if ( params$seed == 99999999 ) {
+  seed <- sample(0:99999999, 1, replace = TRUE)
+} else {
+  seed <- params$seed
+}
+
+set.seed(seed)
+```
+
+<details>
+<summary>Input parameters</summary>
+<font size="2">
+
+* **exprDir**: `r params$exprDir`
+* **exprFile**: `r params$exprFile`
+* **annotFile**: `r params$annotFile`
+* **transform**: `r params$transform`
+* **filter**: `r params$filter`
+* **filter_perc**: `r params$filter_perc`
+* **norm**: `r params$norm`
+* **log**: `r params$log`
+* **results_name**: `r params$results_name`
+* **top_genes**: `r params$top_genes`
+* **goi**: `r params$goi`
+* **grch_version**: `r params$grch_version`
+* **ensembl_version**: `r params$ensembl_version`
+* **seed**: `r seed`
+
+</font> 
+</details>
+
+```{r load_libraries, warning=FALSE}
+### Load libraries
+suppressMessages(library(preprocessCore))
+suppressMessages(library(edgeR))
+suppressMessages(library(ComplexHeatmap))
+suppressMessages(library(preprocessCore))
+suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
+suppressMessages(library(htmltools))
+```
+
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
 ### Define functions
 ##### Create 'not in' operator
 "%!in%" <- function(x,table) match(x,table, nomatch = 0) == 0
-##### Prepare object to write into a file
-prepare2write <- function (x) {
-  
-  x2write <- cbind(rownames(x), x)
-  colnames(x2write) <- c("Gene",colnames(x))
-  return(x2write)
-}
-##### Prepare gene data matrix to write into a file
-geneMatrix2write <- function (x) {
-  
-  x2write <- cbind(rownames(x), x)
-  colnames(x2write) <- c("Gene",colnames(x))
-  return(x2write)
-}
+
 ##### Assign colours to different groups
 getTargetsColours <- function(targets) {
   
@@ -71,20 +107,10 @@ saveWidgetFix <- function ( widget, file, ...) {
 }
 ```
 
-```{r load_libraries, warning=FALSE}
-### Load libraries
-suppressMessages(library(preprocessCore))
-suppressMessages(library(edgeR))
-suppressMessages(library(ComplexHeatmap))
-suppressMessages(library(preprocessCore))
-suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
-suppressMessages(library(htmltools))
-```
-
 ```{r load_data, message=FALSE, warning=FALSE}
 ##### Read in expression data and associated sample annotation files
 data <- read.table(paste(params$exprDir, params$exprFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE, row.names = 1)
-targetFile <- read.table(paste(params$exprDir, params$annotFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE)[,c(1:4)]
+targetFile <- read.table(paste(params$exprDir, params$annotFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE)
 
 ##### Make sure that there are no duplciated samples in the target file
 targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
@@ -103,9 +129,20 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
   data <- data[ , rownames(targetFile) ]
 
   ##### Save data subset into a file
-  write.table(geneMatrix2write(data), file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+  write.table(data, file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 } else {
   data <- data[ , rownames(targetFile) ]
+}
+
+##### Set up annotation features to be used for plots
+annotFeatures <- unique(c("Target", unlist(strsplit(params$annotFeatures, split=',', fixed=TRUE))))
+
+##### Define genes of interest (if specified)
+if ( params$goi != "none" ) {
+  goi_list <- unique(unlist(strsplit(params$goi, split=',', fixed=TRUE)))
+  runGOI <- TRUE
+} else {
+  runGOI <- FALSE
 }
 ```
 
@@ -137,7 +174,8 @@ p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'ba
 p
 
 ##### Save the bar-plot as html (PLOTLY)
-#saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_RNAseq_libSize.html")))
+saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_libSize.html")))
+
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
 ```
@@ -157,10 +195,10 @@ if ( params$filter && params$transform == "CPM" ) {
   ##### Create EdgeR DGEList object
   y <- edgeR::DGEList(counts=data)
   
-  ##### Keep genes with CPM of at least 1 in more than 10% of samples
+  ##### Keep genes with CPM of at least 1 in more than user-defined percentage of samples
   #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
   
-  keep <- rowSums(cpm(y)>1) >= ncol(data)/10
+  keep <- rowSums(cpm(y)>1) >= ncol(data)*params$filter_perc/100
   y$filtered <- y[keep, , keep.lib.sizes=FALSE]
   
   #cat(nrow(y$filtered$counts), "genes remained after filtering out of the", nrow(data), "genes in the input read count matrix\n\n")
@@ -196,8 +234,8 @@ if ( params$filter && params$transform == "CPM" ) {
   ##### Convert data into RPKM
   y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
   
-  ##### Keep genes with TPM of at least 0.2 in more than 10% of samples
-  keep <- rowSums(y$transformed>0.2) >= ncol(y$transformed)/10
+  ##### Keep genes with TPM of at least 0.2 in more than user-defined of samples
+  keep <- rowSums(y$transformed>0.2) >= ncol(data)*params$filter_perc/100
   y$filtered <- y$counts[keep, ]
   y$filtered.transformed <- y$transformed[keep, ]
 
@@ -488,13 +526,13 @@ lib_size_plot <- list()
 if ( params$norm == "sizeFactors" ) {
 
   ##### Prepare data frame
-  data.df <- data.frame(colnames(y$norm), as.numeric(colSums(y$norm)*1e-6))
-  colnames(data.df) <- c("Sample", "Library_size")
+  data.df <- data.frame(targetFile$Target, colnames(y$norm), as.numeric(colSums(y$norm)*1e-6))
+  colnames(data.df) <- c("Group","Sample", "Library_size")
     
   ##### The default order will be alphabetized unless specified as below
   data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
-  lib_size_plot[[1]] <- plot_ly(data.df, x = ~Sample, y = ~Library_size, type = 'bar', width = 800, height = 400) %>%
-    layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, showlegend=FALSE)
+  lib_size_plot[[1]] <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 800, height = 400) %>%
+    layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
 }
 
 if ( length(lib_size_plot) == 1 ) {
@@ -507,7 +545,7 @@ if ( length(lib_size_plot) == 1 ) {
   cat("\n</details>\n")
   
   ##### Save the bar-plot as html (PLOTLY)
-  saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_library_size_norm.html")), selfcontained = TRUE)
+  saveWidgetFix(lib_size_plot[[1]], file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_library_size_norm.html")), selfcontained = TRUE)
 }
 ```
 
@@ -530,7 +568,6 @@ rsd <- apply(y$norm,1,sd)
 y$norm.subset <- y$norm[rsd>0,]
 
 if ( nrow(y$norm.subset) < params$top_genes ) {
-
     sel<-order(rsd, decreasing=TRUE)[1:nrow(y$norm.subset)]
 } else {
     sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
@@ -539,26 +576,31 @@ if ( nrow(y$norm.subset) < params$top_genes ) {
 ##### Subset genes
 y$norm.subset <- data.frame(y$norm.subset[sel,])
 
-##### Perform PCA
-y$norm.subset_pca <- prcomp(t(y$norm.subset), scale=FALSE)
-
-##### Get variance importance for all principal components
-importance_pca <- summary(y$norm.subset_pca)$importance[2,]
-importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
-names(importance_pca) <- names(summary(y$norm.subset_pca)$importance[2,])
+if ( length(targetFile$Target) > 2 ) {
+  ##### Perform PCA
+  y$norm.subset_pca <- prcomp(t(y$norm.subset), scale=FALSE)
   
-##### Prepare data frame
-y$norm.subset_pca.df <- data.frame(targetFile$Target, y$norm.subset_pca$x[,"PC1"], y$norm.subset_pca$x[,"PC2"], y$norm.subset_pca$x[,"PC3"])
-colnames(y$norm.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
-
-##### Generate PCA 2-D plot
-p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
-layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
-
-p
-
-##### Save PCA plot as html
-saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_2d.html")))
+  ##### Get variance importance for all principal components
+  importance_pca <- summary(y$norm.subset_pca)$importance[2,]
+  importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
+  names(importance_pca) <- names(summary(y$norm.subset_pca)$importance[2,])
+    
+  ##### Prepare data frame
+  y$norm.subset_pca.df <- data.frame(targetFile$Target, y$norm.subset_pca$x[,"PC1"], y$norm.subset_pca$x[,"PC2"], y$norm.subset_pca$x[,"PC3"])
+  colnames(y$norm.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+  
+  ##### Generate PCA 2-D plot
+  p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
+  layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+  
+  p
+  
+  ##### Save PCA plot as html
+  saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_2d.html")))
+  
+} else  {
+  cat("Only two samples were analysed!")
+}
 ```
 
 ***
@@ -569,13 +611,18 @@ Scatter plot of the first 3 principal components (PCs) constituting the primary 
 
 ```{r PCA_plot_3D, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Generate PCA 3-D plot
-p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
-layout(title = "", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
-
-p
-
-##### Save PCA plot as html
-saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_3d.html")))
+if ( length(targetFile$Target) > 2 ) {
+  p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
+  layout(title = "", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
+  
+  p
+  
+  ##### Save PCA plot as html
+  saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_3d.html")))
+  
+} else  {
+  cat("Only two samples were analysed!")
+}
 ```
 
 ***
@@ -588,35 +635,42 @@ Scatter plots for all combinations between the first 5 principal components (PCs
 ##### Plot all combinations between the first 5 PCs
 ##### Preapre colours for plot exis
 axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
-p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
-  plot_ly(width = 800, height = 800) %>%
-  add_trace( type = 'splom', dimensions = list(
-      list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
-    ),
-  text=paste(targetFile$Target, rownames(y$norm.subset_pca$x), sep=": "),
-    marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
-    )
-  ) %>%
-  layout(
-    title= "",
-    hovermode="closest",
-    plot_bgcolor="rgba(240,240,240, 0.95)",
-    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
-    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
-    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
-)
 
-p
-
-##### Save pairwise PCA plot as html
-saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.html")))
-
-##### Plot all combinations between the first 5 PCs
-#pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
-##### Save the plot as pdf file
-#pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
-#pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
-#invisible(dev.off())
+if ( length(targetFile$Target) > 4 ) {
+  
+  p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
+    plot_ly(width = 800, height = 800) %>%
+    add_trace( type = 'splom', dimensions = list(
+        list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+      ),
+    text=paste(targetFile$Target, rownames(y$norm.subset_pca$x), sep=": "),
+      marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
+      )
+    ) %>%
+    layout(
+      title= "",
+      hovermode="closest",
+      plot_bgcolor="rgba(240,240,240, 0.95)",
+      xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+      yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+      xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
+  )
+  
+  p
+  
+  ##### Save pairwise PCA plot as html
+  saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.html")))
+  
+  ##### Plot all combinations between the first 5 PCs
+  #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  ##### Save the plot as pdf file
+  #pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
+  #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  #invisible(dev.off())
+  
+} else  {
+  cat("Less than five samples were analysed!")
+}
 ```
 
 ***
@@ -628,7 +682,7 @@ Scree plot presenting the fraction of total variance (y-axis) attributed to each
 ```{r Scree_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Generate scree plot
 ##### Prepare data frame
-y$norm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(y$norm.subset_pca$sdev))), y$norm.subset_pca$sdev)
+y$norm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
 colnames(y$norm.subset_scree.df) <- c("PC", "Variances")
 
 ##### The default order will be alphabetized unless specified as below
@@ -647,13 +701,15 @@ detach("package:plotly", unload=FALSE)
 
 ***
 
-### Heatmap
+### Heatmap {.tabset .tabset-fade}
 
-Heatmap presenting **`r params$top_genes` genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
+`r if ( runGOI ) { c("#### Most variable genes") }`
+
+Heatmap presenting expression levels of **`r params$top_genes` genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
 
 ```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
 ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
-data <- y$norm.subset
+data <- y$norm
 data.df <- as.data.frame(cbind(rownames(data), data))
 colnames(data.df)[1] <- "ENSEMBL"
 
@@ -700,7 +756,6 @@ rsd <- apply(data,1,sd)
 data <- data[rsd>0,]
 
 if ( nrow(data) < params$top_genes ) {
-
     sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
 } else {
     sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
@@ -712,13 +767,13 @@ data.h <- data.frame(data[sel,])
 ##### Prepare heatmap annotation (samples)
 Target.col  <- targets.colour[[1]]
 names(Target.col) <- sort(unique(targetFile$Target))
-ha = HeatmapAnnotation(df = targetFile[, "Target", drop = FALSE], col = list(Target = Target.col ) )
+ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
 
 ##### Cluster genes
-hc <- hclust(as.dist(1-cor(data, method="pearson")), method="ward.D2")
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
 
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data, method="euclidean")), method="ward.D2")
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
 if ( length(unique(targetFile$Target)) > 1 ) {
@@ -729,7 +784,7 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-Heatmap(data, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
   
 pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
@@ -740,7 +795,13 @@ dev.off()
 suppressMessages(library(heatmaply))
 
 ##### Generate heatmap (PLOTLY)
-p <- heatmaply(data.frame(data), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+col_side_colors <- as.data.frame(targetFile[, "Target"])
+colnames(col_side_colors) <- "Target"
+
+col_side_palette <- targets.colour[[2]]
+names(col_side_palette) <- col_side_colors$Target
+
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
@@ -751,7 +812,76 @@ detach("package:heatmaply", unload=FALSE)
 
 ***
 
-##
+`r if ( runGOI ) { c("#### Genes of interest") }`
+
+`r if ( runGOI ) { c("Heatmap presenting expression levels of **genes of interest** (*y-axis*) across all samples (*x-axis*).") }`
+
+`r if ( runGOI ) { paste0("**<span style=\"color:#ff0000\">NOTE</span>**: expression data for ", length(goi_list[ goi_list %!in% rownames(data) ]), " genes were not available.") }`
+
+`r if ( runGOI ) { paste0("<details>") }`
+`r if ( runGOI ) { paste0("<summary>Input genes</summary>") }`
+`r if ( runGOI ) { paste0("<font size=\"2\">") }`
+
+*`r if ( runGOI ) { paste(goi_list[ goi_list %in% rownames(data) ], collapse = ", ") }`*
+
+`r if ( runGOI ) { paste0("</font>") }`
+`r if ( runGOI ) { paste0("</details>") }`
+
+`r if ( runGOI ) { paste0("<details>") }`
+`r if ( runGOI ) { paste0("<summary>Missing genes</summary>") }`
+`r if ( runGOI ) { paste0("<font size=\"2\">") }`
+
+*`r if ( runGOI ) { paste(goi_list[ goi_list %!in% rownames(data) ], collapse = ", ") }`*
+
+`r if ( runGOI ) { paste0("</font>") }`
+`r if ( runGOI ) { paste0("</details>") }`
+
+
+```{r heatmap_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = runGOI}
+##### Keep only genes of interest
+data.h <- data.frame(data[ rownames(data) %in% goi_list,])
+
+##### Prepare heatmap annotation (samples)
+Target.col  <- targets.colour[[1]]
+names(Target.col) <- sort(unique(targetFile$Target))
+ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
+
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+
+##### Generate heatmap (complexHeatmap)
+if ( length(unique(targetFile$Target)) > 1 ) {
+  row_split <- length(unique(targetFile$Target))
+  column_split <- length(unique(targetFile$Target))
+} else {
+  row_split <- NULL
+  column_split <- NULL
+}
+
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+  
+pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = 8)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+dev.off()
+```
+
+```{r heatmap_interactive_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+suppressMessages(library(heatmaply))
+
+##### Generate heatmap (PLOTLY)
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+
+##### Save the heatmap as html (PLOTLY)
+saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap_goi.html")), selfcontained = TRUE)
+
+detach("package:heatmaply", unload=FALSE)
+```
+
+***
 
 ```{r write_data, comment = NA, message=FALSE, warning=FALSE}
 ##### Define the name base on input parameters
@@ -768,7 +898,10 @@ if ( params$log ) {
   logged <- "noLog"
 }
 ##### Save combined data into a file
-write.table(geneMatrix2write(y$norm), file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE)
+write.table(y$norm, file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+
+##### Same for annotated genes
+write.table(data, file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 ```
 
 The combined `r params$transform` expression data were saved in **`r paste0(params$results_name, "_", filtered, "_", logged, ".txt")`**.
