@@ -27,7 +27,8 @@
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
 #   goi:          List of genes of interest (separated by comma)
-#   results_name: Desired core name for the results folder
+#   output_dir:   Directory for the results folder
+#   results_name: Desired core name for the results
 #   seed:         Set up a seed for random number generation
 #   grch_version:  Human reference genome version used for genes annotation (default is "38")
 #
@@ -72,6 +73,8 @@ option_list = list(
               help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),
   make_option("--goi", action="store", default="none", type='character',
               help="List of genes of interest"),
+  make_option("--output_dir", action="store", default=NA, type='character',
+              help="Directory for the results folder"),
   make_option("--results_name", action="store", default=NA, type='character',
               help="Prefix for the results files names"),
   make_option("--seed", action="store", default=99999999, type='numeric',
@@ -83,10 +86,10 @@ option_list = list(
 opt = parse_args(OptionParser(option_list=option_list))
 
 ##### Read in argument from command line and check if all were provide by the user
-if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) ) {
+if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$output_dir) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --output_dir /Combined_data/CUP\n\n")
   
   q()
 }
@@ -162,15 +165,16 @@ param_list <- list(exprDir = opt$exprDir,
                    log = as.logical(opt$log),
                    top_genes = as.numeric(opt$top_genes),
                    goi = opt$goi,
+                   output_dir = opt$output_dir,
                    results_name = opt$results_name,
                    seed = opt$seed,
                    grch_version = as.numeric(opt$grch_version),
                    ensembl_version = as.numeric(ensembl_version))
 
-##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
+##### Pass the user-defined argumentas to the combineExprData R markdown script and run the analysis
 rmarkdown::render(input = "combineExprData.Rmd",
-                  output_file = paste0(opt$results_name, ".html"),
-                  output_dir = opt$exprDir,
+                  output_file = paste0(opt$output_dir, "/", opt$results_name, ".html"),
+                  output_dir = opt$output_dir,
                   params = param_list)
 
 
