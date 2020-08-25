@@ -26,7 +26,7 @@
 #   filter_perc:  The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis. Default is 10
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
-#   goi:          List of genes of interest (separated by comma)
+#   goi:          File listing the genes of interest
 #   output_dir:   Directory for the results folder
 #   results_name: Desired core name for the results
 #   seed:         Set up a seed for random number generation
@@ -72,7 +72,7 @@ option_list = list(
   make_option("--top_genes", action="store", default=400, type='numeric',
               help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),
   make_option("--goi", action="store", default="none", type='character',
-              help="List of genes of interest"),
+              help="File listing the genes of interest"),
   make_option("--output_dir", action="store", default=NA, type='character',
               help="Directory for the results folder"),
   make_option("--results_name", action="store", default=NA, type='character',
