@@ -17,7 +17,7 @@ params:
   datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset/TCGA_PAAD_datasets_list.txt'
   report_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
   transform: 'TPM'
-  norm: 'sizeFactors'
+  norm: 'quantile'
   batch_rm: TRUE
   filter: TRUE
   log: TRUE
@@ -144,12 +144,12 @@ pca <- function(data, targets, dim) {
   ##### Keep only genes with variance > 0 across all samples
   rsd <- apply(data,1,sd)
   data.subset <- data[rsd>0,]
+  rsd <- rsd[rsd>0]
   
   ##### Keep top genes with the highest expression variance across samples
   rsd<-apply(data.subset,1,sd)
   
   if ( nrow(data.subset) < params$top_genes ) {
-  
       sel<-order(rsd, decreasing=TRUE)[1:nrow(data.subset)]
   } else {
       sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
@@ -190,7 +190,7 @@ pca <- function(data, targets, dim) {
   }
   
   ##### Generate scree plot
-  data.subset_scree.df <- data.frame(paste0("PC ", c(1:length(data.subset_pca$sdev))), data.subset_pca$sdev)
+  data.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
 colnames(data.subset_scree.df) <- c("PC", "Variances")
 
   ##### The default order will be alphabetized unless specified as below
@@ -432,8 +432,10 @@ colnames(targetFile)[ncol(targetFile)] <- "Dataset"
 targetFile.list <- vector("list", nrow(DatasetInput))
 names(targetFile.list) <- rownames(DatasetInput)
 
+##### Make syntactically valid names
+rownames(targetFile) <- make.names(rownames(targetFile))
 targetFile.list[[1]] <- targetFile
-
+      
 ##### List datasets with only one sample available
 Dataset.skip <- NULL
   
@@ -459,6 +461,10 @@ if ( nrow(DatasetInput) > 1 ) {
           targetFile.list[[i]][,"Replicates"] <- targetFile.list[[i]][,"Replicates"] + maxRep
         }
       }
+      
+      ##### Make syntactically valid names
+      rownames(targetFile.list[[i]]) <- make.names(rownames(targetFile.list[[i]]))
+      
       targetFile <- rbind(targetFile, targetFile.list[[i]])
       
     } else {
@@ -468,9 +474,6 @@ if ( nrow(DatasetInput) > 1 ) {
   }
 }
 
-##### Make syntactically valid names
-rownames(targetFile) <- make.names(rownames(targetFile))
-
 ##### Loop through the gene-by-sample expression matrices from different datasets and merge them into a matrix
 for ( i in 1:nrow(DatasetInput) ) {
   
@@ -478,6 +481,9 @@ for ( i in 1:nrow(DatasetInput) ) {
   if (!exists("datasets")) {
     datasets <- as.data.frame( read.table(gzfile(paste(params$report_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
     
+    ##### Make syntactically valid names
+    colnames(datasets) <- make.names(colnames(datasets))
+
     ##### Make sure that the target file contains info only about samples present in the data matrix
     targetFile.list[[i]] <- targetFile.list[[i]][ rownames(targetFile.list[[i]]) %in% colnames(datasets),  ]
     
@@ -491,6 +497,9 @@ for ( i in 1:nrow(DatasetInput) ) {
     ##### Add data for the remaining samples   
   } else if (exists("datasets")) {
     dataset <-as.data.frame( read.table(gzfile(paste(params$report_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    
+    ##### Make syntactically valid names
+    colnames(dataset) <- make.names(colnames(dataset))
     
     ##### Make sure that the target file contains info only about samples present in the data matrix
     targetFile.list[[i]] <- targetFile.list[[i]][ rownames(targetFile.list[[i]]) %in% colnames(dataset),  ]
@@ -1352,7 +1361,13 @@ dev.off()
 suppressMessages(library(heatmaply))
 
 ##### Generate heatmap (PLOTLY)
-p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+col_side_colors <- as.data.frame(targetFile[, "Target"])
+colnames(col_side_colors) <- "Target"
+
+col_side_palette <- targets.colour[[2]]
+names(col_side_palette) <- col_side_colors$Target
+
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
@@ -1402,7 +1417,7 @@ dev.off()
 
 ```{r heatmap_scaled_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 ##### Generate heatmap (PLOTLY)
-p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = targetFile[, "Target"], scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
