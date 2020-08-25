@@ -19,12 +19,17 @@
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)
 #   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be blank), (3) "Target" and (4) "Replicates" (may be blank)
+#   annotFeatures:Samples annotation features to be included on heatmaps. Default is "Target"
 #   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (default) and "TPM"
 #   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "sizeFactors" and "quantile" normalisation are used for TPM-transformed data. "None" (default) is available for both transformation methods
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (default) and "FALSE"
+#   filter_perc:  The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis. Default is 10
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
+#   goi:          List of genes of interest (separated by comma)
 #   results_name: Desired core name for the results folder
+#   seed:         Set up a seed for random number generation
+#   grch_version:  Human reference genome version used for genes annotation (default is "38")
 #
 ################################################################################
 
@@ -45,24 +50,34 @@ suppressMessages(library(optparse))
 #===============================================================================
 
 option_list = list(
-  make_option(c("-d", "--exprDir"), action="store", default=NA, type='character',
+  make_option("--exprDir", action="store", default=NA, type='character',
               help="Directory with expression data"),
-  make_option(c("-e", "--exprFile"), action="store", default=NA, type='character',
+  make_option("--exprFile", action="store", default=NA, type='character',
               help="File with expression data (read counts)"),
-  make_option(c("-a", "--annotFile"), action="store", default=NA, type='character',
+  make_option("--annotFile", action="store", default=NA, type='character',
               help="Samples annotation file"),
-  make_option(c("-t", "--transform"), action="store", default=NA, type='character',
+  make_option("--annotFeatures", action="store", default="Target", type='character',
+              help="Samples annotation features to be included on heatmaps"),
+  make_option("--transform", action="store", default=NA, type='character',
               help="Transformation method to be used when converting read counts"),
-  make_option(c("-n", "--norm"), action="store", default=NA, type='character',
+  make_option("--norm", action="store", default=NA, type='character',
               help="Normalisation method"),
-  make_option(c("-f", "--filter"), action="store", default=NA, type='character',
+  make_option("--filter", action="store", default=NA, type='character',
               help="Filtering out low expressed genes"),
-  make_option(c("-l", "--log"), action="store", default=NA, type='character',
+  make_option("--filter_perc", action="store", default=10, type='numeric',
+              help="The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis"),
+  make_option("--log", action="store", default=NA, type='character',
               help="Log (base 2) transform data before normalisation"),
-  make_option(c("-g", "--top_genes"), action="store", default=400, type='numeric',
+  make_option("--top_genes", action="store", default=400, type='numeric',
               help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),
-  make_option(c("-r", "--results_name"), action="store", default=NA, type='character',
-              help="Prefix for the results files names")
+  make_option("--goi", action="store", default="none", type='character',
+              help="List of genes of interest"),
+  make_option("--results_name", action="store", default=NA, type='character',
+              help="Prefix for the results files names"),
+  make_option("--seed", action="store", default=99999999, type='numeric',
+              help="Set up a seed for random number generation"),
+  make_option("--grch_version", action="store", default=NA, type='integer',
+              help="human reference genome version used for genes annotation")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -97,6 +112,18 @@ if ( is.na(opt$log)  ) {
   opt$log <- TRUE
 }
 
+if ( is.na(opt$grch_version)  ) {
+  opt$grch_version <- 38
+  ensembl_version <- 86
+} else if ( opt$grch_version == 38 ) {
+  ensembl_version <- 86
+} else if ( opt$grch_version == 37 ) {
+  ensembl_version <- 75
+} else {
+  cat("\nCurrently human reference genome (GRCh) versions \"37\" and \"38\" are supported.\n\n")
+  q()
+}
+
 ##### Make sure that TMM, TMMwzp, RLE or upperquartile normalisation is used for CPM-tansformed data and quantile normalisation is used for TPM-tansformed data
 if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
   
@@ -119,12 +146,35 @@ if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
 
 ##### Check if the named of the results folder is defined
 if ( !is.na(opt$results_name) ) {
-  
   opt$results_name <- paste0(opt$results_name, "_", opt$transform, "_", opt$norm)
-  
 } else {
   opt$results_name <- paste0(opt$exprFile, "_", opt$transform, "_", opt$norm)
 }
 
+param_list <- list(exprDir = opt$exprDir,
+                   exprFile = opt$exprFile,
+                   annotFile = opt$annotFile,
+                   annotFeatures = opt$annotFeatures,
+                   transform = opt$transform,
+                   norm = opt$norm,
+                   filter = as.logical(opt$filter),
+                   filter_perc = as.numeric(opt$filter_perc),
+                   log = as.logical(opt$log),
+                   top_genes = as.numeric(opt$top_genes),
+                   goi = opt$goi,
+                   results_name = opt$results_name,
+                   seed = opt$seed,
+                   grch_version = as.numeric(opt$grch_version),
+                   ensembl_version = as.numeric(ensembl_version))
+
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combineExprData.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = opt$exprDir, params = list(exprDir = opt$exprDir, exprFile = opt$exprFile, annotFile = opt$annotFile, transform = opt$transform, norm = opt$norm, filter = as.logical(opt$filter), log = as.logical(opt$log), top_genes = as.numeric(opt$top_genes), results_name = opt$results_name))
+rmarkdown::render(input = "combineExprData.Rmd",
+                  output_file = paste0(opt$results_name, ".html"),
+                  output_dir = opt$exprDir,
+                  params = param_list)
+
+
+##### Clear workspace
+rm(list=ls())
+##### Close any open graphics devices
+graphics.off()
