@@ -10,7 +10,7 @@ params:
   transform: 'TPM'
   filter: TRUE
   filter_perc: 10
-  norm: 'sizeFactors'
+  norm: 'quantile'
   log: TRUE
   output_dir: 
   results_name: 
@@ -148,7 +148,7 @@ annotFeatures <- unique(c("Target", unlist(strsplit(params$annotFeatures, split=
 
 ##### Define genes of interest (if specified)
 if ( params$goi != "none" ) {
-  goi_list <- unique(unlist(strsplit(params$goi, split=',', fixed=TRUE)))
+  goi_list <- unique(read.table(params$goi, sep="\t", as.is=TRUE, header=FALSE, row.names=NULL, quote="")[,1])
   runGOI <- TRUE
 } else {
   runGOI <- FALSE
@@ -247,6 +247,10 @@ data_NOISeq <-  data[ rownames(data) %in% gene_info$ENSEMBL,  ]
 biotype <- gene_info$GENEBIOTYPE
 names(biotype) <- gene_info$ENSEMBL
 
+##### NOTE, make sure that each biotype is represented by at least 1 read across all samples
+biotype <- biotype[duplicated(biotype) | duplicated(biotype, fromLast=TRUE)]
+data_NOISeq <-  data[ rownames(data) %in% names(biotype),  ]
+
 ##### Converting data into a NOISeq object
 data_NOISeq <- readData(data = data_NOISeq, biotype = biotype, chromosome = as.data.frame(gene_info[ , c("SEQNAME", "GENESEQSTART", "GENESEQEND") ]), factors = data.frame(sample = colnames(data_NOISeq), group = rep("All", ncol(data_NOISeq))))
 
@@ -271,7 +275,7 @@ invisible(dev.off())
 
 for ( i in 1:ncol(data_NOISeq) ) {
   pdf(paste0(biotype_detection_dir, "/", colnames(data_NOISeq)[i],"_biotype_detection.pdf"))
-  explo.plot(biodetection_samples, samples = colnames(data_NOISeq)[i], plottype = "persample")
+  explo.plot(biodetection_samples, samples = i, plottype = "persample")
   invisible(dev.off())
 }
 ```
@@ -298,7 +302,7 @@ invisible(dev.off())
 
 for ( i in 1:ncol(data_NOISeq) ) {
   pdf(paste0(biotype_detection_dir, "/", colnames(data_NOISeq)[i],"_count_per_biotype.pdf"))
-  explo.plot(countsbio_samples, samples = colnames(data_NOISeq)[i], plottype = "boxplot")
+  explo.plot(countsbio_samples, samples = i, plottype = "boxplot")
   invisible(dev.off())
 }
 ```
@@ -361,11 +365,17 @@ if ( ncol(data_NOISeq) > 10 ) {
     invisible(dev.off())
 
   }
+} else {
+  explo.plot(saturation, toplot = 1, samples = 1:ncol(data_NOISeq))
+  
+  pdf(paste0(saturation_dir, "/saturation_.pdf"))
+  explo.plot(saturation, toplot = 1, samples = 1:ncol(data_NOISeq))
+  invisible(dev.off())
 }
 
 for ( i in 1:ncol(data_NOISeq) ) {
   pdf(paste0(saturation_dir, "/", colnames(data_NOISeq)[i],"_saturation.pdf"))
-  explo.plot(saturation, toplot = 1, samples = colnames(data_NOISeq)[i])
+  explo.plot(saturation, toplot = 1, samples = i)
   invisible(dev.off())
 }
 ```
@@ -777,20 +787,21 @@ Scatter plot of the first 2 principal components (PCs) constituting the primary 
 
 ```{r PCA_plot_2D, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 suppressMessages(library(plotly))
-##### Keep only genes with variance > 0 across all samples
-rsd <- apply(y$norm,1,sd)
-y$norm.subset <- y$norm[rsd>0,]
-
-if ( nrow(y$norm.subset) < params$top_genes ) {
-    sel<-order(rsd, decreasing=TRUE)[1:nrow(y$norm.subset)]
-} else {
-    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
-}
-
-##### Subset genes
-y$norm.subset <- data.frame(y$norm.subset[sel,])
 
 if ( length(targetFile$Target) > 2 ) {
+  ##### Keep only genes with variance > 0 across all samples
+  rsd <- apply(y$norm,1,sd)
+  y$norm.subset <- y$norm[rsd>0,]
+  
+  if ( nrow(y$norm.subset) < params$top_genes ) {
+      sel<-order(rsd, decreasing=TRUE)[1:nrow(y$norm.subset)]
+  } else {
+      sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
+  }
+  
+  ##### Subset genes
+  y$norm.subset <- data.frame(y$norm.subset[sel,])
+
   ##### Perform PCA
   y$norm.subset_pca <- prcomp(t(y$norm.subset), scale=FALSE)
   
@@ -880,7 +891,6 @@ if ( length(targetFile$Target) > 4 ) {
   #pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
   #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
   #invisible(dev.off())
-  
 }
 ```
 
@@ -895,22 +905,27 @@ Scree plot presenting the fraction of total variance (y-axis) attributed to each
 ```{r Scree_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Generate scree plot
 ##### Prepare data frame
-y$norm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
-colnames(y$norm.subset_scree.df) <- c("PC", "Variances")
-
-##### The default order will be alphabetized unless specified as below
-y$norm.subset_scree.df$PC <- factor(y$norm.subset_scree.df$PC, levels = y$norm.subset_scree.df[["PC"]])
-p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
-  layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
-
-p
-
-##### Save scree plot as html
-saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_scree_plot.html")))
+if ( length(targetFile$Target) > 2 ) {
+  
+  y$norm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
+  colnames(y$norm.subset_scree.df) <- c("PC", "Variances")
+  
+  ##### The default order will be alphabetized unless specified as below
+  y$norm.subset_scree.df$PC <- factor(y$norm.subset_scree.df$PC, levels = y$norm.subset_scree.df[["PC"]])
+  p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+    layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+  
+  ##### Save scree plot as html
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_scree_plot.html")))
+  
+  p
+}
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
 ```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
 
 ***
 
@@ -967,6 +982,7 @@ rm(data.df, edb, keys)
 ##### Keep only genes with variance > 0 across all samples
 rsd <- apply(data,1,sd)
 data <- data[rsd>0,]
+rsd <- rsd[rsd>0]
 
 if ( nrow(data) < params$top_genes ) {
     sel<-order(rsd, decreasing=TRUE)[1:nrow(data)]
