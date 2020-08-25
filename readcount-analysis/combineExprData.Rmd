@@ -12,6 +12,7 @@ params:
   filter_perc: 10
   norm: 'sizeFactors'
   log: TRUE
+  output_dir:
   results_name: 
   top_genes: 400
   goi: 'none'
@@ -129,7 +130,7 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
   data <- data[ , rownames(targetFile) ]
 
   ##### Save data subset into a file
-  write.table(data, file=paste0(normalizePath(params$exprDir), "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+  write.table(data, file=paste0(params$output_dir, "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 } else {
   data <- data[ , rownames(targetFile) ]
 }
@@ -174,7 +175,7 @@ p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'ba
 p
 
 ##### Save the bar-plot as html (PLOTLY)
-saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_libSize.html")))
+saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_libSize.html")))
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -338,7 +339,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
   par(mfrow=c(1,2))
   
   ##### Before filtering
@@ -378,7 +379,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
   ##### Without filtering
   plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
   title(main="Transformed data (unfiltered)", xlab=params$transform)
@@ -475,7 +476,7 @@ if ( tolower(params$norm) != "none" ) {
 }
   
 ##### Save the plot as pdf file
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
 par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
 ##### Unnormalised data
@@ -513,7 +514,7 @@ invisible(dev.off())
 #   }
 # 
 # ##### Save the box-plot as html
-# saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.html")))
+# saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.html")))
 ########################################################
 ```
 
@@ -545,7 +546,7 @@ if ( length(lib_size_plot) == 1 ) {
   cat("\n</details>\n")
   
   ##### Save the bar-plot as html (PLOTLY)
-  saveWidgetFix(lib_size_plot[[1]], file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_library_size_norm.html")), selfcontained = TRUE)
+  saveWidgetFix(lib_size_plot[[1]], file = paste0(params$output_dir, "/", paste0(params$results_name, "_library_size_norm.html")), selfcontained = TRUE)
 }
 ```
 
@@ -592,16 +593,15 @@ if ( length(targetFile$Target) > 2 ) {
   ##### Generate PCA 2-D plot
   p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
   layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+  ##### Save PCA plot as html
+  saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_2d.html")))
   
   p
-  
-  ##### Save PCA plot as html
-  saveWidgetFix(as_widget(p), paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_2d.html")))
-  
-} else  {
-  cat("Only two samples were analysed!")
 }
 ```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
 
 ***
 
@@ -615,15 +615,15 @@ if ( length(targetFile$Target) > 2 ) {
   p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
   layout(title = "", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
   
+  ##### Save PCA plot as html
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_3d.html")))
+  
   p
   
-  ##### Save PCA plot as html
-  saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_3d.html")))
-  
-} else  {
-  cat("Only two samples were analysed!")
 }
 ```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
 
 ***
 
@@ -656,22 +656,22 @@ if ( length(targetFile$Target) > 4 ) {
       xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
   )
   
-  p
-  
   ##### Save pairwise PCA plot as html
-  saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.html")))
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.html")))
+  
+  p
   
   ##### Plot all combinations between the first 5 PCs
   #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
   ##### Save the plot as pdf file
-  #pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
+  #pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
   #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
   #invisible(dev.off())
   
-} else  {
-  cat("Less than five samples were analysed!")
 }
 ```
+
+`r if ( length(targetFile$Target) < 5 ) { c("**Less than five samples were analysed!**") }`
 
 ***
 
@@ -693,7 +693,7 @@ p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', widt
 p
 
 ##### Save scree plot as html
-saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_scree_plot.html")))
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_scree_plot.html")))
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -786,7 +786,7 @@ if ( length(unique(targetFile$Target)) > 1 ) {
 
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
   
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
 dev.off()
 ```
@@ -805,7 +805,7 @@ p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, 
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
-saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap.html")), selfcontained = TRUE)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.html")), selfcontained = TRUE)
 
 detach("package:heatmaply", unload=FALSE)
 ```
@@ -863,7 +863,7 @@ if ( length(unique(targetFile$Target)) > 1 ) {
 
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
   
-pdf(paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = 8)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = 8)
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
 dev.off()
 ```
@@ -876,7 +876,7 @@ p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, 
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
-saveWidgetFix(p, file = paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_heatmap_goi.html")), selfcontained = TRUE)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi.html")), selfcontained = TRUE)
 
 detach("package:heatmaply", unload=FALSE)
 ```
@@ -898,10 +898,10 @@ if ( params$log ) {
   logged <- "noLog"
 }
 ##### Save combined data into a file
-write.table(y$norm, file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+write.table(y$norm, file=paste0(params$output_dir, "/", paste0(params$results_name, "_", filtered, "_", logged, ".txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 
 ##### Same for annotated genes
-write.table(data, file=paste0(normalizePath(params$exprDir), "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+write.table(data, file=paste0(params$output_dir, "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 ```
 
 The combined `r params$transform` expression data were saved in **`r paste0(params$results_name, "_", filtered, "_", logged, ".txt")`**.
