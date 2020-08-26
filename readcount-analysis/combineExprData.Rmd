@@ -163,7 +163,7 @@ if ( params$goi != "none" ) {
 
 ***
 
-## Clustering analysis {.tabset}
+## Exploratory data analysis {.tabset}
 
 ### Library size
 
@@ -779,7 +779,7 @@ if ( length(lib_size_plot) == 1 ) {
 
 ***
 
-## Exploratory data analysis {.tabset .tabset-fade}
+## Clustering analysis {.tabset .tabset-fade}
 
 ### PCA {.tabset .tabset-fade}
 
