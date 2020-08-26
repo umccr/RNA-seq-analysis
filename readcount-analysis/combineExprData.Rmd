@@ -163,7 +163,7 @@ if ( params$goi != "none" ) {
 
 ***
 
-## Exploratory data analysis {.tabset}
+## Clustering analysis {.tabset}
 
 ### Library size
 
