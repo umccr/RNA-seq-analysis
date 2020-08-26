@@ -22,9 +22,13 @@ params:
 output:
   html_document:
     keep_md: yes
+    code_download: true
     code_folding: hide
+    theme: readable
     toc: true
     toc_float: true
+  rmdformats::material:
+    highlight: kate
 ---
 
 Results from combining expression data (**`r params$exprFile`**) from different samples. This includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`) and normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
