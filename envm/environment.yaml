@@ -40,6 +40,7 @@ dependencies:
         - r-knitr
         - r-plotly=4.9.0
         - plotly-orca
+        - r-heatmaply
         - r-scales
         - r-rcircos
         - r-ggplot2
