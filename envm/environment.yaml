@@ -55,6 +55,7 @@ dependencies:
         - r-rcolorbrewer
         - r-corrplot
         - pandoc
+        - libopenblas=0.3.3
         - bioconductor-ensdb.hsapiens.v75
         - bioconductor-ensdb.hsapiens.v86
         - bioconductor-bsgenome.hsapiens.ucsc.hg19
