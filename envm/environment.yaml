@@ -43,7 +43,7 @@ dependencies:
         - plotly-orca
         - r-scales
         - r-rcircos
-        - r-ggplot2
+        - r-ggplot2=3.2
         - r-ggforce
         - r-pdftools
         - r-png
