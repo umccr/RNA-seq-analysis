@@ -34,6 +34,34 @@ params:
 
 The aim of this report is to investigate changes to the read count data at various post-processing steps and to illustrate data distribution patterns of user-defined genes (***`r params$genes`***) across all samples in combined expression dataset. The data combination includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), normalisation (`r params$norm`) and scaling (`r if ( tolower(params$scaling) == "gene-wise" ) { c("Z-score tansformation") } else { c("centering") }`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
 
+***
+
+<details>
+<summary>Input parameters</summary>
+<font size="2">
+
+* **datasets**: `r params$datasets`
+* **report_dir**: `r params$report_dir`
+* **transform**: `r params$transform`
+* **norm**: `r params$norm`
+* **batch_rm**: `r params$batch_rm`
+* **filter**: `r params$filter`
+* **log**: `r params$log`
+* **genes**: `r params$genes`
+* **top_genes**: `r params$top_genes`
+* **ensembl**: `r params$ensembl`
+* **samples**: `r params$samples`
+* **results_name**: `r params$results_name`
+* **scaling**: `r params$scaling`
+* **ref_data_dir**: `r params$ref_data_dir`
+* **ensembl_version**: `r params$ensembl_version`
+* **hide_code_btn**: `r params$hide_code_btn`
+
+</font> 
+</details>
+
+***
+
 ```{r code_display, echo = FALSE}
 ##### Include or exclude the "Code" buttom allowing to "show"/"hide" code chunks from the report 
 if ( params$hide_code_btn ) {
