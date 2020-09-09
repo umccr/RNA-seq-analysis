@@ -60,8 +60,6 @@ The aim of this report is to investigate changes to the read count data at vario
 </font> 
 </details>
 
-***
-
 ```{r code_display, echo = FALSE}
 ##### Include or exclude the "Code" buttom allowing to "show"/"hide" code chunks from the report 
 if ( params$hide_code_btn ) {
