@@ -673,7 +673,7 @@ The global variability of the data can also be assessed from the scree plot. Her
 ```{r Scree_plot_datasets, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Generate scree plot
 ##### Prepare data frame
-y.filtered.norm.cpm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(y.filtered.norm.cpm.subset_pca$sdev))), y.filtered.norm.cpm.subset_pca$sdev)
+y.filtered.norm.cpm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
 colnames(y.filtered.norm.cpm.subset_scree.df) <- c("PC", "Variances")
 
 ##### The default order will be alphabetized unless specified as below
