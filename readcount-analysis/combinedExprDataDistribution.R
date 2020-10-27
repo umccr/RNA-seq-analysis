@@ -118,8 +118,30 @@ if ( !file.exists(report_dir) ) {
   dir.create(report_dir, recursive=TRUE)
 }
 
-##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
-rmarkdown::render(input = "combinedExprDataDistribution.Rmd", output_file = paste0(opt$results_name, ".html"), output_dir = report_dir, params = list(datasets = opt$datasets, report_dir = report_dir, transform = opt$transform, norm = opt$norm, batch_rm = opt$batch_rm, filter = opt$filter, log = opt$log, scaling = opt$scaling, genes = opt$genes, top_genes = as.numeric(opt$top_genes), ensembl = opt$ensembl, samples = opt$samples,  results_name = opt$results_name, hide_code_btn = opt$hide_code_btn))
+param_list <- list(datasets = opt$datasets,
+                   report_dir = report_dir,
+                   transform = opt$transform,
+                   norm = opt$norm,
+                   batch_rm = opt$batch_rm,
+                   filter = opt$filter,
+                   log = opt$log,
+                   scaling = opt$scaling,
+                   genes = opt$genes,
+                   top_genes = as.numeric(opt$top_genes),
+                   ensembl = opt$ensembl,
+                   samples = opt$samples, 
+                   results_name = opt$results_name,
+                   hide_code_btn = opt$hide_code_btn)
 
-##### Remove the assocaited folder with plots that are imbedded in the HTML report
-unlink(paste0(report_dir, "/", opt$results_name, "_files"), recursive = TRUE)
+##### Pass the user-defined arguments to the RNAseq_report R markdown script and generate the report
+rmarkdown::render(input = "combinedExprDataDistribution.Rmd",
+                  output_file = paste0(report_dir, "/", opt$results_name, ".html"),
+                  output_dir = report_dir,
+                  params = param_list )
+
+##### Clear workspace
+rm(list=ls())
+##### Close any open graphics devices
+graphics.off()
+
+
