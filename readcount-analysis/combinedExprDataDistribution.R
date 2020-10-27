@@ -127,7 +127,11 @@ if ( !is.na(opt$results_name) ) {
   opt$results_name <- paste0(opt$exprFile, "_", opt$transform, "_", opt$norm)
 }
 
-param_list <- list(datasets = opt$datasets,
+##### Get directory with input files
+input_dir <- paste(head(unlist(strsplit(opt$datasets, split='/', fixed=TRUE)),-1), collapse = "/")
+
+param_list <- list(input_dir = opt$input_dir,
+                   datasets = opt$datasets,
                    report_dir = report_dir,
                    transform = opt$transform,
                    norm = opt$norm,

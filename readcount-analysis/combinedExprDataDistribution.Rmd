@@ -14,6 +14,7 @@ output:
   rmdformats::material:
     highlight: kate
 params:
+  input_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
   datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset/TCGA_PAAD_datasets_list.txt'
   report_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
   transform: 'TPM'
