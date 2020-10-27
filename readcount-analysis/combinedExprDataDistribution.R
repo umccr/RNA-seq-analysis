@@ -106,16 +106,25 @@ if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
 
 ##### Check if the named of the results folder is defined
 if ( !is.na(opt$results_name) ) {
+  
+  ##### Create user-defined directory for the report
+  report_dir <- opt$results_name
+  
+  if ( !file.exists(report_dir) ) {
+    dir.create(report_dir, recursive=TRUE)
+  }
+  
   opt$results_name <- paste0(opt$results_name, "_", opt$transform, "_", opt$norm)
 } else {
+  
+  ##### Create user-defined directory for the report
+  report_dir <- opt$results_name
+  
+  if ( !file.exists(report_dir) ) {
+    dir.create(report_dir, recursive=TRUE)
+  }
+  
   opt$results_name <- paste0(opt$exprFile, "_", opt$transform, "_", opt$norm)
-}
-
-##### Create user-defined directory for the report
-report_dir <- paste(head(unlist(strsplit(opt$datasets, split='/', fixed=TRUE)),-1), collapse = "/")
-
-if ( !file.exists(report_dir) ) {
-  dir.create(report_dir, recursive=TRUE)
 }
 
 param_list <- list(datasets = opt$datasets,
