@@ -1158,15 +1158,19 @@ if ( length(lib_size_plot) == 1 ) {
 ```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE}
 ##### The strategy for correcting data for batch effects is to consider the investigated sample and internal reference cohort as one group (batch) (regardless of the investigated patient tissiu origin), and TCGA data (of any cancer type) as another batch. The objective is to remove as much as possible data variation due to technical factors.
 batches <- as.character(datasets.list[[dataset]][["sample_annot"]]$Dataset)
+batch_rm_status <- FALSE
 
 ##### Perform batch-effect correctrion using limma
 if ( length(unique(batches)) > 1 ) {
-  datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
-  
-  batch_rm_status <- params$batch_rm
+  if ( params$batch_rm ) {
+    datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
+    
+    batch_rm_status <- TRUE
+  } else {
+    datasets.list[[dataset]][["batch_effect_corrected"]] <- datasets.list[[dataset]][["combined_data_processed"]]
+  }
 } else {
   datasets.list[[dataset]][["batch_effect_corrected"]] <- datasets.list[[dataset]][["combined_data_processed"]]
-  batch_rm_status <- FALSE
 }
 
 ##### Write combined data into a file
@@ -1274,7 +1278,7 @@ suppressMessages(library(plotly))
 ##### Loop through combined datasets and perform PCA
 target <- datasets.list[[dataset]][["sample_annot"]]
   
-pca(data=y[["comb"]]$norm, targets=target, dim=2)[[2]]
+pca(data=datasets.list[[dataset]][["batch_effect_corrected"]], targets=target, dim=2)[[2]]
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -1310,7 +1314,7 @@ suppressMessages(library(plotly))
 ##### Loop through combined datasets and perform PCA
 target <- datasets.list[[dataset]][["sample_annot"]]
   
-pca(data=y[["comb"]]$norm, targets=target, dim=3)[[2]]
+pca(data=datasets.list[[dataset]][["batch_effect_corrected"]], targets=target, dim=3)[[2]]
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -1340,7 +1344,7 @@ Heatmap presenting **`r params$top_genes` genes** (*y-axis*) with the highest ex
 
 ```{r heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 ##### Keep top genes with the highest expression variance across samples
-data <- y[["comb"]]$norm
+data <- datasets.list[[dataset]][["batch_effect_corrected"]]
 rsd<-apply(data,1,sd)
 data <- data[rsd>0,]
 
