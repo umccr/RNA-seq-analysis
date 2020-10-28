@@ -14,9 +14,8 @@ output:
   rmdformats::material:
     highlight: kate
 params:
-  input_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
-  datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset/TCGA_PAAD_datasets_list.txt'
-  report_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
+  datasets: '/Users/jmarzec/data/PAAD_snRNA_seq/expression/snRNA_seq_WTS_pipeline/Combined_data/snRNAseq_WTS_datasets_bulk_mRNA.txt'
+  output_dir: '/Users/jmarzec/data/PAAD_snRNA_seq/expression/snRNA_seq_WTS_pipeline/Combined_data/snRNAseq_WTS_genes_distributions_bulk_mRNA'
   transform: 'TPM'
   norm: 'quantile'
   batch_rm: TRUE
@@ -42,7 +41,6 @@ The aim of this report is to investigate changes to the read count data at vario
 <font size="2">
 
 * **datasets**: `r params$datasets`
-* **report_dir**: `r params$report_dir`
 * **transform**: `r params$transform`
 * **norm**: `r params$norm`
 * **batch_rm**: `r params$batch_rm`
@@ -52,6 +50,7 @@ The aim of this report is to investigate changes to the read count data at vario
 * **top_genes**: `r params$top_genes`
 * **ensembl**: `r params$ensembl`
 * **samples**: `r params$samples`
+* **output_dir**: `r params$output_dir`
 * **results_name**: `r params$results_name`
 * **scaling**: `r params$scaling`
 * **ref_data_dir**: `r params$ref_data_dir`
@@ -445,9 +444,12 @@ if ( nrow(DatasetInput) == 1 ) {
   DatasetInput <- DatasetInput[, -c(ncol(DatasetInput))]
 }
 
+##### Get directory with input files
+input_dir <- paste(head(unlist(strsplit(params$datasets, split='/', fixed=TRUE)),-1), collapse = "/")
+
 ##### Extract info about target file for the first dataset
 fileInfo = strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
-targetFile <- read.table(paste(params$report_dir, DatasetInput[1,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
+targetFile <- read.table(paste(input_dir, DatasetInput[1,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
 
 ##### Make sure that there are no duplciated samples in the target file
 targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
@@ -470,7 +472,7 @@ if ( nrow(DatasetInput) > 1 ) {
   for ( i in 2:nrow(DatasetInput) ) {
     
     ##### Create a temporary object to store info from the remaining target files
-    targetFile.list[[i]] <- read.table(paste(params$report_dir, DatasetInput[i,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
+    targetFile.list[[i]] <- read.table(paste(input_dir, DatasetInput[i,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
     
     ##### Make sure that there are > 1 samples in each dataset. Otherwise discard them
     if ( nrow(targetFile.list[[i]]) > 2 ) {
@@ -506,7 +508,7 @@ for ( i in 1:nrow(DatasetInput) ) {
   
   ##### Create combined dataset variable if it doesn't exist yet
   if (!exists("datasets")) {
-    datasets <- as.data.frame( read.table(gzfile(paste(params$report_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    datasets <- as.data.frame( read.table(gzfile(paste(input_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
     
     ##### Make syntactically valid names
     colnames(datasets) <- make.names(colnames(datasets))
@@ -523,7 +525,7 @@ for ( i in 1:nrow(DatasetInput) ) {
     
     ##### Add data for the remaining samples   
   } else if (exists("datasets")) {
-    dataset <-as.data.frame( read.table(gzfile(paste(params$report_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
+    dataset <-as.data.frame( read.table(gzfile(paste(input_dir, DatasetInput[ i, "Expression_matrix" ], sep="/")), header=TRUE, sep="\t", row.names=NULL) )
     
     ##### Make syntactically valid names
     colnames(dataset) <- make.names(colnames(dataset))
@@ -564,7 +566,7 @@ datasets <- datasets[ , rownames(targetFile) ]
 
 ##### Write list of missing genes into a file
 if ( length(gene_list.missing) > 0 ) {
-  write.table(prepare2write(gene_list.missing), file = paste0(params$report_dir, "/", params$results_name,".missing_genes.txt"), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+  write.table(prepare2write(gene_list.missing), file = paste0(params$output_dir, "/", params$results_name,".missing_genes.txt"), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
 
 #### Prepare input samples of interest
@@ -634,7 +636,7 @@ p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'ba
 p
 
 ##### Save the bar-plot as html (PLOTLY)
-saveWidgetFix(p, file = paste0(params$report_dir, "/", params$results_name,".RNAseq_libSize.html"))
+saveWidgetFix(p, file = paste0(params$output_dir, "/", params$results_name,".RNAseq_libSize.html"))
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -888,7 +890,7 @@ p <- plot_ly( data.df, x = ~Transformed, y = ~Counts, width = 800, height = 300,
 p
 
 ##### Save interactive plot as html file
-saveWidgetFix(p, file = paste0(params$report_dir, "/", params$results_name,".counts_vs_transformed.html"))
+saveWidgetFix(p, file = paste0(params$output_dir, "/", params$results_name,".counts_vs_transformed.html"))
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
@@ -935,7 +937,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5, pointsize = 8)
+  pdf(paste0(params$output_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5, pointsize = 8)
   par(mfrow=c(1,2))
   
   ##### Before filtering
@@ -975,7 +977,7 @@ if ( params$filter ) {
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
   
   ##### Save the plot as pdf file
-  pdf(paste0(params$report_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5, pointsize = 8)
+  pdf(paste0(params$output_dir, "/", params$results_name,".filtering.pdf"), width=8, height=5, pointsize = 8)
   ##### Without filtering
   plot(density(y[["comb"]]$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
   title(main="Transformed data (unfiltered)", xlab=params$transform)
@@ -1105,7 +1107,7 @@ if ( tolower(params$norm) != "none" ) {
 }
     
 ##### Save the plot as pdf file
-pdf(paste0(params$report_dir, "/", params$results_name,".normalisation.pdf"), width=8, height=14, pointsize = 6)
+pdf(paste0(params$output_dir, "/", params$results_name,".normalisation.pdf"), width=8, height=14, pointsize = 6)
 par(mfrow=c(norm.height,1), mar=c(max(nchar(colnames(y[["comb"]]$noNorm)))/2, 5, 3, 2))
     
 ##### Unnormalised data
@@ -1152,7 +1154,7 @@ if ( length(lib_size_plot) == 1 ) {
   cat("\n</details>\n")
   
   ##### Save the bar-plot as html (PLOTLY)
-  saveWidgetFix(p, file = paste0(params$report_dir, "/", paste0(params$results_name, ".library_size_norm.html")), selfcontained = TRUE)
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, ".library_size_norm.html")), selfcontained = TRUE)
 }
 ```
 
@@ -1175,10 +1177,10 @@ if ( length(unique(batches)) > 1 ) {
 }
 
 ##### Write combined data into a file
-write.table(prepare2write(datasets.list[[dataset]][["batch_effect_corrected"]]), file = paste0(params$report_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
+write.table(prepare2write(datasets.list[[dataset]][["batch_effect_corrected"]]), file = paste0(params$output_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
 
 ##### Write list genes into a file
-write.table(prepare2write(rownames(datasets.list[[dataset]][["batch_effect_corrected"]])), file = paste0(params$report_dir, "/", params$results_name,".combined_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
+write.table(prepare2write(rownames(datasets.list[[dataset]][["batch_effect_corrected"]])), file = paste0(params$output_dir, "/", params$results_name,".combined_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
 ```
 
 `r if ( batch_rm_status ) { c("***") }`
@@ -1234,10 +1236,10 @@ if ( tolower(params$scaling) == "gene-wise" ) {
 }
 
 ##### Write combined and re-scaled data into a file
-write.table(prepare2write(y[["comb"]]$z), file = paste0(params$report_dir, "/", paste0(params$results_name, ".combined.z.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
+write.table(prepare2write(y[["comb"]]$z), file = paste0(params$output_dir, "/", paste0(params$results_name, ".combined.z.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
 
 ##### Write list genes into a file
-write.table(prepare2write(rownames(y[["comb"]]$z)), file = paste0(params$report_dir, "/", params$results_name,".combined.z_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
+write.table(prepare2write(rownames(y[["comb"]]$z)), file = paste0(params$output_dir, "/", params$results_name,".combined.z_genes.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
 ```
 
 ```{r data_z_score_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
@@ -1249,7 +1251,7 @@ boxplot(y[["comb"]]$z, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = 
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent", cex=0.8)
     
 ##### Save the plot as pdf file
-pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".", scaled_title, ".pdf")), width=8, height=6, pointsize = 6)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, ".", scaled_title, ".pdf")), width=8, height=6, pointsize = 6)
 par(mfrow=c(1,1), mar=c(2, 5, 3, 2))
     
 boxplot(y[["comb"]]$z, col=targets.colour[[2]], main="", pch=".", las=2, xaxt = "n")
@@ -1383,7 +1385,7 @@ if ( length(unique(targetFile$Target)) > 1 ) {
 
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
   
-pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap.pdf")), width = 8, height = 8)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, ".heatmap.pdf")), width = 8, height = 8)
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
 dev.off()
 ```
@@ -1402,7 +1404,7 @@ p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, 
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
-saveWidgetFix(p, file = paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap.html")), selfcontained = TRUE)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, ".heatmap.html")), selfcontained = TRUE)
 ```
 
 `r c(paste0("**", scaled_title, "**"))`
@@ -1441,7 +1443,7 @@ if ( length(unique(targetFile$Target)) > 1 ) {
 
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
   
-pdf(paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap_scaled.pdf")), width = 8, height = 8)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, ".heatmap_scaled.pdf")), width = 8, height = 8)
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
 dev.off()
 ```
@@ -1452,7 +1454,7 @@ p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, 
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
-saveWidgetFix(p, file = paste0(params$report_dir, "/", paste0(params$results_name, ".heatmap_scaled.html")), selfcontained = TRUE)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, ".heatmap_scaled.html")), selfcontained = TRUE)
 
 detach("package:heatmaply", unload=FALSE)
 ```
@@ -1495,7 +1497,7 @@ if ( tolower(params$norm) != "none" ) {
 
 ##### Write list of genes into a file
 if ( length(genes) > 0 ) {
-    write.table(prepare2write(genes), file = paste0(params$report_dir, "/", paste0(params$results_name, ".genes.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+    write.table(prepare2write(genes), file = paste0(params$output_dir, "/", paste0(params$results_name, ".genes.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
   
   runChunk <- TRUE
 } else {
@@ -1504,7 +1506,7 @@ if ( length(genes) > 0 ) {
 
 ##### Write list of missing genes into a file
 if ( exists("genes.missing") && length(genes.missing) > 0 ) {
-  write.table(prepare2write(genes.missing), file = paste0(params$report_dir, "/", paste0(params$results_name, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
+  write.table(prepare2write(genes.missing), file = paste0(params$output_dir, "/", paste0(params$results_name, ".genes.missing.txt")), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
 ```
 

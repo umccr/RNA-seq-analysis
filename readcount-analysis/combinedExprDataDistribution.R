@@ -27,6 +27,7 @@
 #   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
 #   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (default) and "FALSE"
 #   samples (optional):  ID of samples of interest
+#   output_dir:   Directory for the results folder
 #   results_name: Desired core name for the results folder
 #   hide_code_btn: Hide the "Code" button allowing to show/hide code chunks in the final HTML report. Available options are: "TRUE" (default) and "FALSE"
 #
@@ -71,6 +72,8 @@ option_list = list(
               help="Are genes annotated using ensembl IDs?"),
   make_option("--samples", action="store", default=NA, type='character',
               help="ID of samples of interest"),
+  make_option("--output_dir", action="store", default=NA, type='character',
+              help="Directory for the results folder"),
   make_option("--results_name", action="store", default=NA, type='character',
               help="Prefix for the results files names"),
   make_option("--hide_code_btn", action="store", default=TRUE, type='logical',
@@ -80,10 +83,10 @@ option_list = list(
 opt = parse_args(OptionParser(option_list=option_list))
 
 ##### Read in arguments from command line and check if all the required ones were provide by the user
-if ( is.na(opt$datasets) || is.na(opt$genes) ) {
+if ( is.na(opt$datasets) || is.na(opt$genes) || is.na(opt$output_dir) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\nRscript  combineExprData.R --datasets ../data/test_data/test.datasets_list.txt --genes MKI67,KRAS\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --datasets ../data/test_data/test.datasets_list.txt --genes MKI67,KRAS --output_dir ../data/test_data/combinedExprDataDistribution\n\n")
   q()
 }
 
@@ -106,33 +109,12 @@ if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
 
 ##### Check if the named of the results folder is defined
 if ( !is.na(opt$results_name) ) {
-  
-  ##### Create user-defined directory for the report
-  report_dir <- opt$results_name
-  
-  if ( !file.exists(report_dir) ) {
-    dir.create(report_dir, recursive=TRUE)
-  }
-  
   opt$results_name <- paste0(opt$results_name, "_", opt$transform, "_", opt$norm)
 } else {
-  
-  ##### Create user-defined directory for the report
-  report_dir <- opt$results_name
-  
-  if ( !file.exists(report_dir) ) {
-    dir.create(report_dir, recursive=TRUE)
-  }
-  
   opt$results_name <- paste0(opt$exprFile, "_", opt$transform, "_", opt$norm)
 }
 
-##### Get directory with input files
-input_dir <- paste(head(unlist(strsplit(opt$datasets, split='/', fixed=TRUE)),-1), collapse = "/")
-
-param_list <- list(input_dir = opt$input_dir,
-                   datasets = opt$datasets,
-                   report_dir = report_dir,
+param_list <- list(datasets = opt$datasets,
                    transform = opt$transform,
                    norm = opt$norm,
                    batch_rm = opt$batch_rm,
@@ -142,19 +124,17 @@ param_list <- list(input_dir = opt$input_dir,
                    genes = opt$genes,
                    top_genes = as.numeric(opt$top_genes),
                    ensembl = opt$ensembl,
-                   samples = opt$samples, 
+                   samples = opt$samples,
+                   output_dir = opt$output_dir,
                    results_name = opt$results_name,
                    hide_code_btn = opt$hide_code_btn)
 
-##### Pass the user-defined arguments to the RNAseq_report R markdown script and generate the report
 rmarkdown::render(input = "combinedExprDataDistribution.Rmd",
-                  output_file = paste0(report_dir, "/", opt$results_name, ".html"),
-                  output_dir = report_dir,
-                  params = param_list )
+                  output_file = paste0(opt$output_dir, "/", opt$results_name, ".html"),
+                  output_dir = opt$output_dir,
+                  params = param_list)
 
 ##### Clear workspace
 rm(list=ls())
 ##### Close any open graphics devices
 graphics.off()
-
-
