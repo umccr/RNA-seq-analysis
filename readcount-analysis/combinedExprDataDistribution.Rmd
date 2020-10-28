@@ -438,12 +438,6 @@ suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_versi
 ##### Read file with datasets information
 DatasetInput=read.table(params$datasets,sep="\t", as.is=TRUE, header=TRUE, row.names=1)
 
-if ( nrow(DatasetInput) == 1 ) {
-  
-  names(DatasetInput)[1:ncol(DatasetInput)-1] <- names(DatasetInput)[2:ncol(DatasetInput)]
-  DatasetInput <- DatasetInput[, -c(ncol(DatasetInput))]
-}
-
 ##### Get directory with input files
 input_dir <- paste(head(unlist(strsplit(params$datasets, split='/', fixed=TRUE)),-1), collapse = "/")
 
