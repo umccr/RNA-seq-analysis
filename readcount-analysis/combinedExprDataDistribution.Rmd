@@ -14,8 +14,8 @@ output:
   rmdformats::material:
     highlight: kate
 params:
-  datasets: '/Users/jmarzec/data/PAAD_snRNA_seq/expression/snRNA_seq_WTS_pipeline/Combined_data/snRNAseq_WTS_datasets_bulk_mRNA.txt'
-  output_dir: '/Users/jmarzec/data/PAAD_snRNA_seq/expression/snRNA_seq_WTS_pipeline/Combined_data/snRNAseq_WTS_genes_distributions_bulk_mRNA'
+  datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset/TCGA_PAAD_datasets_list.txt'
+  output_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
   transform: 'TPM'
   norm: 'quantile'
   batch_rm: TRUE
@@ -25,7 +25,7 @@ params:
   top_genes: 400
   ensembl: TRUE
   samples: 'TCGA-3A-A9I9-01A-11R-A38C-07'
-  results_name: 'test'
+  results_name: 'TCGA-PAAD_dataset'
   scaling: 'gene-wise'
   ref_data_dir: '../data'
   ensembl_version: 75
