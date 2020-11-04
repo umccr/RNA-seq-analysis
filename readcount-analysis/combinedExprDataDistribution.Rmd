@@ -28,7 +28,8 @@ params:
   results_name: 'TCGA-PAAD_dataset'
   scaling: 'gene-wise'
   ref_data_dir: '../data'
-  ensembl_version: 75
+  grch_version: 38
+  ensembl_version: 86
   hide_code_btn: TRUE
 ---
 
@@ -54,6 +55,7 @@ The aim of this report is to investigate changes to the read count data at vario
 * **results_name**: `r params$results_name`
 * **scaling**: `r params$scaling`
 * **ref_data_dir**: `r params$ref_data_dir`
+* **grch_version**: `r params$grch_version`
 * **ensembl_version**: `r params$ensembl_version`
 * **hide_code_btn**: `r params$hide_code_btn`
 

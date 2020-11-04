@@ -29,6 +29,7 @@
 #   samples (optional):  ID of samples of interest
 #   output_dir:   Directory for the results folder
 #   results_name: Desired core name for the results folder
+#   grch_version:  Human reference genome version used for genes annotation (default is "38")
 #   hide_code_btn: Hide the "Code" button allowing to show/hide code chunks in the final HTML report. Available options are: "TRUE" (default) and "FALSE"
 #
 ################################################################################
@@ -76,6 +77,8 @@ option_list = list(
               help="Directory for the results folder"),
   make_option("--results_name", action="store", default=NA, type='character',
               help="Prefix for the results files names"),
+  make_option("--grch_version", action="store", default=NA, type='integer',
+              help="human reference genome version used for genes annotation"),
   make_option("--hide_code_btn", action="store", default=TRUE, type='logical',
               help="Hide the \"Code\" button allowing to show/hide code chunks in the final HTML report")
 )
@@ -107,6 +110,18 @@ if ( opt$transform == "TPM" && opt$norm == "TMM" ) {
   q()
 }
 
+if ( is.na(opt$grch_version)  ) {
+  opt$grch_version <- 38
+  ensembl_version <- 86
+} else if ( opt$grch_version == 38 ) {
+  ensembl_version <- 86
+} else if ( opt$grch_version == 37 ) {
+  ensembl_version <- 75
+} else {
+  cat("\nCurrently human reference genome (GRCh) versions \"37\" and \"38\" are supported.\n\n")
+  q()
+}
+
 ##### Check if the named of the results folder is defined
 if ( !is.na(opt$results_name) ) {
   opt$results_name <- paste0(opt$results_name, "_", opt$transform, "_", opt$norm)
@@ -127,6 +142,8 @@ param_list <- list(datasets = opt$datasets,
                    samples = opt$samples,
                    output_dir = opt$output_dir,
                    results_name = opt$results_name,
+                   grch_version = as.numeric(opt$grch_version),
+                   ensembl_version = as.numeric(ensembl_version),
                    hide_code_btn = opt$hide_code_btn)
 
 rmarkdown::render(input = "combinedExprDataDistribution.Rmd",
