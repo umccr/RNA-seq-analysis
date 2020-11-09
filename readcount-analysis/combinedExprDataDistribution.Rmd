@@ -463,7 +463,7 @@ targetFile.list[[1]] <- targetFile
       
 ##### List datasets with only one sample available
 Dataset.skip <- NULL
-  
+
 if ( nrow(DatasetInput) > 1 ) {
   for ( i in 2:nrow(DatasetInput) ) {
     
@@ -564,6 +564,10 @@ datasets <- datasets[ , rownames(targetFile) ]
 if ( length(gene_list.missing) > 0 ) {
   write.table(prepare2write(gene_list.missing), file = paste0(params$output_dir, "/", params$results_name,".missing_genes.txt"), sep="\t", quote=FALSE, row.names=TRUE, append = FALSE )
 }
+
+
+##### Write combined count data into a file
+write.table(prepare2write(datasets), file = paste0(params$output_dir, "/", params$results_name,".combined_counts.txt"), sep="\t", quote=FALSE, col.names=FALSE, row.names=FALSE, append = FALSE )
 
 #### Prepare input samples of interest
 if ( !is.na(params$samples) ) {
