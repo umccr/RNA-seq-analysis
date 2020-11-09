@@ -567,7 +567,7 @@ if ( length(gene_list.missing) > 0 ) {
 
 
 ##### Write combined count data into a file
-write.table(prepare2write(datasets), file = paste0(params$output_dir, "/", params$results_name,".combined_counts.txt"), sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE, append = FALSE )
+write.table(prepare2write(datasets), file = paste0(params$output_dir, "/", params$results_name,".combined.counts.txt"), sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE, append = FALSE )
 
 #### Prepare input samples of interest
 if ( !is.na(params$samples) ) {
