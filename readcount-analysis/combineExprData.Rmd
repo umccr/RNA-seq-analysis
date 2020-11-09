@@ -416,6 +416,7 @@ The read count data is converted into **`r params$transform`**s using *[edgeR](h
 ```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
+
 ##### CPM transformation and filtering
 if ( params$filter && params$transform == "CPM" ) {
   
@@ -630,6 +631,7 @@ if ( params$filter ) {
 
 ```{r data_normalisation_unnorm_vs_norm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
 ##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
+
 if ( params$transform == "CPM" ) {
   
   ##### Calculate normalization factors and  transformations from the raw-scale to CPM and normalisation using user-defined method
@@ -795,6 +797,7 @@ if ( length(targetFile$Target) > 2 ) {
   ##### Keep only genes with variance > 0 across all samples
   rsd <- apply(y$norm,1,sd)
   y$norm.subset <- y$norm[rsd>0,]
+  rsd <- rsd[rsd>0]
   
   if ( nrow(y$norm.subset) < params$top_genes ) {
       sel<-order(rsd, decreasing=TRUE)[1:nrow(y$norm.subset)]
