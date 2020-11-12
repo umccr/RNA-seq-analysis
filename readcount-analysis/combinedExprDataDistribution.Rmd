@@ -1160,7 +1160,7 @@ if ( length(lib_size_plot) == 1 ) {
 }
 ```
 
-```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE}
+```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE, echo = FALSE}
 ##### The strategy for correcting data for batch effects is to consider the investigated sample and internal reference cohort as one group (batch) (regardless of the investigated patient tissiu origin), and TCGA data (of any cancer type) as another batch. The objective is to remove as much as possible data variation due to technical factors.
 batches <- as.character(datasets.list[[dataset]][["sample_annot"]]$Dataset)
 batch_rm_status <- FALSE
@@ -1259,10 +1259,12 @@ detach("package:plotly", unload=FALSE)
 
 `r if ( batch_rm_status && params$batch_rm == "combat" ) { c("***") }`
 
-`r if ( batch_rm_status && params$batch_rm == "combat" ) { c("### PCA") }`
+`r if ( batch_rm_status && params$batch_rm == "combat" ) { c("### Prior plot") }`
+
+`r if ( batch_rm_status && params$batch_rm == "combat" ) { c("Set of plots helping to assess whether parametric or nonparametric adjustments should be used. If the red (parametric estimate of the empirical batch effect density) and black (kernel estimate of the empirical batch effect density) lines do not match up well then nonparametric ajustments should be used.") }`
 
 
-```{r prior_plot_batch_effect, comment = NA, message=FALSE, warning=FALSE, eval=batch_rm_status}
+```{r prior_plot_batch_effect, warning = FALSE, echo = TRUE, message = FALSE, results = 'asis', eval=batch_rm_status, fig.width = 12, fig.height = 10}
 ##### Generate prior plots to assess if parametric or nonparametric adjustments should be used in ComBat. If the red (parametric estimate of the empirical batch effect density) and black (kernel estimate of the empirical batch effect density) lines don't match up well, use the nonparametric ajustments
 cat("![](",paste0(params$output_dir, "/", params$results_name,".Combat_PriorPlot.png"), ")", sep = "")
 ```
