@@ -1268,7 +1268,9 @@ detach("package:plotly", unload=FALSE)
 
 ```{r prior_plot_batch_effect, warning = FALSE, echo = TRUE, message = FALSE, results = 'asis', eval=batch_rm_status, fig.width = 12, fig.height = 10}
 ##### Generate prior plots to assess if parametric or nonparametric adjustments should be used in ComBat. If the red (parametric estimate of the empirical batch effect density) and black (kernel estimate of the empirical batch effect density) lines don't match up well, use the nonparametric ajustments
-cat("![](",paste0(params$output_dir, "/", params$results_name,".Combat_PriorPlot.png"), ")", sep = "")
+if ( params$batch_rm == "combat" && params$batch_par ) {
+  cat("![](",paste0(params$output_dir, "/", params$results_name,".Combat_PriorPlot.png"), ")", sep = "")
+}
 ```
 
 ***
