@@ -1170,6 +1170,8 @@ if ( length(unique(batches)) > 1 ) {
   if ( params$batch_rm == "limma" ) {
     datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
     
+    batch_rm_status <- TRUE
+    
   } else if ( params$batch_rm == "combat" ) {
 
     ##### Adjusting data for batch effects using ComBat. As default, parametric adjustments are used
