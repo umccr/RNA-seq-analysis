@@ -18,7 +18,8 @@ params:
   output_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
   transform: 'TPM'
   norm: 'quantile'
-  batch_rm: TRUE
+  batch_rm: 'combat'
+  batch_par: TRUE
   filter: TRUE
   log: TRUE
   genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
@@ -45,6 +46,7 @@ The aim of this report is to investigate changes to the read count data at vario
 * **transform**: `r params$transform`
 * **norm**: `r params$norm`
 * **batch_rm**: `r params$batch_rm`
+* **batch_par**: `r params$batch_par`
 * **filter**: `r params$filter`
 * **log**: `r params$log`
 * **genes**: `r params$genes`
@@ -432,6 +434,7 @@ suppressMessages(library(scales))
 suppressMessages(library(truncnorm))
 suppressMessages(library(RColorBrewer))
 suppressMessages(library(limma))
+suppressMessages(library(sva))
 suppressMessages(library(htmltools))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 ```
@@ -1125,7 +1128,6 @@ if ( tolower(params$norm) != "none" ) {
 invisible(dev.off())
 ```
 
-
 ```{r library_size_norm_plot, comment = NA, message=FALSE, warning=FALSE, echo = TRUE, fig.width = 8, fig.height = 3, results="asis"}
 suppressMessages(library(plotly))
 
@@ -1165,10 +1167,51 @@ batch_rm_status <- FALSE
 
 ##### Perform batch-effect correctrion using limma
 if ( length(unique(batches)) > 1 ) {
-  if ( params$batch_rm ) {
+  if ( params$batch_rm == "limma" ) {
     datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
     
+  } else if ( params$batch_rm == "combat" ) {
+
+    ##### Adjusting data for batch effects using ComBat. As default, parametric adjustments are used
+    #####  Create model matrix for outcome of interest and other covariates besides batch
+    f.model <- factor(targetFile$Target, levels = levels(factor(targetFile$Target)))
+    
+    if ( length(levels(f.model))>1 ) {
+      mod <- model.matrix(~f.model)
+    } else {
+      mod = NULL
+    }
+    
+    #####  Create an environment and assign target categories (covariates) to samples from each batch
+    batchenv<-new.env()
+    
+    for(i in 1:length(batches)) {
+      batchenv[[ batches[i] ]] <- c(batchenv[[ batches[i] ]],f.model[i])
+    }
+    
+    #####  Check whether any of known batches are confounded with any of specified covariates ( problem affecting design matrix discussed at glokbase forum: http://grokbase.com/t/r/bioconductor/138km86v3q/bioc-fwd-combat-error-in-solve-default-t-design-design-lapack-routine-dgesv-system-is-exactly-singular )
+    for(i in 1:length(ls(batchenv))) {
+      
+      #####  If any of the covariates are confounded with any batch then stop the analysis
+      if ( length(unique(batchenv[[ls(batchenv)[i]]])) == 1 ) {
+        
+        cat("Data combinationed stopped due to presence of covariates which seem to be confounded with one of the provided batched" )
+        q()
+      }
+    }
+    
+    ##### Adjusting data for batch effects using ComBat
+    if ( params$batch_par ) {
+      ##### Generate prior plots to assess if parametric or nonparametric adjustments should be used in ComBat. If the red (parametric estimate of the empirical batch effect density) and black (kernel estimate of the empirical batch effect density) lines don't match up well, use the nonparametric ajustments
+      png(paste0(params$output_dir, "/", params$results_name,".Combat_PriorPlot.png"), pointsize = 12, bg = "transparent")
+      datasets.list[[dataset]][["batch_effect_corrected"]] = ComBat(dat=as.matrix(datasets.list[[dataset]][["combined_data_processed"]]), batch=batches, mod=mod, par.prior=params$batch_par, prior.plots=TRUE)
+      dev.off()
+    } else {
+      datasets.list[[dataset]][["batch_effect_corrected"]] = ComBat(dat=as.matrix(datasets.list[[dataset]][["combined_data_processed"]]), batch=batches, mod=mod, par.prior=params$batch_par, prior.plots=FALSE)
+    }
+    
     batch_rm_status <- TRUE
+    
   } else {
     datasets.list[[dataset]][["batch_effect_corrected"]] <- datasets.list[[dataset]][["combined_data_processed"]]
   }
@@ -1185,7 +1228,11 @@ write.table(prepare2write(rownames(datasets.list[[dataset]][["batch_effect_corre
 
 `r if ( batch_rm_status ) { c("***") }`
 
-`r if ( batch_rm_status ) { c("## Batch-effects correction") }`
+`r if ( batch_rm_status && params$batch_rm == "limma" ) { c("## Batch-effects correction") }`
+
+`r if ( batch_rm_status && params$batch_rm == "combat" ) { c("## Batch-effects correction {.tabset}") }`
+
+`r if ( batch_rm_status && params$batch_rm == "combat" ) { c("### PCA") }`
 
 `r if ( batch_rm_status ) { c("Scatter-plots of the first 2 principal components (PCs) constituting the primary source of variation in the data before and after batch effects correction. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.") }`
 
@@ -1207,6 +1254,17 @@ datasets.list[[dataset]][["pca_batch_effect_corrected"]][[2]]
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
+```
+
+
+`r if ( batch_rm_status && params$batch_rm == "combat" ) { c("***") }`
+
+`r if ( batch_rm_status && params$batch_rm == "combat" ) { c("### PCA") }`
+
+
+```{r prior_plot_batch_effect, comment = NA, message=FALSE, warning=FALSE, eval=batch_rm_status}
+##### Generate prior plots to assess if parametric or nonparametric adjustments should be used in ComBat. If the red (parametric estimate of the empirical batch effect density) and black (kernel estimate of the empirical batch effect density) lines don't match up well, use the nonparametric ajustments
+cat("![](",paste0(params$output_dir, "/", params$results_name,".Combat_PriorPlot.png"), ")", sep = "")
 ```
 
 ***
