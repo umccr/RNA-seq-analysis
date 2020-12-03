@@ -371,7 +371,7 @@ if ( ncol(data_NOISeq) > 10 ) {
 } else {
   explo.plot(saturation, toplot = 1, samples = 1:ncol(data_NOISeq))
   
-  pdf(paste0(saturation_dir, "/saturation_.pdf"))
+  pdf(paste0(saturation_dir, "/saturation.pdf"))
   explo.plot(saturation, toplot = 1, samples = 1:ncol(data_NOISeq))
   invisible(dev.off())
 }
