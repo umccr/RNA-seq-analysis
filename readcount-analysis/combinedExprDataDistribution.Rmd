@@ -447,7 +447,6 @@ DatasetInput=read.table(params$datasets,sep="\t", as.is=TRUE, header=TRUE, row.n
 input_dir <- paste(head(unlist(strsplit(params$datasets, split='/', fixed=TRUE)),-1), collapse = "/")
 
 ##### Extract info about target file for the first dataset
-fileInfo = strsplit(DatasetInput[,"Target_file"], split='/', fixed=TRUE)
 targetFile <- read.table(paste(input_dir, DatasetInput[1,"Target_file"], sep="/"), sep="\t", as.is=TRUE, header=TRUE)
 
 ##### Make sure that there are no duplciated samples in the target file
