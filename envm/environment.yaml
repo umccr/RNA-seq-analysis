@@ -21,6 +21,7 @@ dependencies:
         - r-tidyverse
         - bioconductor-edger
         - bioconductor-limma
+        - bioconductor-glimma
         - bioconductor-noiseq
         - bioconductor-preprocesscore
         - bioconductor-tximport
