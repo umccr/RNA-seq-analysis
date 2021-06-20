@@ -22,6 +22,7 @@ dependencies:
         - bioconductor-edger
         - bioconductor-limma
         - bioconductor-glimma
+        - bioconductor-edaseq
         - bioconductor-noiseq
         - bioconductor-preprocesscore
         - bioconductor-tximport
