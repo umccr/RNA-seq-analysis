@@ -21,7 +21,7 @@
 #   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be blank), (3) "Target" and (4) "Replicates" (may be blank)
 #   annotFeatures:Samples annotation features to be included on heatmaps. Default is "Target"
 #   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (default) and "TPM"
-#   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "sizeFactors" and "quantile" normalisation are used for TPM-transformed data. "None" (default) is available for both transformation methods
+#   norm:         Normalisation method. Currently, "TMM" (default),"TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "sizeFactors" and "quantile" normalisation are used for TPM-transformed data. "None" is available for both transformation methods
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (default) and "FALSE"
 #   filter_perc:  The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis. Default is 10
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
@@ -59,9 +59,9 @@ option_list = list(
               help="Samples annotation file"),
   make_option("--annotFeatures", action="store", default="Target", type='character',
               help="Samples annotation features to be included on heatmaps"),
-  make_option("--transform", action="store", default=NA, type='character',
+  make_option("--transform", action="store", default="CPM", type='character',
               help="Transformation method to be used when converting read counts"),
-  make_option("--norm", action="store", default=NA, type='character',
+  make_option("--norm", action="store", default="TMM", type='character',
               help="Normalisation method"),
   make_option("--filter", action="store", default=NA, type='character',
               help="Filtering out low expressed genes"),
