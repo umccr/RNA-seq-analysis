@@ -7,10 +7,10 @@ params:
   exprFile: 
   annotFile: 
   annotFeatures: 'Target'
-  transform: 'TPM'
+  transform: 'CPM'
   filter: TRUE
   filter_perc: 10
-  norm: 'quantile'
+  norm: 'TMM'
   log: TRUE
   output_dir: 
   results_name: 
@@ -689,42 +689,36 @@ if ( params$transform == "CPM" ) {
 }
 
 ##### Plot expression distribution of samples for unnormalised and normalised data
-par(mfrow=c(3,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
+par(mfrow=c(2,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
   
 ##### Unnormalised data
-boxplot(y$noNorm, col=targets.colour[[2]], main="", pch=".", las=2)
-title(main="Unnormalised data", ylab=params$transform)
+boxplot(y$noNorm, col=targets.colour[[2]], main="Unnormalised data", pch=".", las=2, ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
   
-  boxplot(y$norm, col=targets.colour[[2]], main="", pch=".", las=2)
-  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+  boxplot(y$norm, col=targets.colour[[2]], main=paste0("Normalised data (", params$norm, ")"), pch=".", las=2, ylab=params$transform)
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-  
-  plot(y$noNorm, y$norm, col=targets.colour[[2]], main="", pch=".", las=2, title(main=paste0("Unmormalised vs normalised data (", params$norm, ")")), xlab=params$transform, ylab=paste0(params$transform, " (", params$norm, ")"))
-  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
 }
 
 ##### Save the plot as pdf file
-pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
-par(mfrow=c(3,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=16)
+par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
 ##### Unnormalised data
-boxplot(y$noNorm, col=targets.colour[[2]], main="", pch=".", las=2)
-title(main="Unnormalised data", ylab=params$transform)
+boxplot(y$noNorm, col=targets.colour[[2]], main="Unnormalised data", pch=".", las=2, ylab=params$transform)
 legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
 ##### Normalised data
 if ( tolower(params$norm) != "none" ) {
   
-  boxplot(y$norm, col=targets.colour[[2]], main="", pch=".", las=2)
-  title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
+  boxplot(y$norm, col=targets.colour[[2]], main=paste0("Normalised data (", params$norm, ")"), pch=".", las=2, ylab=params$transform)
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
   
-  #plot(y$noNorm, y$norm, col=targets.colour[[2]], main="", pch=".", las=2, title(main=paste0("Unmormalised vs normalised data (", params$norm, ")")), xlab=params$transform, ylab=paste0(params$transform, " (", params$norm, ")"))
-  #legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
+  par(mfrow=c(2,1), mar=c(3, 5, 3, 2))
+  plot(y$noNorm, y$norm, col=targets.colour[[2]], main=paste0("Unmormalised vs normalised data"), pch=".", las=2, xlab=params$transform, ylab=paste0(params$transform, " + ", params$norm, ""))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
 }
 invisible(dev.off())
 
@@ -751,6 +745,22 @@ invisible(dev.off())
 # ##### Save the box-plot as html
 # saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.html")))
 ########################################################
+```
+
+```{r unnorm_vs_norm_plot, comment = NA, message=FALSE, warning=FALSE, echo = TRUE, fig.width = 8, fig.height = 5, results="asis"}
+##### Generate plot comparing unnormalised vs normalised data
+if ( tolower(params$norm) != "none" ) {
+  
+  cat("\n<details>\n")
+  cat("\n<summary>Unnormalised vs normalised data plot</summary>\n")
+  cat("<font size=\"2\">\n")
+  
+  plot(y$noNorm, y$norm, col=targets.colour[[2]], main=paste0("Unmormalised vs normalised data"), pch=".", las=2, xlab=params$transform, ylab=paste0(params$transform, " (", params$norm, ")"))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
+  
+  cat("\n</font>\n")
+  cat("\n</details>\n")
+}
 ```
 
 ```{r library_size_norm_plot, comment = NA, message=FALSE, warning=FALSE, echo = TRUE, fig.width = 8, fig.height = 3, results="asis"}
@@ -935,6 +945,30 @@ if ( length(targetFile$Target) > 2 ) {
 
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
+```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
+
+***
+
+### RLE
+
+The relative log expression (RLE) plot is a useful diagnostic plot to visualize the differences between the distributions of read counts across samples. It shows boxplots of the log-ratios of the gene-level read counts of each sample to those of a reference sample (defined as the median across the samples). Ideally, the distributions should be centered around the zero line and as tight as possible. Clear deviations indicate the need for normalisation and/or the presence of outlying samples.
+
+```{r RLE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+if ( length(targetFile$Target) > 2 ) {
+  
+  par(mar=c((max(nchar(colnames(y$norm)))+3)/2, 5, 3, 2))
+  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_RLE.pdf")), width=8, height=8)
+  par(mar=c(max(nchar(colnames(y$norm)))/2, 5, 3, 2))
+  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  invisible(dev.off())
+}
 ```
 
 `r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
