@@ -24,6 +24,8 @@ dependencies:
         - bioconductor-glimma
         - bioconductor-edaseq
         - bioconductor-noiseq
+        - bioconductor-clusterprofiler
+        - bioconductor-pathview
         - bioconductor-preprocesscore
         - bioconductor-tximport
         - bioconductor-rhdf5
