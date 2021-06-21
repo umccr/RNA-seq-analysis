@@ -71,6 +71,7 @@ set.seed(seed)
 ### Load libraries
 suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
+suppressMessages(library(EDASeq))
 suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(NOISeq))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
@@ -686,9 +687,9 @@ if ( params$transform == "CPM" ) {
     }
   }
 }
- 
+
 ##### Plot expression distribution of samples for unnormalised and normalised data
-par(mfrow=c(2,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
+par(mfrow=c(3,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
   
 ##### Unnormalised data
 boxplot(y$noNorm, col=targets.colour[[2]], main="", pch=".", las=2)
@@ -701,11 +702,14 @@ if ( tolower(params$norm) != "none" ) {
   boxplot(y$norm, col=targets.colour[[2]], main="", pch=".", las=2)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-}
   
+  plot(y$noNorm, y$norm, col=targets.colour[[2]], main="", pch=".", las=2, title(main=paste0("Unmormalised vs normalised data (", params$norm, ")")), xlab=params$transform, ylab=paste0(params$transform, " (", params$norm, ")"))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
+}
+
 ##### Save the plot as pdf file
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=14)
-par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
+par(mfrow=c(3,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
   
 ##### Unnormalised data
 boxplot(y$noNorm, col=targets.colour[[2]], main="", pch=".", las=2)
@@ -718,9 +722,12 @@ if ( tolower(params$norm) != "none" ) {
   boxplot(y$norm, col=targets.colour[[2]], main="", pch=".", las=2)
   title(main=paste0("Normalised data (", params$norm, ")"), ylab=params$transform)
   legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+  #plot(y$noNorm, y$norm, col=targets.colour[[2]], main="", pch=".", las=2, title(main=paste0("Unmormalised vs normalised data (", params$norm, ")")), xlab=params$transform, ylab=paste0(params$transform, " (", params$norm, ")"))
+  #legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
 }
 invisible(dev.off())
-  
+
 # #######################################################
 # ##### Prepare expression data frame for plotting in plotly by adding samples annotation and converting the matrix into two column data frame
 # ##### Un-normalised cpm data
@@ -849,7 +856,6 @@ if ( length(targetFile$Target) > 2 ) {
   saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_3d.html")))
   
   p
-  
 }
 ```
 
