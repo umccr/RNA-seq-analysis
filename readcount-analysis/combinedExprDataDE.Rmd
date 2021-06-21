@@ -1,0 +1,1343 @@
+---
+title: "Differential expression analysis"
+author: "UMCCR"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+params:
+  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/in-house/Avner_Birinapant/Combined_data'
+  exprFile: 'Avner_Birinapant_Organoid.counts.matrix.txt'
+  annotFile: 'Avner_Birinapant_Organoid_Target.txt'
+  annotFeatures: 'Target,Subject,Timestamp'
+  output_dir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/in-house/Avner_Birinapant/Combined_data/Avner_Birinapant_Organoid_DE_adjP'
+  transform: 'CPM'
+  norm: 'TMM'
+  batch_rm: FALSE
+  filter: TRUE
+  filter_perc: 15
+  log: TRUE
+  top_genes: 500
+  ensembl: TRUE
+  results_name: 'Avner_Birinapant_Organoid_DE'
+  lfcThreshold: 2
+  adjMethod: "BH"
+  pThreshold: 0.05
+  ref_data_dir: '../data'
+  grch_version: 37
+  ensembl_version: 75
+  seed: 99999999
+  hide_code_btn: TRUE
+output:
+  html_document:
+    keep_md: yes
+    code_download: true
+    code_folding: hide
+    theme: readable
+    toc: true
+    toc_float: true
+  rmdformats::material:
+    highlight: kate
+---
+
+Report presenting eifferential expression analysis results. The data processing includes filtering out genes with low counts `r if ( !params$filter ) { c("(this step is skipped)") }`, transformation (`r params$transform` method, `r if ( !params$log ) { c("with no log-transformation") } else if ( params$log ) { c("followed by log2-transformation") }`), and  normalisation (`r params$norm`). The pipeline is based on recommendations from *[RNAseq123](https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html){target="_blank"}* package.
+
+```{r seed}
+##### Set the seed
+if ( params$seed == 99999999 ) {
+  seed <- sample(0:99999999, 1, replace = TRUE)
+} else {
+  seed <- params$seed
+}
+
+set.seed(seed)
+```
+
+<details>
+<summary>Input parameters</summary>
+<font size="2">
+
+* **exprDir**: `r params$exprDir`
+* **exprFile**: `r params$exprFile`
+* **annotFile**: `r params$annotFile`
+* **transform**: `r params$transform`
+* **filter**: `r params$filter`
+* **filter_perc**: `r params$filter_perc`
+* **norm**: `r params$norm`
+* **log**: `r params$log`
+* **output_dir**: `r params$output_dir`
+* **top_genes**: `r params$top_genes`
+* **grch_version**: `r params$grch_version`
+* **ensembl_version**: `r params$ensembl_version`
+* **seed**: `r seed`
+
+</font> 
+</details>
+
+```{r load_libraries, warning=FALSE}
+### Load libraries
+suppressMessages(library(preprocessCore))
+suppressMessages(library(DT))
+suppressMessages(library(edgeR))
+suppressMessages(library(EDASeq))
+suppressMessages(library(limma))
+suppressMessages(library(Glimma))
+suppressMessages(library(ComplexHeatmap))
+suppressMessages(library(preprocessCore))
+suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
+suppressMessages(library(htmltools))
+```
+
+```{r code_display, echo = FALSE}
+##### Include or exclude the "Code" buttom allowing to "show"/"hide" code chunks from the report 
+if ( params$hide_code_btn ) {
+  writeLines(".btn { display: none ;", con = "combinedExprDE.css")
+} else {
+  writeLines(" ", con = "combinedExprDE.css")
+}
+```
+
+```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
+### Define functions
+##### Create 'not in' operator
+"%!in%" <- function(x,table) match(x,table, nomatch = 0) == 0
+
+##### Assign colours to different groups
+getTargetsColours <- function(targets) {
+  
+##### Predefined selection of colours for groups
+targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue", "coral", "cornflowerblue", "chartreuse4", "bisque4", "chocolate3", "cadetblue3", "darkslategrey", "lightgoldenrod4", "mediumpurple4", "orangered3","indianred1","blueviolet","darkolivegreen4","darkgoldenrod4","firebrick3","deepskyblue4", "coral3", "dodgerblue1", "chartreuse3", "bisque3", "chocolate4", "cadetblue", "darkslategray4", "lightgoldenrod3", "mediumpurple3", "orangered1")
+  f.targets <- factor(targets)
+  vec.targets <- targets.colours[1:length(levels(f.targets))]
+  targets.colour <- rep(0,length(f.targets))
+  for(i in 1:length(f.targets))
+    targets.colour[i] <- vec.targets[ f.targets[i]==levels(f.targets)]
+  
+  return( list(vec.targets, targets.colour) )
+}
+##### Calculate TPM from RPKM (from http://luisvalesilva.com/datasimple/rna-seq_units.html )
+tpm_from_rpkm <- function(x) {
+  rpkm.sum <- colSums(x)
+  return(t(t(x) / (1e-06 * rpkm.sum)))
+}
+
+##### A wrapper to saveWidget which compensates for arguable BUG in saveWidget which requires `file` to be in current working directory (see post https://github.com/ramnathv/htmlwidgets/issues/299 )
+saveWidgetFix <- function ( widget, file, ...) {
+  wd<-getwd()
+  on.exit(setwd(wd))
+  outDir<-dirname(file)
+  file<-basename(file)
+  setwd(outDir);
+  htmlwidgets::saveWidget(widget,file=file,...)
+}
+```
+
+```{r load_data, message=FALSE, warning=FALSE}
+##### Read in expression data and associated sample annotation files
+data <- read.table(paste(params$exprDir, params$exprFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE, row.names = 1)
+targetFile <- read.table(paste(params$exprDir, params$annotFile, sep="/"), sep="\t", as.is=TRUE, header=TRUE)
+
+##### Make sure that there are no duplciated samples in the target file
+targetFile <- targetFile[!duplicated(targetFile[,"Sample_name"]),]
+rownames(targetFile) <- targetFile[,"Sample_name"]
+
+##### Make syntactically valid names
+colnames(data) <- make.names(colnames(data))
+rownames(targetFile) <- make.names(rownames(targetFile))
+
+##### Make sure that the target file contains info only about samples present in the data matrix
+targetFile <- targetFile[ rownames(targetFile) %in% colnames(data),  ]
+
+##### Make sure that the samples order in the data matrix is the same as in the target file. If the expression matrix contains data for additional samples then write the data subset (containing only samples from the target file) into a file
+if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
+  
+  data <- data[ , rownames(targetFile) ]
+
+  ##### Save data subset into a file
+  write.table(data, file=paste0(params$output_dir, "/", paste0(params$exprFile, ".subset.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+} else {
+  data <- data[ , rownames(targetFile) ]
+}
+
+##### Set up annotation features to be used for plots
+annotFeatures <- unique(c("Target", unlist(strsplit(params$annotFeatures, split=',', fixed=TRUE))))
+```
+
+`r c(paste0("In total **", ncol(data), "** samples were analysed."))`
+
+***
+
+## Library size
+
+Bar-plot illustrating library size for each sample.
+
+```{r library_size_plot, message = FALSE, warning=FALSE, fig.width = 12, fig.height = 9}
+suppressMessages(library(plotly))
+##### Generate bar-plot for library size. The colours indicate sample groups, as provided in *Target* column in the sample annotation file
+
+##### Assigne colours to targets and datasets
+targets.colour <- getTargetsColours(targetFile$Target)
+
+##### Prepare data frame
+data.df <- data.frame(targetFile$Target, colnames(data), as.numeric(colSums(data)*1e-6))
+colnames(data.df) <- c("Group","Sample", "Library_size")
+
+##### The default order will be alphabetized unless specified as below
+data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
+p <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 800, height = 400) %>%
+  layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+
+##### Print htmlwidget
+p
+
+##### Save the bar-plot as html (PLOTLY)
+saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_libSize.html")))
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+***
+
+## Data transformation and filtering
+
+The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
+
+```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
+##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
+##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
+##### CPM transformation and filtering
+
+if ( params$filter && params$transform == "CPM" ) {
+  
+  ##### Create EdgeR DGEList object
+  y <- edgeR::DGEList(counts=data)
+  
+  ##### Keep genes with CPM of at least 1 in more than user-defined percentage of samples
+  #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
+  
+  keep <- rowSums(cpm(y)>1) >= ncol(data)*params$filter_perc/100
+  y$filtered <- y[keep, , keep.lib.sizes=FALSE]
+  
+  #cat(nrow(y$filtered$counts), "genes remained after filtering out of the", nrow(data), "genes in the input read count matrix\n\n")
+  
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  y$filtered.transformed <- edgeR::cpm(y$filtered, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  
+##### CPM transformation without filtering
+} else if ( !params$filter && params$transform == "CPM" ) {
+  
+  ##### Create EdgeR DGEList object
+  y <- edgeR::DGEList(counts=data,  group=targetFile$Target)
+  
+  ##### Transform the raw-scale to CPM. Add small offset to each observation to avoid taking log of zero
+  y$transformed <- edgeR::cpm(y, normalized.lib.sizes=FALSE, log=params$log, prior.count=0.25)
+  
+##### TPM data transformation. We can convert RPKM to TPM in two different ways: from pre-calculated RPKM, by diving by the sum of RPKM values, or directly from the normalized counts. Here we calculate TPM starting from RPKM values computed using edgeR's rpkm function ( from http://luisvalesilva.com/datasimple/rna-seq_units.html )
+##### TPM transformation with filtering
+} else if ( params$filter && params$transform == "TPM" ) {
+  
+  ##### Get genes lengths
+  edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  gene.length <- lengthOf(edb, filter = GeneIdFilter(rownames(data)))
+  
+  ##### Check for which genes the lenght info is not available and remove them from the data
+  genes.no_length <- rownames(data)[ rownames(data) %!in% names(gene.length)]
+  data <- data[ rownames(data) %!in% genes.no_length, ]
+  
+  ##### Create EdgeR DGEList object
+  y <- edgeR::DGEList(counts=data)
+  
+  ##### Convert data into RPKM
+  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+  
+  ##### Keep genes with TPM of at least 0.2 in more than user-defined of samples
+  keep <- rowSums(y$transformed>0.2) >= ncol(data)*params$filter_perc/100
+  y$filtered <- y$counts[keep, ]
+  y$filtered.transformed <- y$transformed[keep, ]
+
+  if ( params$norm == "sizeFactors" ) {
+    sizeFactors <- edgeR::equalizeLibSizes(y, dispersion=NULL, log=FALSE)
+    y$norm <- edgeR::rpkm(sizeFactors$pseudo.counts, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+    
+    ##### Keep genes with RPKM of at least 0.2 in more than user-defined of samples
+    y$norm <- y$norm[keep, ]
+  }
+  
+  ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
+  if ( params$log ) {
+    
+    y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
+    y$filtered.transformed <- log2(tpm_from_rpkm(y$filtered.transformed+0.25))
+  
+    if ( params$norm == "sizeFactors" ) {
+      y$norm <- log2(tpm_from_rpkm(y$norm+0.25))
+    }
+    
+  } else {
+    y$transformed <- tpm_from_rpkm(y$transformed)
+    y$filtered.transformed <- tpm_from_rpkm(y$filtered.transformed)
+  }
+  
+##### TPM transformation without filtering
+} else if ( !params$filter && params$transform == "TPM" ) {
+  
+  ##### Get genes lengths
+  edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  gene.length <- lengthOf(edb, filter = GeneIdFilter(rownames(data)))
+  
+  ##### Check for which genes the lenght info is not available and remove them from the data
+  genes.no_length <- rownames(data)[ rownames(data) %!in% names(gene.length)]
+  data <- data[ rownames(data) %!in% genes.no_length, ]
+  
+  ##### Create EdgeR DGEList object
+  y <- edgeR::DGEList(counts=data)
+  
+  ##### Convert data into RPKM
+  y$transformed <- edgeR::rpkm(y, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+  
+  if ( params$norm == "sizeFactors" ) {
+    sizeFactors <- edgeR::equalizeLibSizes(y, dispersion=NULL, log=FALSE)
+    y$norm <- edgeR::rpkm(sizeFactors$pseudo.counts, gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
+  }
+  
+  ##### ... and then to TPM scale. Add small offset to each observation to avoid taking log of zero
+  if ( params$log ) {
+    
+    y$transformed <- log2(tpm_from_rpkm(y$transformed+0.25))
+    
+    if ( params$norm == "sizeFactors" ) {
+      y$norm <- log2(tpm_from_rpkm(y$norm+0.25))
+    }
+    
+  } else {
+    y$transformed <- tpm_from_rpkm(y$transformed)
+  }
+}
+```
+
+```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+##### Collect the most extreme density values for set the x-axis and y-axis boundaries
+den.x <- density(y$transformed[,1])$x
+den.y <- density(y$transformed[,1])$y
+  
+for (i in 2:ncol(y$transformed)) {
+    
+  den <- density(y$transformed[,i])
+  den.x <- sort(c(den.x, den$x))
+  den.y <- sort(c(den.y, den$y))
+}
+
+if ( params$filter ) {
+
+  par(mfrow=c(1,2))
+  
+  ##### Before filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### After filtering
+  plot(density(y$filtered.transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed and filtered data", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$filtered.transformed)){
+    den <- density(y$filtered.transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  par(mfrow=c(1,2))
+  
+  ##### Before filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### After filtering
+  plot(density(y$filtered.transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed and filtered data", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$filtered.transformed)){
+    den <- density(y$filtered.transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  invisible(dev.off())
+  
+} else {
+  
+  ##### Without filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_filtering.pdf")), width=8, height=5)
+  ##### Without filtering
+  plot(density(y$transformed[,1]), lwd=2, xlim=c(den.x[1],den.x[length(den.x)]), ylim=c(den.y[1],den.y[length(den.y)]), las=2, main="", xlab="", col=targets.colour[[2]][1])
+  title(main="Transformed data (unfiltered)", xlab=params$transform)
+  abline(v=0, lty=3)
+  
+  for (i in 2:ncol(y$transformed)){
+    den <- density(y$transformed[,i])
+    lines(den$x, den$y, lwd=2, col=targets.colour[[2]][i])
+  }
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], bty="n", bg = "transparent")
+  invisible(dev.off())
+}
+```
+
+***
+
+## Data normalisation
+
+`r if ( tolower(params$norm) == "none" ) { c("No normalisation is performed") } else { c(paste0("During the sample preparation or sequencing process, external factors that are not of biological interest can affect the expression of individual samples. For example, samples processed in the first batch of an experiment can have higher expression overall when compared to samples processed in a second batch. It is assumed that all samples should have a similar range and distribution of expression values. Normalisation for sample-specific effects is required to ensure that the expression distributions of each sample are similar across the entire experiment. Normalisation is performed using ", params$norm, " method")) }`. 
+
+`r if ( tolower(params$norm) != "none" ) { c(paste0("Box-plots below present ", params$transform, " data for individual samples, coloured by sample groups, before and after ", params$norm, " normalisation.")) }`
+
+```{r data_normalisation_unnorm_vs_norm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 16}
+##### TMM normalsation. Trimmed mean of M-values (https://www.ncbi.nlm.nih.gov/pubmed/20196867) (TMM) is performed using the calcNormFactors function in edgeR. The normalisation factors calculated here are used as a scaling factor for the library sizes. TMM is the recommended for most RNA-Seq data where the majority (more than half) of the genes are believed not differentially expressed between any pair of the samples. It adjusts for RNA composition effect, calculates scaling factors for the library sizes with calcNormFactors function using trimmed mean of M-values (TMM) between each pair of samples. Note, that the raw read counts are used to calculate the normalisation factors
+
+if ( params$transform == "CPM" ) {
+  
+  ##### Calculate normalization factors and  transformations from the raw-scale to CPM and normalisation using user-defined method
+  if ( params$filter ) {
+    
+    y$noNorm <- y$filtered.transformed
+    y$filtered$samples["norm.factors"] <- edgeR::calcNormFactors(y$filtered, method = params$norm)$samples["norm.factors"]
+    y$norm <- edgeR::cpm(y$filtered, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  
+  } else {
+    
+    y$noNorm <- y$transformed
+    y$samples["norm.factors"] <- edgeR::calcNormFactors(y, method = params$norm)$samples["norm.factors"]
+    y$norm <- edgeR::cpm(y, normalized.lib.sizes=TRUE, log=params$log, prior.count=0.25)
+  }
+  
+##### Quantile normalsation (from https://www.biostars.org/p/296992/ )
+} else if ( params$transform == "TPM" ) {
+  
+  ##### Normalisation using quantile method
+  if ( params$filter ) {
+    
+    y$filtered.transformed <- data.matrix(y$filtered.transformed) 
+    y$noNorm <- y$filtered.transformed
+    
+    if ( params$norm != "sizeFactors" ) {
+      if ( tolower(params$norm) != "none" ) {
+        
+        y$norm  <- normalize.quantiles(y$filtered.transformed, copy = TRUE)
+        colnames(y$norm) <- colnames(y$filtered.transformed)
+        rownames(y$norm) <- rownames(y$filtered.transformed)
+        
+      } else {
+        y$norm  <- y$filtered.transformed
+      }
+    } 
+  } else {
+    
+    y$noNorm <- y$transformed
+    y$transformed <- data.matrix(y$transformed)
+    
+    if ( params$norm != "sizeFactors" ) {
+      if ( tolower(params$norm) != "none" ) {
+        
+        y$norm  <- normalize.quantiles(y$transformed, copy = TRUE)
+        colnames(y$norm) <- colnames(y$transformed)
+        rownames(y$norm) <- rownames(y$transformed)
+        
+      } else {
+        y$norm  <- y$transformed
+      }
+    }
+  }
+}
+
+##### Plot expression distribution of samples for unnormalised and normalised data
+par(mfrow=c(2,1), mar=c((max(nchar(colnames(y$noNorm)))+3)/2, 5, 3, 2))
+  
+##### Unnormalised data
+boxplot(y$noNorm, col=targets.colour[[2]], main="Unnormalised data", pch=".", las=2, ylab=params$transform)
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+##### Normalised data
+if ( tolower(params$norm) != "none" ) {
+  
+  boxplot(y$norm, col=targets.colour[[2]], main=paste0("Normalised data (", params$norm, ")"), pch=".", las=2, ylab=params$transform)
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+}
+
+##### Save the plot as pdf file
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_normalisation.pdf")), width=8, height=16)
+par(mfrow=c(2,1), mar=c(max(nchar(colnames(y$noNorm)))/2, 5, 3, 2))
+  
+##### Unnormalised data
+boxplot(y$noNorm, col=targets.colour[[2]], main="Unnormalised data", pch=".", las=2, ylab=params$transform)
+legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+##### Normalised data
+if ( tolower(params$norm) != "none" ) {
+  
+  boxplot(y$norm, col=targets.colour[[2]], main=paste0("Normalised data (", params$norm, ")"), pch=".", las=2, ylab=params$transform)
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+  par(mfrow=c(2,1), mar=c(3, 5, 3, 2))
+  plot(y$noNorm, y$norm, col=targets.colour[[2]], main=paste0("Unmormalised vs normalised data"), pch=".", las=2, xlab=params$transform, ylab=paste0(params$transform, " + ", params$norm, ""))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
+}
+invisible(dev.off())
+
+# #######################################################
+# ##### Prepare expression data frame for plotting in plotly by adding samples annotation and converting the matrix into two column data frame
+# ##### Un-normalised cpm data
+# y$transformed.df <- as.data.frame(cbind(rep(rownames(y$transformed), ncol(y$transformed)), rep(colnames(y$transformed), each=nrow(y$transformed)), rep(as.vector(y$filtered$samples$group), each=nrow(y$transformed)), as.numeric(y$transformed)))
+# colnames(y$transformed.df) <- c("Gene", "Sample", "Group", "cpm")
+# 
+# ##### Normalised cpm data
+# y$norm.transformed.df <- as.data.frame(cbind(rep(rownames(y$norm.transformed), ncol(y$norm.transformed)), rep(colnames(y$norm.transformed), each=nrow(y$norm.transformed)), rep(as.vector(y$norm$samples$group), each=nrow(y$norm.transformed)), as.numeric(y$norm.transformed)))
+# colnames(y$norm.transformed.df) <- c("Gene", "Sample", "Group", "cpm")
+# 
+# 
+# p <- plot_ly(width = 800, height = 600) 
+# 
+# for ( i in 1:12 ) {
+#  p <- add_trace(p, y = y$transformed[,i], type = 'box', name = colnames(y$transformed)[i], jitter = 0.3, pointpos = 0, boxpoints = 'outliers',
+#         marker = list(color = 'rgb(9,56,125)'),
+#         line = list(color = 'rgb(9,56,125)'),
+#         showlegend=FALSE)
+#   }
+# 
+# ##### Save the box-plot as html
+# saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_", params$transform, "_", params$norm, "_normalisation.html")))
+########################################################
+```
+
+```{r unnorm_vs_norm_plot, comment = NA, message=FALSE, warning=FALSE, echo = TRUE, fig.width = 8, fig.height = 5, results="asis"}
+##### Generate plot comparing unnormalised vs normalised data
+if ( tolower(params$norm) != "none" ) {
+  
+  cat("\n<details>\n")
+  cat("\n<summary>Unnormalised vs normalised data plot</summary>\n")
+  cat("<font size=\"2\">\n")
+  
+  plot(y$noNorm, y$norm, col=targets.colour[[2]], main=paste0("Unmormalised vs normalised data"), pch=".", las=2, xlab=params$transform, ylab=paste0(params$transform, " (", params$norm, ")"))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=FALSE, bg = "transparent", box.col="transparent")
+  
+  cat("\n</font>\n")
+  cat("\n</details>\n")
+}
+```
+
+```{r library_size_norm_plot, comment = NA, message=FALSE, warning=FALSE, echo = TRUE, fig.width = 8, fig.height = 3, results="asis"}
+suppressMessages(library(plotly))
+
+lib_size_plot <- list()
+
+##### Generate bar-plot for library size again if sizeFactors normalisation was used to see if it works
+if ( params$norm == "sizeFactors" ) {
+
+  ##### Prepare data frame
+  data.df <- data.frame(targetFile$Target, colnames(y$norm), as.numeric(colSums(y$norm)*1e-6))
+  colnames(data.df) <- c("Group","Sample", "Library_size")
+    
+  ##### The default order will be alphabetized unless specified as below
+  data.df$Sample <- factor(data.df$Sample, levels = data.df[["Sample"]])
+  lib_size_plot[[1]] <- plot_ly(data.df, x = ~Sample, y = ~Library_size, color = ~Group, type = 'bar', colors = targets.colour[[1]], width = 800, height = 400) %>%
+    layout(title = "", xaxis = list( tickfont = list(size = 10), title = ""), yaxis = list(title = "Library size (millions)"), margin = list(l=50, r=50, b=150, t=50, pad=4), autosize = F, legend = list(orientation = 'v', y = 0.5), showlegend=TRUE)
+}
+
+if ( length(lib_size_plot) == 1 ) {
+  cat("\n<details>\n")
+  cat("\n<summary>Normalised library size plot</summary>\n")
+  cat("<font size=\"2\">\n")
+  cat(renderTags(lib_size_plot[[1]])$html)
+  
+  cat("\n</font>\n")
+  cat("\n</details>\n")
+  
+  ##### Save the bar-plot as html (PLOTLY)
+  saveWidgetFix(lib_size_plot[[1]], file = paste0(params$output_dir, "/", paste0(params$results_name, "_library_size_norm.html")), selfcontained = TRUE)
+}
+```
+
+***
+
+## Exploratory data analysis {.tabset .tabset-fade}
+
+### PCA {.tabset .tabset-fade}
+
+Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **`r params$top_genes` genes** with the highest expression variance across all samples were use for PCA.
+
+#### 2D plot
+
+Scatter plot of the first 2 principal components (PCs) constituting the primary source of variation in the data.
+
+```{r PCA_plot_2D, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+suppressMessages(library(plotly))
+##### Keep only genes with variance > 0 across all samples
+rsd <- apply(y$norm,1,sd)
+y$norm.subset <- y$norm[rsd>0,]
+rsd <- rsd[rsd>0]
+
+if ( nrow(y$norm.subset) < params$top_genes ) {
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(y$norm.subset)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
+}
+
+##### Subset genes
+y$norm.subset <- data.frame(y$norm.subset[sel,])
+
+##### Perform PCA
+y$norm.subset_pca <- prcomp(t(y$norm.subset), scale=FALSE)
+
+##### Get variance importance for all principal components
+importance_pca <- summary(y$norm.subset_pca)$importance[2,]
+importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
+names(importance_pca) <- names(summary(y$norm.subset_pca)$importance[2,])
+  
+##### Prepare data frame
+y$norm.subset_pca.df <- data.frame(targetFile$Target, y$norm.subset_pca$x[,"PC1"], y$norm.subset_pca$x[,"PC2"], y$norm.subset_pca$x[,"PC3"])
+colnames(y$norm.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+
+##### Generate PCA 2-D plot
+p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
+layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+p
+
+##### Save PCA plot as html
+saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_2d.html")))
+```
+
+***
+
+#### 3D plot
+
+Scatter plot of the first 3 principal components (PCs) constituting the primary source of variation in the data.
+
+```{r PCA_plot_3D, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Generate PCA 3-D plot
+p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
+layout(title = "", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
+
+p
+
+##### Save PCA plot as html
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_3d.html")))
+```
+
+***
+
+#### Pariwise plot
+
+Scatter plots for all combinations between the first 5 principal components (PCs) to help determine which PCs explain the biological and/or potential batch effects.
+
+```{r PCA_pairwise_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Plot all combinations between the first 5 PCs
+##### Preapre colours for plot exis
+axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
+p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
+  plot_ly(width = 800, height = 800) %>%
+  add_trace( type = 'splom', dimensions = list(
+      list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+    ),
+  text=paste(targetFile$Target, rownames(y$norm.subset_pca$x), sep=": "),
+    marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
+    )
+  ) %>%
+  layout(
+    title= "",
+    hovermode="closest",
+    plot_bgcolor="rgba(240,240,240, 0.95)",
+    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
+)
+
+p
+
+##### Save pairwise PCA plot as html
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.html")))
+
+##### Plot all combinations between the first 5 PCs
+#pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+##### Save the plot as pdf file
+#pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
+#pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+#invisible(dev.off())
+```
+
+***
+
+#### Scree plot
+
+Scree plot presenting the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance. 
+
+```{r Scree_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+##### Generate scree plot
+##### Prepare data frame
+y$norm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
+colnames(y$norm.subset_scree.df) <- c("PC", "Variances")
+
+##### The default order will be alphabetized unless specified as below
+y$norm.subset_scree.df$PC <- factor(y$norm.subset_scree.df$PC, levels = y$norm.subset_scree.df[["PC"]])
+p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+
+p
+
+##### Save scree plot as html
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_scree_plot.html")))
+
+
+glMDSPlot(y$norm, launch=FALSE)
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+***
+
+### RLE
+
+The relative log expression (RLE) plot is a useful diagnostic plot to visualize the differences between the distributions of read counts across samples. It shows boxplots of the log-ratios of the gene-level read counts of each sample to those of a reference sample (defined as the median across the samples). Ideally, the distributions should be centered around the zero line and as tight as possible. Clear deviations indicate the need for normalisation and/or the presence of outlying samples.
+
+```{r RLE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+if ( length(targetFile$Target) > 2 ) {
+  
+  par(mar=c((max(nchar(colnames(y$norm)))+3)/2, 5, 3, 2))
+  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_RLE.pdf")), width=8, height=8)
+  par(mar=c(max(nchar(colnames(y$norm)))/2, 5, 3, 2))
+  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  invisible(dev.off())
+}
+```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
+
+***
+
+### Heatmap {.tabset .tabset-fade}
+
+Heatmap presenting expression levels of **`r params$top_genes` genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
+
+```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
+##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
+data <- y$norm
+data.df <- as.data.frame(cbind(rownames(data), data))
+colnames(data.df)[1] <- "ENSEMBL"
+
+##### Get genes annotation and genomic locations
+edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+##### Get keytypes for gene SYMBOL
+keys <- keys(edb, keytype="GENEID")
+  
+##### Get genes genomic coordiantes
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENENAME"), keytype="GENEID")
+names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+  
+##### Limit genes annotation to those genes for which sample expression measurments are available
+gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
+  
+##### Remove rows with duplicated ENSEMBL IDs
+gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+rownames(gene_info) <- gene_info$ENSEMBL
+  
+##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+  
+##### Merge genes genomic coordinates info with their annotation and expression data
+data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+rownames(data.annot) <- data.annot$ENSEMBL
+
+##### Keep only genes for which gene symbol is available
+data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
+rownames(data.annot) <- data.annot$SYMBOL
+  
+##### Get data matrix with gene symbols
+data <- apply(data.annot[, colnames(data)], 2, as.numeric)
+rownames(data) <- data.annot$SYMBOL
+
+##### Also keep the annotated data for heatmaps
+data2plot <- data
+
+##### Clean the space
+rm(data.df, edb, keys)
+```
+
+```{r heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+##### Keep only genes with variance > 0 across all samples
+rsd <- apply(data2plot,1,sd)
+data.h <- data2plot[rsd>0,]
+rsd <- rsd[rsd>0]
+
+if ( nrow(data.h) < params$top_genes ) {
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(data.h)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
+}
+
+##### Subset genes
+data.h <- data.frame(data[sel,])
+
+##### Prepare heatmap annotation (samples)
+Target.col  <- targets.colour[[1]]
+names(Target.col) <- sort(unique(targetFile$Target))
+ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
+
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+
+##### Generate heatmap (complexHeatmap)
+if ( length(unique(targetFile$Target)) > 1 ) {
+  row_split <- length(unique(targetFile$Target))
+  column_split <- length(unique(targetFile$Target))
+} else {
+  row_split <- NULL
+  column_split <- NULL
+}
+
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+  
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+dev.off()
+```
+
+```{r heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+suppressMessages(library(heatmaply))
+
+##### Generate heatmap (PLOTLY)
+col_side_colors <- as.data.frame(targetFile[, "Target"])
+colnames(col_side_colors) <- "Target"
+
+col_side_palette <- targets.colour[[2]]
+names(col_side_palette) <- col_side_colors$Target
+
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+
+##### Save the heatmap as html (PLOTLY)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.html")), selfcontained = TRUE)
+
+detach("package:heatmaply", unload=FALSE)
+```
+
+***
+
+```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
+
+# WORK IN PROGRESS
+# Also the counts data should be corrected for batch effects as this data is to be used for DE analysis
+
+# IN edge R that kind of formula should be used  (see page 41 in https://www.bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf )
+# design <- model.matrix(~Batch+Treatment) 
+
+
+# Apply both LIMMA (lmFit and contrasts.fit; https://www.bioconductor.org/packages/devel/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html#differential-expression-analysis  ) and EDGER (glmQLFTest; https://www.bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf ) DE models
+# and then show overlap
+
+
+##### The strategy for correcting data for batch effects is to consider the investigated sample and internal reference cohort as one group (batch) (regardless of the investigated patient tissiu origin), and TCGA data (of any cancer type) as another batch. The objective is to remove as much as possible data variation due to technical factors.
+batches <- as.character(datasets.list[[dataset]][["sample_annot"]]$Dataset)
+
+##### Perform batch-effect correctrion using limma
+if ( length(unique(batches)) > 1 ) {
+  datasets.list[[dataset]][["batch_effect_corrected"]] <- limma::removeBatchEffect(datasets.list[[dataset]][["combined_data_processed"]], batch = batches)
+  
+  batch_rm_status <- params$batch_rm
+} else {
+  datasets.list[[dataset]][["batch_effect_corrected"]] <- datasets.list[[dataset]][["combined_data_processed"]]
+  batch_rm_status <- FALSE
+}
+
+##### Write combined data into a file
+write.table(datasets.list[[dataset]][["batch_effect_corrected"]], file = paste0(params$output_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=FALSE, append = FALSE )
+
+##### Write list genes into a file
+write.table(rownames(datasets.list[[dataset]][["batch_effect_corrected"]]), file = paste0(params$output_dir, "/", params$results_name,".combined_genes.txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+```
+
+`r if ( params$batch_rm ) { c("***") }`
+
+`r if ( params$batch_rm ) { c("## Batch-effects correction") }`
+
+`r if ( params$batch_rm ) { c("Scatter-plots of the first 2 principal components (PCs) constituting the primary source of variation in the data before and after batch effects correction. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.") }`
+
+```{r pca_batch_effect, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
+suppressMessages(library(plotly))
+
+##### Perform principal component analysis (PCA) using combined-only data and batch-effect corrected data
+##### Loop through combined datasets and perform PCA
+target <- datasets.list[[dataset]][["sample_annot"]]
+  
+datasets.list[[dataset]][["pca_combined_data_processed"]] <- pca(data=datasets.list[[dataset]][["combined_data_processed"]], targets=target)
+datasets.list[[dataset]][["pca_batch_effect_corrected"]] <- pca(data=datasets.list[[dataset]][["batch_effect_corrected"]], targets=target)
+
+#### Before batch-effects correction
+datasets.list[[dataset]][["pca_combined_data_processed"]][[2]]
+
+#### After batch-effects correction
+datasets.list[[dataset]][["pca_batch_effect_corrected"]][[2]]
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+
+***
+
+## Differential expression analysis {.tabset}
+
+<details>
+<summary>Parameters</summary>
+<font size="2">
+
+* log fold-change (logFC): **`r  params$lfcThreshold`**
+* p-value: **`r  params$pThreshold`**
+* transformation: **CPM**
+* normalisation: **TMM**
+
+`r if ( params$adjMethod=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using ", params$adjMethod, " method.")) }`
+
+</font> 
+</details>
+
+```{r DE_analysis_prep, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+##### Perform differential expression analysis
+targets <- targetFile$Target 
+
+if (length(unique(targets)) > 1) {
+	
+	cat(paste("There are", length(unique(targets)), "groups specified in this study. Perfroming differenatial expression analysis.\n"), sep=" ")
+} else {
+	cat("There is only one group specified in this study. No differential expression analysis will be performed!\n")
+	q()
+}
+
+
+##### Now annotate filtered count data with gene symbols
+data <- y$counts[ rownames(y$counts) %in% rownames(y$filtered.transformed), ]
+data.df <- as.data.frame(cbind(rownames(data), data))
+colnames(data.df)[1] <- "ENSEMBL"
+
+##### Get genes annotation and genomic locations
+edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+##### Get keytypes for gene SYMBOL
+keys <- keys(edb, keytype="GENEID")
+  
+##### Get genes genomic coordiantes
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENENAME"), keytype="GENEID")
+names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+  
+##### Limit genes annotation to those genes for which sample expression measurments are available
+gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
+  
+##### Remove rows with duplicated ENSEMBL IDs
+gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+rownames(gene_info) <- gene_info$ENSEMBL
+  
+##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+  
+##### Merge genes genomic coordinates info with their annotation and expression data
+data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+rownames(data.annot) <- data.annot$ENSEMBL
+
+##### Keep only genes for which gene symbol is available
+data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
+rownames(data.annot) <- data.annot$SYMBOL
+  
+##### Get data matrix with gene symbols
+data <- apply(data.annot[, colnames(data)], 2, as.numeric)
+rownames(data) <- data.annot$SYMBOL
+
+##### GEt DGEList object for annotated counts data
+DGEdata <- edgeR::DGEList(counts=data, genes=gene_info)
+
+##### Apply scale normalisation
+DGEdata <- edgeR::calcNormFactors(DGEdata, method = "TMM")
+
+#####  Create model matrix for outcome of interest
+f.model <- factor(targets, levels = levels(factor(targets)))
+mod <- model.matrix(~0 + f.model)
+colnames(mod) <- levels(factor(targets))
+
+##### Make sure that the comparisons names are valid
+colnames(mod) <- make.names(colnames(mod) )
+
+##### Clean the space
+rm(data.df, edb, keys)
+```
+
+```{r DE_model_fit, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+##### Removing heteroscedascity from count data using voom function
+##### Convert the read counts to log2-cpm, with associated weights, ready for linear modelling
+png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_voomPlot.png"), sep = ""))
+DGEdata.voom <- voom(DGEdata, mod, plot=TRUE)
+dev.off()
+
+#####  Add to the model relevant principle components to adjust the data for surrogate variables detected in PCA analysis -> divide this code to two parts, data combination and differential expression analysis to enable users to select PCs to be used to adjust the data for surrogate variables
+#data_pca$rotation
+#data_pca$sdev
+#mod = cbind(mod,data_pca$sdev)
+#mod <- model.matrix(~0 + f.model + data_pca$sdev)
+#colnames(mod) <- c(levels(factor(targets)),"PC1")
+
+#####  Fit linear model to combined data, given the above design
+if ( all(is.na(targetFile$Replicates)) || all(targetFile$Replicates == "-") ) {
+  fit <- lmFit(DGEdata.voom, mod)
+} else {
+  cat("Dealing with technical replicates...\n")
+    
+  biolrep <- targetFile$Replicates
+  biolrep[is.na(biolrep)] <- 0
+  maxRep <- max(biolrep)
+    
+  cumSum = maxRep
+  for (i in 1:length(biolrep)) {
+      if ( biolrep[i]==0 ) {
+          cumSum = cumSum+1
+          biolrep[i] <- cumSum
+      }
+  }
+    
+  corfit <- duplicateCorrelation(DGEdata.voom, design=mod, ndups = 1, block = biolrep)
+  fit <- lmFit(DGEdata.voom, mod, block = biolrep, cor = corfit$consensus)
+}
+
+
+##### Create matrix of possible comparisons
+##### Make sure that the comparisons names are valid
+comb <- make.names(levels(factor(targets)))
+comb <- combn(comb, 2)
+
+#####  Get number of possible comparisons using the following formula:
+#
+# n!/((n-r)!(r!))
+#
+# n = the number of classes to compare
+# r = the number of elements for single comparison
+#
+################################################################################
+
+targetsNo <- length(levels(factor(targets)))
+combNo <- factorial(targetsNo)/(factorial(targetsNo-2)*(factorial(2))) # n!/((n-r)!(r!))
+
+contrasts <- NULL
+contrastNames <- NULL
+
+#####  Create string with possible contrasts
+for (i in 1:combNo) {
+  contrasts <- c(contrasts, paste(paste(comb[1,i], comb[2,i], sep="vs"),paste(comb[1,i], comb[2,i], sep=" -"), sep="="))
+  contrastNames[i] <- paste(comb[1,i], comb[2,i], sep=" vs ")
+}
+contrasts <- paste(contrasts, collapse=", ")
+
+#####  Create contrasts of interest
+func = "makeContrasts"
+arguments = paste(contrasts, "levels=mod",sep=", ")
+
+contrast.matrix <- eval(parse(text = paste(func, "(", arguments, ")",sep="")))
+
+#####  Fit contrasts to linear model
+fitContrasts <- contrasts.fit(fit, contrast.matrix)
+
+#####  Apply empirical Bayes statistics
+eb <- eBayes(fitContrasts)
+
+png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_voomPlot_fitted.png"), sep = ""))
+plotSA(eb, main="Final model: Mean-variance trend")
+dev.off()
+```
+
+```{r DE_results, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+##### Differenatial expression analysis results visualisation
+for (i in 1:ncol(eb$p.value) ) {
+    
+  #####  P-value histograms
+  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_P_hist.png", sep=""), width = 6, height = 6, units = "in", res = 150)
+  histogram <- hist(eb$p.value[,i], breaks=seq(0,1,by= 0.01), main=contrastNames[i], xlab="p-value")
+  exprected_p.value <- mean(histogram$counts)+(sd(histogram$counts)*1)
+  abline(v=params$pThreshold,col="red")
+  abline(h=exprected_p.value,col="blue")
+  dev.off()
+  
+  
+  #####  Volcano plots of log2 fold-changes versus significance (adjusted p-values, +label top 10)
+  topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod, sort.by="none", number=nrow(DGEdata.voom))
+  
+  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_volcano_plot", ".png", sep = ""), width = 6, height = 6, units = "in", res = 150)
+  plot(topGenes[,"logFC"],-log2(topGenes[,"adj.P.Val"]),pch=16,cex=0.5,xlab="Log2 fold-change",ylab="-log2(adjusted p-value)",main=contrastNames[i],col="grey")
+  #####  Highlight genes with logFC above specified threshold
+  points(topGenes[abs(topGenes[,"logFC"])>params$lfcThreshold,"logFC"],-log2(topGenes[abs(topGenes[,"logFC"])>params$lfcThreshold,"adj.P.Val"]),cex=0.5,pch=16)
+  abline(h=-log2(params$pThreshold),col="red", lty = 2)
+  #####  Label top 10 most significant genes
+  ord <- order(-log2(topGenes[,"adj.P.Val"]),decreasing=TRUE)
+  top10 <- ord[1:10]
+  text(topGenes[top10,"logFC"],-log2(topGenes[top10,"adj.P.Val"]), labels=rownames(DGEdata.voom[top10,]),cex=0.6,col="blue")
+  dev.off()
+}
+```
+
+```{r DE_overlap, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+eb.decideTests <- as.data.frame(decideTests(eb, method="separate", adjust.method=params$adjMethod, p.value=params$pThreshold, lfc=params$lfcThreshold))
+summary(eb.decideTests)
+
+#### Order the decideTests
+eb.decideTests <- eb.decideTests[apply(eb.decideTests[,-1], 1, function(x) !all(x==0)),]
+eb.decideTests.abs <- abs(eb.decideTests)
+eb.decideTests.colSums <- colSums(eb.decideTests.abs)
+eb.decideTests.rowSums <- rowSums(eb.decideTests.abs)
+eb.decideTests <- eb.decideTests[ , names(sort(eb.decideTests.colSums, decreasing = TRUE)) ]
+eb.decideTests <- eb.decideTests[ names(sort(eb.decideTests.rowSums, decreasing = TRUE)),  ]
+
+write.table(eb.decideTests, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_decideTests.txt", sep = ""), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+
+#####  Write the analysis results into a file
+for (i in 1:ncol(eb$p.value) ) {
+    
+	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", number=nrow(DGEdata.voom))
+  rownames(topGenes) <- topGenes[,"SYMBOL"]
+  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
+  colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+    
+  write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+}
+
+#####  ... write into a file only differnetially expressed genes
+topGenes.index <- NULL
+
+##### Create lists to store DE genes for each comparison
+topGenes_list <- list()
+
+for (i in 1:ncol(eb$p.value) ) {
+    
+	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", p.value=params$pThreshold, lfc=params$lfcThreshold, number=nrow(DGEdata.voom))
+    
+  if ( length(topGenes) != 0 ) {
+        
+    rownames(topGenes) <- topGenes[,"SYMBOL"]
+    topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
+    colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+        
+    write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+    ##### Generate dataTable
+    topGenes_list[[i]] <- DT::datatable( data = topGenes, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;', htmltools::strong(colnames(eb$p.value)[i])), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 2), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+        DT::formatStyle( columns = names(topGenes), 'text-align' = 'center' ) %>%
+        DT::formatRound(columns = c("log2FC", "t-statistic"), 2)
+    
+    topGenes.index <- unique(c(topGenes.index,rownames(topGenes)))
+    
+  } else {
+    cat(paste("No differentially expressed genes detected in ", contrastNames[i], "\n", sep=""))
+  }
+}
+```
+
+### Summary {.tabset}
+
+#### Heatmap {.tabset}
+
+Heatmap presenting expression levels of `r length(topGenes.index)` **differentially expressed genes** (*y-axis*) across all samples (*x-axis*).
+
+<details>
+<summary>Differentially expressed genes</summary>
+<font size="2">
+
+*`r paste(topGenes.index, collapse = ", ")`*
+
+</font>
+</details>
+
+##### Static
+
+```{r DE_heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+##### Keep only DE genes
+data.h <- data.frame(DGEdata.voom$E[ rownames(DGEdata.voom$E) %in% topGenes.index,])
+
+##### Prepare heatmap annotation (samples)
+Target.col  <- targets.colour[[1]]
+names(Target.col) <- sort(unique(targetFile$Target))
+ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
+
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+
+##### Generate heatmap (complexHeatmap)
+if ( length(unique(targetFile$Target)) > 1 ) {
+  row_split <- length(unique(targetFile$Target))
+  column_split <- length(unique(targetFile$Target))
+} else {
+  row_split <- NULL
+  column_split <- NULL
+}
+
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+dev.off()
+```
+
+***
+
+##### Interactive
+
+```{r DE_heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+suppressMessages(library(heatmaply))
+
+##### Generate heatmap (PLOTLY)
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+
+p
+
+htmltools::tagList(setNames(p, NULL))
+
+##### Save the heatmap as html (PLOTLY)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
+
+detach("package:heatmaply", unload=FALSE)
+```
+
+***
+
+`r if ( length(contrastNames) < 4 ) { c("#### Venn diagram") }`
+
+```{r DE_venn, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+#####  Generate Venn diagrams
+venn.counts <- vennCounts(eb.decideTests, include = "both")
+colnames(venn.counts)[1:ncol(venn.counts)-1] <- contrastNames
+
+if ( length(contrastNames) < 4) {
+    vennDiagram(venn.counts)
+}
+
+##### ... save results in a file
+if ( length(contrastNames) < 4) {
+    pdf(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_DE_venn.pdf", sep = ""), width = 8, height = 8, pointsize = 7, bg = "transparent")
+    vennDiagram(venn.counts)
+    dev.off()
+}
+```
+
+`r if ( length(contrastNames) < 4 ) { c("***") }`
+
+#### Table
+
+```{r DE_summary_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+DE_summary <- DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;', htmltools::strong(colnames(eb$p.value)[i])), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+    DT::formatStyle( columns = names(eb.decideTests), 'text-align' = 'center' ) %>%
+  
+    ##### Colour cells according to evidence level and trust rating
+    DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
+
+DE_summary
+```
+
+***
+
+#### Mean-variance trend
+
+```{r DE_mean_variance, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+cat(paste0("![](", paste0(params$output_dir, "/", paste0(params$results_name, "_voomPlot.png", sep="")), ")\n"))
+cat(paste0("![](", paste0(params$output_dir, "/", paste0(params$results_name, "_voomPlot_fitted.png", sep="")), ")\n"))
+```
+
+***
+
+### Comparisons {.tabset}
+
+```{r DE_results_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+##### Now once the plots are ready show them in separate tabs
+for( i in 1:ncol(eb$p.value) ){
+  
+  cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
+  
+  ##### Present p-value histograms
+  cat("\n##### P-values distribution \n")
+  
+  cat(paste0("![](", paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_P_hist.png)", sep="")), "\n")
+  cat("\n***\n")
+  
+  ##### Present volcano plots
+  cat("\n##### Volcano plot \n")
+  
+  cat(paste0("![](", paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_volcano_plot.png)", sep="")), "\n")
+  cat("\n***\n")
+  
+  ##### Present tables with DE results and stats
+  cat("\n##### Table \n")
+  
+  cat(renderTags(topGenes_list[[i]])$html)
+  
+  cat("\n***\n")
+}
+```
+
+***
+
+## Addendum
+
+<details>
+<summary>Parameters</summary>
+<font size="2">
+
+```{r params_info, comment = NA}
+for ( i in 1:length(params) ) {
+  cat(paste("Parameter: ", names(params)[i], "\nValue: ", paste(unlist(params[i]), collapse = ","), "\n\n", sep=""))
+}
+```
+
+</font>
+</details>
+
+<details>
+<summary>Session info</summary>
+<font size="2">
+
+```{r sessioninfo, comment = NA}
+devtools::session_info()
+```
+
+</font>
+</details>
