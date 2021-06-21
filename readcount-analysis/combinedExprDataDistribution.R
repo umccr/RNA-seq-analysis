@@ -12,7 +12,16 @@
 
 ################################################################################
 #
-#	 Description: Pipeline combining datasets (optional) and investigating expression distribution of user-defined genes. For each dataset it requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk) and (3) "Target". The pipeline is based on recommendaitons from RNAseq123 R package (https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html).
+#   Sources:
+#
+#   RNAseq123 R package:     https://master.bioconductor.org/packages/release/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html
+#   RNA-seq analysis in R:    https://combine-australia.github.io/RNAseq-R/06-rnaseq-day1.html
+#
+################################################################################
+
+################################################################################
+#
+#	 Description: Pipeline combining datasets (optional) and investigating expression distribution of user-defined genes. For each dataset it requires accompanying sample annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be balnk) and (3) "Target".
 #
 #	 Command line use example: Rscript  combinedExprDataDistribution.R --datasets ../data/test_data/test.datasets_list.txt --transform CPM --norm TMM --filter TRUE --log TRUE --genes MKI67,KRAS --ensembl TRUE --sample Sample_10,Sample_14  --results_name test
 #
