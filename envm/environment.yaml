@@ -26,6 +26,7 @@ dependencies:
         - bioconductor-noiseq
         - bioconductor-clusterprofiler
         - bioconductor-pathview
+        - bioconductor-kegg.db
         - bioconductor-preprocesscore
         - bioconductor-tximport
         - bioconductor-rhdf5
