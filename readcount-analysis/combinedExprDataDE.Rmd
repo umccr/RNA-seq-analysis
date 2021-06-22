@@ -3,11 +3,11 @@ title: "Differential expression analysis"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/in-house/Avner_Birinapant/Combined_data'
-  exprFile: 'Avner_Birinapant_Organoid.counts.matrix.txt'
-  annotFile: 'Avner_Birinapant_Organoid_Target.txt'
-  annotFeatures: 'Target,Subject,Timestamp'
-  output_dir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/in-house/Avner_Birinapant/Combined_data/Avner_Birinapant_Organoid_DE_adjP'
+  exprDir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data'
+  exprFile: 'PRMT5.counts.matrix.txt'
+  annotFile: 'PRMT5_target_D6.txt'
+  annotFeatures: 'Target,Time,Treatment'
+  output_dir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/PRMT5_CPM_TMM_DE'
   transform: 'CPM'
   norm: 'TMM'
   batch_rm: FALSE
@@ -16,7 +16,7 @@ params:
   log: TRUE
   top_genes: 500
   ensembl: TRUE
-  results_name: 'Avner_Birinapant_Organoid_DE'
+  results_name: 'PRMT5_CPM_TMM_DE'
   lfcThreshold: 2
   adjMethod: "BH"
   pThreshold: 0.05
@@ -79,6 +79,8 @@ suppressMessages(library(edgeR))
 suppressMessages(library(EDASeq))
 suppressMessages(library(limma))
 suppressMessages(library(Glimma))
+suppressMessages(library(pathview))
+suppressMessages(library(clusterProfiler))
 suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
@@ -583,7 +585,7 @@ if ( length(lib_size_plot) == 1 ) {
 
 ***
 
-## Exploratory data analysis {.tabset .tabset-fade}
+## Clustering analysis {.tabset .tabset-fade}
 
 ### PCA {.tabset .tabset-fade}
 
@@ -916,7 +918,6 @@ datasets.list[[dataset]][["pca_batch_effect_corrected"]][[2]]
 detach("package:plotly", unload=FALSE)
 ```
 
-
 ***
 
 ## Differential expression analysis {.tabset}
@@ -1090,8 +1091,8 @@ dev.off()
 for (i in 1:ncol(eb$p.value) ) {
     
   #####  P-value histograms
-  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_P_hist.png", sep=""), width = 6, height = 6, units = "in", res = 150)
-  histogram <- hist(eb$p.value[,i], breaks=seq(0,1,by= 0.01), main=contrastNames[i], xlab="p-value")
+  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_P_hist.png", sep=""), width = 6, height = 4, units = "in", res = 300, pointsize = 10)
+  histogram <- hist(eb$p.value[,i], breaks=seq(0,1,by= 0.01), main="", xlab="p-value")
   exprected_p.value <- mean(histogram$counts)+(sd(histogram$counts)*1)
   abline(v=params$pThreshold,col="red")
   abline(h=exprected_p.value,col="blue")
@@ -1101,8 +1102,8 @@ for (i in 1:ncol(eb$p.value) ) {
   #####  Volcano plots of log2 fold-changes versus significance (adjusted p-values, +label top 10)
   topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod, sort.by="none", number=nrow(DGEdata.voom))
   
-  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_volcano_plot", ".png", sep = ""), width = 6, height = 6, units = "in", res = 150)
-  plot(topGenes[,"logFC"],-log2(topGenes[,"adj.P.Val"]),pch=16,cex=0.5,xlab="Log2 fold-change",ylab="-log2(adjusted p-value)",main=contrastNames[i],col="grey")
+  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_volcano_plot", ".png", sep = ""), width = 6, height = 4, units = "in", res = 300, pointsize = 10)
+  plot(topGenes[,"logFC"],-log2(topGenes[,"adj.P.Val"]),pch=16,cex=0.5,xlab="Log2 fold-change",ylab="-log2(adjusted p-value)",main="",col="grey")
   #####  Highlight genes with logFC above specified threshold
   points(topGenes[abs(topGenes[,"logFC"])>params$lfcThreshold,"logFC"],-log2(topGenes[abs(topGenes[,"logFC"])>params$lfcThreshold,"adj.P.Val"]),cex=0.5,pch=16)
   abline(h=-log2(params$pThreshold),col="red", lty = 2)
@@ -1114,17 +1115,23 @@ for (i in 1:ncol(eb$p.value) ) {
 }
 ```
 
-```{r DE_overlap, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
-eb.decideTests <- as.data.frame(decideTests(eb, method="separate", adjust.method=params$adjMethod, p.value=params$pThreshold, lfc=params$lfcThreshold))
-summary(eb.decideTests)
+```{r DE_overlap, comment = NA, message=FALSE, warning=FALSE, results = 'asis'}
+eb.decideTests <- decideTests(eb, method="separate", adjust.method=params$adjMethod, p.value=params$pThreshold, lfc=params$lfcThreshold)
+
+eb.decideTests <- as.data.frame(eb.decideTests)
 
 #### Order the decideTests
-eb.decideTests <- eb.decideTests[apply(eb.decideTests[,-1], 1, function(x) !all(x==0)),]
-eb.decideTests.abs <- abs(eb.decideTests)
-eb.decideTests.colSums <- colSums(eb.decideTests.abs)
-eb.decideTests.rowSums <- rowSums(eb.decideTests.abs)
-eb.decideTests <- eb.decideTests[ , names(sort(eb.decideTests.colSums, decreasing = TRUE)) ]
-eb.decideTests <- eb.decideTests[ names(sort(eb.decideTests.rowSums, decreasing = TRUE)),  ]
+if ( ncol(eb.decideTests) > 1 ) {
+  eb.decideTests <- eb.decideTests[apply(as.data.frame(eb.decideTests)[,-1], 1, function(x) !all(x==0)),]
+  eb.decideTests.abs <- abs(eb.decideTests)
+  eb.decideTests.rowSums <- rowSums(eb.decideTests.abs)
+  eb.decideTests.colSums <- colSums(eb.decideTests.abs)
+  eb.decideTests <- eb.decideTests[ , names(sort(eb.decideTests.colSums, decreasing = TRUE)), drop = FALSE ]
+  eb.decideTests <- eb.decideTests[ names(sort(eb.decideTests.rowSums, decreasing = TRUE)), , drop = FALSE]
+} else {
+  eb.decideTests.abs <- abs(eb.decideTests)
+  eb.decideTests <- eb.decideTests[ order(eb.decideTests.abs[,1], decreasing = TRUE), , drop = FALSE]
+}
 
 write.table(eb.decideTests, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_decideTests.txt", sep = ""), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 
@@ -1144,37 +1151,42 @@ topGenes.index <- NULL
 
 ##### Create lists to store DE genes for each comparison
 topGenes_list <- list()
+topGenes_list_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
-    
-	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", p.value=params$pThreshold, lfc=params$lfcThreshold, number=nrow(DGEdata.voom))
-    
+  
+  topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", p.value=params$pThreshold, lfc=params$lfcThreshold, number=nrow(DGEdata.voom))
+  	
   if ( length(topGenes) != 0 ) {
-        
+    
     rownames(topGenes) <- topGenes[,"SYMBOL"]
     topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
     colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
-        
-    write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
+    write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+  
     ##### Generate dataTable
-    topGenes_list[[i]] <- DT::datatable( data = topGenes, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;', htmltools::strong(colnames(eb$p.value)[i])), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 2), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+    topGenes_list_table[[i]] <- DT::datatable( data = topGenes, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
         DT::formatStyle( columns = names(topGenes), 'text-align' = 'center' ) %>%
         DT::formatRound(columns = c("log2FC", "t-statistic"), 2)
     
     topGenes.index <- unique(c(topGenes.index,rownames(topGenes)))
+    topGenes_list[[i]] <- topGenes
     
   } else {
-    cat(paste("No differentially expressed genes detected in ", contrastNames[i], "\n", sep=""))
+    topGenes_list_table[[i]] <- paste("\nNo differentially expressed genes detected in ", contrastNames[i], "comparison\n", sep="")
   }
 }
+
+######## NEED TO FIX THIS as for one comparisn the summary table in "DE_results_visualisation" chunk is not apprearing
+
+
+
+
+
 ```
 
-### Summary {.tabset}
-
-#### Heatmap {.tabset}
-
-Heatmap presenting expression levels of `r length(topGenes.index)` **differentially expressed genes** (*y-axis*) across all samples (*x-axis*).
+***
 
 <details>
 <summary>Differentially expressed genes</summary>
@@ -1184,6 +1196,14 @@ Heatmap presenting expression levels of `r length(topGenes.index)` **differentia
 
 </font>
 </details>
+
+***
+
+### Summary {.tabset}
+
+#### Heatmap {.tabset}
+
+Heatmap presenting expression levels of `r length(topGenes.index)` **differentially expressed genes** (*y-axis*) across all samples (*x-axis*).
 
 ##### Static
 
@@ -1212,7 +1232,7 @@ if ( length(unique(targetFile$Target)) > 1 ) {
 }
 
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
-
+  
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
 dev.off()
@@ -1222,7 +1242,7 @@ dev.off()
 
 ##### Interactive
 
-```{r DE_heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+```{r DE_heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'as.is', fig.width = 12, fig.height = 8}
 suppressMessages(library(heatmaply))
 
 ##### Generate heatmap (PLOTLY)
@@ -1230,8 +1250,6 @@ p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, 
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 p
-
-htmltools::tagList(setNames(p, NULL))
 
 ##### Save the heatmap as html (PLOTLY)
 saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
@@ -1241,40 +1259,63 @@ detach("package:heatmaply", unload=FALSE)
 
 ***
 
-`r if ( length(contrastNames) < 4 ) { c("#### Venn diagram") }`
 
-```{r DE_venn, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+
+
+
+
+
+`r if ( length(contrastNames) < 1 ) { c("#### Venn diagram") }`
+
+```{r DE_venn, comment = NA, message=FALSE, warning=FALSE, results = 'hide', eval=FALSE}
+
+
+##### NEEDS FIXING 
+
+
+
+
+
 #####  Generate Venn diagrams
-venn.counts <- vennCounts(eb.decideTests, include = "both")
-colnames(venn.counts)[1:ncol(venn.counts)-1] <- contrastNames
-
 if ( length(contrastNames) < 4) {
-    vennDiagram(venn.counts)
+  venn.counts <- vennCounts(eb.decideTests, include = "both")
+  colnames(venn.counts)[1:ncol(venn.counts)-1] <- contrastNames
+  vennDiagram(venn.counts)
 }
 
 ##### ... save results in a file
 if ( length(contrastNames) < 4) {
-    pdf(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_DE_venn.pdf", sep = ""), width = 8, height = 8, pointsize = 7, bg = "transparent")
-    vennDiagram(venn.counts)
-    dev.off()
+  pdf(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_DE_venn.pdf", sep = ""), width = 8, height = 8, pointsize = 7, bg = "transparent")
+  vennDiagram(venn.counts)
+  dev.off()
 }
 ```
 
-`r if ( length(contrastNames) < 4 ) { c("***") }`
+`r if ( length(contrastNames) < 1 ) { c("***") }`
 
-#### Table
+
+
+`r if ( length(contrastNames) > 1 ) { c("#### Table") }`
 
 ```{r DE_summary_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
-DE_summary <- DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;', htmltools::strong(colnames(eb$p.value)[i])), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+##### Show DE results across mutliple comparisons
+DE_summary <- list()
+
+if ( length(contrastNames) > 1 ) {
+  
+DE_summary[[1]]<- DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
     DT::formatStyle( columns = names(eb.decideTests), 'text-align' = 'center' ) %>%
   
     ##### Colour cells according to evidence level and trust rating
     DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
+}
 
-DE_summary
+if ( length(contrastNames) > 1 ) {
+  DE_summary[[1]]
+}
 ```
 
-***
+`r if ( length(contrastNames) > 1 ) { c("***") }`
 
 #### Mean-variance trend
 
@@ -1308,13 +1349,11 @@ for( i in 1:ncol(eb$p.value) ){
   ##### Present tables with DE results and stats
   cat("\n##### Table \n")
   
-  cat(renderTags(topGenes_list[[i]])$html)
+  cat(renderTags(topGenes_list_table[[i]])$html)
   
   cat("\n***\n")
 }
 ```
-
-***
 
 ## Addendum
 
