@@ -21,8 +21,8 @@ params:
   adjMethod: "BH"
   pThreshold: 0.05
   ref_data_dir: '../data'
-  grch_version: 37
-  ensembl_version: 75
+  grch_version: 38
+  ensembl_version: 86
   seed: 99999999
   hide_code_btn: TRUE
 output:
@@ -81,6 +81,9 @@ suppressMessages(library(limma))
 suppressMessages(library(Glimma))
 suppressMessages(library(pathview))
 suppressMessages(library(clusterProfiler))
+suppressMessages(library(KEGG.db))
+suppressMessages(library(grid))
+suppressMessages(library(png))
 suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
@@ -128,6 +131,17 @@ saveWidgetFix <- function ( widget, file, ...) {
   file<-basename(file)
   setwd(outDir);
   htmlwidgets::saveWidget(widget,file=file,...)
+}
+
+##### Function to show the created pathways PNG in the plot window and by default delete the file itself afterwards ( https://stackoverflow.com/questions/60141841/how-to-get-pathview-plot-displayed-directly-rather-than-saving-as-a-file-in-r )
+see_pathview <- function(..., save_image = FALSE)
+{
+  msg <- capture.output(pathview::pathview(...), type = "message")
+  msg <- grep("image file", msg, value = T)
+  filename <- sapply(strsplit(msg, " "), function(x) x[length(x)])
+  img <- png::readPNG(filename)
+  grid::grid.raster(img)
+  if(!save_image) invisible(file.remove(filename))
 }
 ```
 
@@ -961,17 +975,17 @@ edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
 keys <- keys(edb, keytype="GENEID")
   
 ##### Get genes genomic coordiantes
-gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENENAME"), keytype="GENEID")
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENENAME", "ENTREZID"), keytype="GENEID")
 names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
 names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
-  
+
 ##### Limit genes annotation to those genes for which sample expression measurments are available
 gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
   
 ##### Remove rows with duplicated ENSEMBL IDs
 gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
 rownames(gene_info) <- gene_info$ENSEMBL
-  
+
 ##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
 gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
   
@@ -1155,26 +1169,27 @@ topGenes_list_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
   
-  topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", p.value=params$pThreshold, lfc=params$lfcThreshold, number=nrow(DGEdata.voom))
+  topGenes_list[[i]] <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", p.value=params$pThreshold, lfc=params$lfcThreshold, number=nrow(DGEdata.voom))
   	
-  if ( length(topGenes) != 0 ) {
+  if ( length(topGenes_list[[i]] ) != 0 ) {
     
-    rownames(topGenes) <- topGenes[,"SYMBOL"]
-    topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
-    colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+    rownames(topGenes_list[[i]]) <- topGenes_list[[i]] [,"SYMBOL"]
+    topGenes_list[[i]]  <- topGenes_list[[i]] [,colnames(topGenes_list[[i]] ) %in% c("ENTREZID", "logFC","t","P.Value","adj.P.Val")]
+    colnames(topGenes_list[[i]] ) <- c("ENTREZID", "log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
     
-    write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
   
     ##### Generate dataTable
-    topGenes_list_table[[i]] <- DT::datatable( data = topGenes, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
-        DT::formatStyle( columns = names(topGenes), 'text-align' = 'center' ) %>%
+    topGenes_list_table[[i]] <- DT::datatable( data = topGenes_list[[i]] , caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+        DT::formatStyle( columns = names(topGenes_list[[i]] ), 'text-align' = 'center' ) %>%
         DT::formatRound(columns = c("log2FC", "t-statistic"), 2)
     
-    topGenes.index <- unique(c(topGenes.index,rownames(topGenes)))
-    topGenes_list[[i]] <- topGenes
+    topGenes.index <- unique(c(topGenes.index,rownames(topGenes_list[[i]] )))
+    topGenes_list[[i]] <- topGenes_list[[i]] 
     
   } else {
-    topGenes_list_table[[i]] <- paste("\nNo differentially expressed genes detected in ", contrastNames[i], "comparison\n", sep="")
+    topGenes_list[[i]] <- 0
+    topGenes_list_table[[i]] <- paste("\nNo differentially expressed genes detected in ", contrastNames[i], " comparison!\n", sep="")
   }
 }
 
@@ -1207,54 +1222,64 @@ Heatmap presenting expression levels of `r length(topGenes.index)` **differentia
 
 ##### Static
 
-```{r DE_heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
-##### Keep only DE genes
-data.h <- data.frame(DGEdata.voom$E[ rownames(DGEdata.voom$E) %in% topGenes.index,])
-
-##### Prepare heatmap annotation (samples)
-Target.col  <- targets.colour[[1]]
-names(Target.col) <- sort(unique(targetFile$Target))
-ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
-
-##### Cluster genes
-hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
-
-##### Cluster samples
-hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
-
-##### Generate heatmap (complexHeatmap)
-if ( length(unique(targetFile$Target)) > 1 ) {
-  row_split <- length(unique(targetFile$Target))
-  column_split <- length(unique(targetFile$Target))
-} else {
-  row_split <- NULL
-  column_split <- NULL
-}
-
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+```{r DE_heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'asis', fig.width = 12, fig.height = 10}
+if ( !is.null(topGenes.index) ) {
   
-pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
-dev.off()
+  ##### Keep only DE genes
+  data.h <- data.frame(DGEdata.voom$E[ rownames(DGEdata.voom$E) %in% topGenes.index,])
+  
+  ##### Prepare heatmap annotation (samples)
+  Target.col  <- targets.colour[[1]]
+  names(Target.col) <- sort(unique(targetFile$Target))
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
+  
+  ##### Cluster genes
+  hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+  
+  ##### Cluster samples
+  hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+  
+  ##### Generate heatmap (complexHeatmap)
+  if ( length(unique(targetFile$Target)) > 1 ) {
+    row_split <- length(unique(targetFile$Target))
+    column_split <- length(unique(targetFile$Target))
+  } else {
+    row_split <- NULL
+    column_split <- NULL
+  }
+  
+  Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+    
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
+  Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+  dev.off()
+} else {
+  cat(paste("\nNo differentially expressed genes detected!\n", sep=""))
+}
 ```
 
 ***
 
 ##### Interactive
 
-```{r DE_heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'as.is', fig.width = 12, fig.height = 8}
-suppressMessages(library(heatmaply))
-
-##### Generate heatmap (PLOTLY)
-p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
-layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
-
-p
-
-##### Save the heatmap as html (PLOTLY)
-saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
-
-detach("package:heatmaply", unload=FALSE)
+```{r DE_heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'asis', fig.width = 12, fig.height = 8}
+if ( !is.null(topGenes.index) ) {
+    
+  suppressMessages(library(heatmaply))
+  
+  ##### Generate heatmap (PLOTLY)
+  p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+  layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+  
+  p
+  
+  ##### Save the heatmap as html (PLOTLY)
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
+  
+  detach("package:heatmaply", unload=FALSE)
+} else {
+  cat(paste("\nNo differentially expressed genes detected!\n", sep=""))
+}
 ```
 
 ***
@@ -1299,19 +1324,13 @@ if ( length(contrastNames) < 4) {
 
 ```{r DE_summary_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
 ##### Show DE results across mutliple comparisons
-DE_summary <- list()
-
-if ( length(contrastNames) > 1 ) {
+if ( !is.null(topGenes.index) ) {
   
-DE_summary[[1]]<- DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
-    DT::formatStyle( columns = names(eb.decideTests), 'text-align' = 'center' ) %>%
-  
-    ##### Colour cells according to evidence level and trust rating
-    DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
-}
-
-if ( length(contrastNames) > 1 ) {
-  DE_summary[[1]]
+  DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+      DT::formatStyle( columns = names(eb.decideTests), 'text-align' = 'center' ) %>%
+    
+      ##### Colour cells according to evidence level and trust rating
+      DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
 }
 ```
 
@@ -1352,6 +1371,84 @@ for( i in 1:ncol(eb$p.value) ){
   cat(renderTags(topGenes_list_table[[i]])$html)
   
   cat("\n***\n")
+}
+```
+
+## KEGG pathways {.tabset}
+
+### Over-representation analysis {.tabset}
+
+<details>
+<summary>Parameters</summary>
+<font size="2">
+
+* p-value: **`r  params$pThreshold`**
+* q-value: **0.5**
+* minimal size of each geneSet: **120**
+
+</font> 
+</details>
+
+```{r KEGG_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+##### Create lists to store pathways enrichemnt results for each comparison
+topPathways_list <- list()
+topPathways_list_table <- list()
+
+for (i in 1:ncol(eb$p.value) ) {
+  
+  ##### Run analysis only for comparisons with significant results
+  if ( topGenes_list[[i]] != 0 ) {
+    topPathways_list[[i]] <- enrichKEGG(gene=topGenes_list[[i]]$ENTREZID, organism = 'hsa', pvalueCutoff = params$pThreshold, use_internal_data = TRUE)
+    
+    topPathways_list_table[[i]]<- DT::datatable( data = as.data.frame(topPathways_list[[i]]), caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE )
+  } else {
+    topPathways_list[[i]] <- 0
+  }
+}
+```
+
+#### Comparisons {.tabset}
+
+Visualization KEGG pathways over-representation analysis results in individual groups comparisons. The gradient color scale illustrates expression log2 fold-change values observed in individual comparisons.
+
+```{r KEGG_over_representation_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+##### Now once the plots are ready show them in separate tabs
+for( i in 1:ncol(eb$p.value) ){
+    
+  cat("\n##### ", colnames(eb$p.value)[i], " {.tabset} \n")
+  
+  ##### Run analysis only for comparisons with significant results
+  if ( topGenes_list[[i]] != 0 ) {
+    
+    #cat(renderTags(topPathways_list_table[[i]])$html)
+    
+    ##### Loop through pathways if available
+    if ( topPathways_list[[i]] != 0 ) {
+      
+      for ( j in 1:nrow(topPathways_list[[i]]) ) {
+        
+        ##### Prepare data with logFC values
+        data.pathways <- topGenes_list[[i]]$log2FC
+        names(data.pathways) <- topGenes_list[[i]]$ENTREZID
+        
+        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
+        cat(paste0("\n###### ", topPathways_list[[i]][j]$Description, "\n"))
+        
+        #see_pathview(gene.data = data.pathways, 
+        #         pathway.id = topPathways_list[[i]][j]$ID,
+        #         species = "hsa",  
+        #         kegg.native = TRUE)
+        
+        cat("\n***\n")
+      }
+    } else {
+      cat(paste("\nNo enriched KEGG pathways detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat("\n***\n")
+    }
+  } else {
+    cat(paste("\nNo differentially expressed genes detected in ", contrastNames[i], " comparison\n", sep=""))
+    cat("\n***\n")
+  }
 }
 ```
 
