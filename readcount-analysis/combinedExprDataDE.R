@@ -30,7 +30,13 @@
 #   batch_rm:     Remove batch-associated effects between datasets. Available options are: "TRUE" (default) and "FALSE"
 #   lfcThreshold: Fold-change threshold for calling DE genes. Default is 2
 #   pThreshold:   P-value threshold for calling DE genes. Default is 0.05
-#   adjMethod:    Method for correcting results for multiple testing. Default is "BH"
+#   adjMethod:    Method for correcting DE results for multiple testing. Default is "BH"
+#   pvalueCutoff_kegg:    P-value threshold for calling enriched KEGG pathways. Default is 0.05
+#   qvalueCutoff_kegg:    Q-value threshold for calling enriched KEGG pathways. Default is 0.2
+#   pAdjustMethod_kegg:   Method for correcting KEGG pathways enrichment results for multiple testing. Default is "BH"
+#   minGSSize_kegg:    Minimal size of genes annotated by Ontology term for testing. Default is 5
+#   maxGSSize_kegg:    Maximal size of genes annotated by Ontology term for testing. Default is 500
+#   use_internal_data_kegg:    Logical to use KEGG.db or latest online KEGG data. Default is FALSE
 #   output_dir:   Directory for the results folder
 #   results_name: Desired core name for the results
 #   seed:         Set up a seed for random number generation
@@ -81,6 +87,18 @@ option_list = list(
   make_option("--pThreshold", action="store", default=0.05, type='numeric',
               help="p-value threshold for calling DE genes"),
   make_option("--adjMethod", action="store", default="BH", type='character',
+              help="Method for correcting results for multiple testing"),
+  make_option("--pvalueCutoff_kegg", action="store", default=0.05, type='numeric',
+              help="Method for correcting results for multiple testing"),
+  make_option("--qvalueCutoff_kegg", action="store", default=0.2, type='numeric',
+              help="Method for correcting results for multiple testing"),
+  make_option("--pAdjustMethod_kegg", action="store", default="BH", type='character',
+              help="Method for correcting results for multiple testing"),
+  make_option("--minGSSize_kegg", action="store", default=5, type='numeric',
+              help="Method for correcting results for multiple testing"),
+  make_option("--maxGSSize_kegg", action="store", default=500, type='numeric',
+              help="Method for correcting results for multiple testing"),
+  make_option("--use_internal_data_kegg", action="store", default=FALSE, type='logical',
               help="Method for correcting results for multiple testing"),
   make_option("--output_dir", action="store", default=NA, type='character',
               help="Directory for the results folder"),
@@ -177,6 +195,12 @@ param_list <- list(exprDir = opt$exprDir,
                    lfcThreshold = opt$lfcThreshold,
                    pThreshold = opt$pThreshold,
                    adjMethod = opt$adjMethod,
+                   pvalueCutoff_kegg = opt$pvalueCutoff_kegg,
+                   qvalueCutoff_kegg = opt$qvalueCutoff_kegg,
+                   pAdjustMethod_kegg = opt$pAdjustMethod_kegg,
+                   minGSSize_kegg = opt$minGSSize_kegg,
+                   maxGSSize_kegg = opt$maxGSSize_kegg,
+                   use_internal_data_kegg = opt$use_internal_data_kegg,
                    output_dir = opt$output_dir,
                    results_name = opt$results_name,
                    seed = opt$seed,
