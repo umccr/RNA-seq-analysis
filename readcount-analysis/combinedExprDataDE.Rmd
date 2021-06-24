@@ -20,11 +20,15 @@ params:
   lfcThreshold: 2
   adjMethod: "BH"
   pThreshold: 0.05
-  ref_data_dir: '../data'
+  pvalueCutoff_kegg: 0.05
+  qvalueCutoff_kegg: 0.2
+  pAdjustMethod_kegg: "BH"
+  minGSSize_kegg: 5
+  maxGSSize_kegg: 500
+  use_internal_data_kegg: FALSE
   grch_version: 38
   ensembl_version: 86
   seed: 99999999
-  hide_code_btn: TRUE
 output:
   html_document:
     keep_md: yes
@@ -57,13 +61,27 @@ set.seed(seed)
 * **exprDir**: `r params$exprDir`
 * **exprFile**: `r params$exprFile`
 * **annotFile**: `r params$annotFile`
+* **annotFeatures**: `r params$annotFeatures`
 * **transform**: `r params$transform`
 * **filter**: `r params$filter`
 * **filter_perc**: `r params$filter_perc`
 * **norm**: `r params$norm`
 * **log**: `r params$log`
-* **output_dir**: `r params$output_dir`
+* **batch_rm**: `r params$batch_rm`
 * **top_genes**: `r params$top_genes`
+* **lfcThreshold**: `r params$lfcThreshold`
+* **adjMethod**: `r params$adjMethod`
+* **pThreshold**: `r params$pThreshold`
+* **pvalueCutoff_kegg**: `r params$pvalueCutoff_kegg`
+* **qvalueCutoff_kegg**: `r params$qvalueCutoff_kegg`
+* **pAdjustMethod_kegg**: `r params$pAdjustMethod_kegg`
+* **minGSSize_kegg**: `r params$minGSSize_kegg`
+* **maxGSSize_kegg**: `r params$maxGSSize_kegg`
+* **use_internal_data_kegg**: `r params$use_internal_data_kegg`
+* **top_genes**: `r params$top_genes`
+* **top_genes**: `r params$top_genes`
+* **results_name**: `r params$results_name`
+* **output_dir**: `r params$output_dir`
 * **grch_version**: `r params$grch_version`
 * **ensembl_version**: `r params$ensembl_version`
 * **seed**: `r seed`
@@ -88,15 +106,6 @@ suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 suppressMessages(library(htmltools))
-```
-
-```{r code_display, echo = FALSE}
-##### Include or exclude the "Code" buttom allowing to "show"/"hide" code chunks from the report 
-if ( params$hide_code_btn ) {
-  writeLines(".btn { display: none ;", con = "combinedExprDE.css")
-} else {
-  writeLines(" ", con = "combinedExprDE.css")
-}
 ```
 
 ```{r define_functions, comment=NA, message=FALSE, warning=FALSE}
@@ -1169,8 +1178,9 @@ for (i in 1:ncol(eb$p.value) ) {
     write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
   
     ##### Generate dataTable
-    topGenes_list_table[[i]] <- DT::datatable( data = topGenes_list[[i]] , caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
-        DT::formatStyle( columns = names(topGenes_list[[i]] ), 'text-align' = 'center' ) %>%
+    topGenes4table <- topGenes_list[[i]][ , c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))]
+    topGenes_list_table[[i]] <- DT::datatable( data = topGenes4table, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+        DT::formatStyle( columns = names(topGenes4table), 'text-align' = 'center' ) %>%
         DT::formatRound(columns = c("log2FC", "t-statistic"), 2)
     
     topGenes.index <- unique(c(topGenes.index,rownames(topGenes_list[[i]] )))
@@ -1178,7 +1188,7 @@ for (i in 1:ncol(eb$p.value) ) {
     
   } else {
     topGenes_list[[i]] <- NA
-    topGenes_list_table[[i]] <- paste("\nNo differentially expressed genes detected in ", contrastNames[i], " comparison!\n", sep="")
+    topGenes_list_table[[i]] <- paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison!\n", sep="")
   }
 }
 
@@ -1243,7 +1253,7 @@ dev.off()
   
   
   
-  
+
 
 #### FIX in cases where no DE genes were detecetd if ( !is.null(topGenes.index) ) {
   
@@ -1386,21 +1396,33 @@ topPathways_list <- list()
 topPathways_list_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
-  
+        
   ##### Run analysis only for comparisons with significant results
   if ( !is.na(topGenes_list[[i]]) ) {
     
     ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
     genes.ENTREZID <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
     
+    ##### Also prepare reference for converting ENTREZIDs to gene symbols
+    reference <- rownames(topGenes_list[[i]][ !is.na(topGenes_list[[i]]$ENTREZID),  ])
+    names(reference) <- as.character(genes.ENTREZID)
+        
     ##### Run analysis only for > 1 gene
     if ( length(genes.ENTREZID) > 1 ) {
       
-      enrichKEGG.results <- enrichKEGG(gene=genes.ENTREZID, organism = 'hsa', pvalueCutoff = params$pThreshold, use_internal_data = FALSE)
+      enrichKEGG.results <- enrichKEGG( gene=genes.ENTREZID, organism = 'hsa', pvalueCutoff = params$pvalueCutoff_kegg, pAdjustMethod = params$pAdjustMethod, qvalueCutoff = params$qvalueCutoff, minGSSize = params$minGSSize_kegg, maxGSSize = params$maxGSSize_kegg, use_internal_data = params$use_internal_data_kegg, universe = as.character(data.annot$ENTREZID[ !is.na(data.annot$ENTREZID) ]) )
       
-      if ( !is.null(enrichKEGG.results) && nrow(enrichKEGG.results) > 0  ) {
+      if ( !is.null(enrichKEGG.results) && nrow(enrichKEGG.results) > 0 ) {
         
-        topPathways_list[[i]] <- enrichKEGG.results
+        ##### Substitute ENTREZIDs with Gene symbols
+        enrichKEGG.results4table <- as.data.frame(enrichKEGG.results)
+        enrichKEGG.results.genes <- unlist(strsplit(enrichKEGG.results4table$geneID, split='/', fixed=TRUE))
+        
+        enrichKEGG.results.genes_symbols<- ifelse(is.na(reference[enrichKEGG.results.genes]), enrichKEGG.results.genes, reference[enrichKEGG.results.genes])
+        
+        enrichKEGG.results4table$geneID <- paste(enrichKEGG.results.genes_symbols, collapse = " / ")
+        
+        topPathways_list[[i]] <- enrichKEGG.results4table[, c("Description", "GeneRatio", "pvalue", "p.adjust", "qvalue", "Count", "geneID")]
         topPathways_list_table[[i]]<- DT::datatable( data = as.data.frame(topPathways_list[[i]]), caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE )
       } else {
         topPathways_list[[i]] <- NA
@@ -1447,26 +1469,23 @@ for( i in 1:ncol(eb$p.value) ){
         data.pathways <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         names(data.pathways) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         
+        cat("\n***\n")
         cat(paste("Visualization of over-representated KEGG pathways. The gradient color scale illustrates expression log2 fold-change values observed in ", contrastNames[i], " comparison.\n\n", sep=""))
         
         ##### Present KEGG pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", topPathways_list[[i]][j]$Description, "\n")
+        cat("\n###### ", topPathways_list[[i]]$Description[j], "\n")
         
-        pathview.res <- pathview(gene.data  = data.pathways,
-                     pathway.id = topPathways_list[[i]][j]$ID,
-                     species    = "hsa",
-                     limit      = list(gene=max(abs(data.pathways)), cpd=1),
-                     kegg.dir = KEGG_dir)
+        pathview.res <- pathview(gene.data  = data.pathways, pathway.id = rownames(topPathways_list[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways)), cpd=1), kegg.dir = KEGG_dir)
         
-        cat(paste0("![](", paste(KEGG_dir, "/", topPathways_list[[i]][j]$ID, ".pathview.png)", sep="")), "\n")
+        cat(paste0("![](", paste(KEGG_dir, "/", rownames(topPathways_list[[i]])[j], ".pathview.png)", sep="")), "\n")
         cat("\n***\n")
       }
     } else {
-      cat(paste("\nNo enriched KEGG pathways detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat(paste("\n**No enriched KEGG pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
     }
   } else {
-    cat(paste("\nNo differentially expressed genes detected in ", contrastNames[i], " comparison\n", sep=""))
+    cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
     cat("\n***\n")
   }
 }
