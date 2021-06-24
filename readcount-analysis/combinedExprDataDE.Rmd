@@ -1416,11 +1416,14 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Substitute ENTREZIDs with Gene symbols
         enrichKEGG.results4table <- as.data.frame(enrichKEGG.results)
-        enrichKEGG.results.genes <- unlist(strsplit(enrichKEGG.results4table$geneID, split='/', fixed=TRUE))
         
-        enrichKEGG.results.genes_symbols<- ifelse(is.na(reference[enrichKEGG.results.genes]), enrichKEGG.results.genes, reference[enrichKEGG.results.genes])
-        
-        enrichKEGG.results4table$geneID <- paste(enrichKEGG.results.genes_symbols, collapse = " / ")
+        for ( j in 1: nrow(enrichKEGG.results) ) {
+          enrichKEGG.results.genes <- unlist(strsplit(enrichKEGG.results4table$geneID[j], split='/', fixed=TRUE))
+          
+          enrichKEGG.results.genes_symbols<- ifelse(is.na(reference[enrichKEGG.results.genes]), enrichKEGG.results.genes, reference[enrichKEGG.results.genes])
+          
+          enrichKEGG.results4table$geneID[j] <- paste(enrichKEGG.results.genes_symbols, collapse = " / ")
+        }
         
         topPathways_list[[i]] <- enrichKEGG.results4table[, c("Description", "GeneRatio", "pvalue", "p.adjust", "qvalue", "Count", "geneID")]
         topPathways_list_table[[i]]<- DT::datatable( data = as.data.frame(topPathways_list[[i]]), caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE )
@@ -1461,6 +1464,9 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat(renderTags(topPathways_list_table[[i]])$html)
       
+      cat("\n***\n")
+      cat(paste("Visualization of over-representated KEGG pathways. The gradient color scale illustrates expression log2 fold-change values observed in ", contrastNames[i], " comparison.\n\n", sep=""))
+        
       for ( j in 1:nrow(topPathways_list[[i]]) ) {
         
         ##### Prepare data with logFC values
@@ -1468,9 +1474,6 @@ for( i in 1:ncol(eb$p.value) ){
         data.pathways <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         data.pathways <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         names(data.pathways) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-        
-        cat("\n***\n")
-        cat(paste("Visualization of over-representated KEGG pathways. The gradient color scale illustrates expression log2 fold-change values observed in ", contrastNames[i], " comparison.\n\n", sep=""))
         
         ##### Present KEGG pathway with gene expression values mapped to gradient color scale
         cat("\n###### ", topPathways_list[[i]]$Description[j], "\n")
