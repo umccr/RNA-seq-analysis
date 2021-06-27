@@ -31,16 +31,20 @@
 #   lfcThreshold: Fold-change threshold for calling DE genes. Default is 2
 #   pThreshold:   P-value threshold for calling DE genes. Default is 0.05
 #   adjMethod:    Method for correcting DE results for multiple testing. Default is "BH"
-#   pvalueCutoff_kegg:    P-value threshold for calling enriched KEGG pathways. Default is 0.05
-#   qvalueCutoff_kegg:    Q-value threshold for calling enriched KEGG pathways. Default is 0.2
-#   pAdjustMethod_kegg:   Method for correcting KEGG pathways enrichment results for multiple testing. Default is "BH"
-#   minGSSize_kegg:    Minimal size of genes annotated by Ontology term for testing. Default is 5
-#   maxGSSize_kegg:    Maximal size of genes annotated by Ontology term for testing. Default is 500
+#   pvalueCutoff:    P-value threshold for calling enriched pathways (over-representation analysis). Default is 0.05
+#   qvalueCutoff:    Q-value threshold for calling enriched pathways (over-representation analysis). Default is 0.2
+#   pAdjustMethod:   Method for correcting pathways enrichment results for multiple testing (over-representation analysis). Default is "BH"
+#   minGSSize:    Minimal size of genes annotated by Ontology term for testing. Default is 5
+#   maxGSSize:    Maximal size of genes annotated by Ontology term for testing. Default is 500
+#   pvalueCutoff_gsea:    P-value threshold for calling enriched pathways (GSEA). Default is 0.2
+#   pAdjustMethod_gsea:   Method for correcting pathways enrichment results for multiple testing (GSEA). Default is "BH"
+#   nPerm_gsea:        Number of permutations for GSEA. Default is 1000
 #   use_internal_data_kegg:    Logical to use KEGG.db or latest online KEGG data. Default is FALSE
 #   output_dir:   Directory for the results folder
 #   results_name: Desired core name for the results
-#   seed:         Set up a seed for random number generation
 #   grch_version:  Human reference genome version used for genes annotation (default is "38")
+#   save_session:  Logical to save the session data. Default is TRUE
+#   seed:         Set up a seed for random number generation
 #
 ################################################################################
 
@@ -88,26 +92,34 @@ option_list = list(
               help="p-value threshold for calling DE genes"),
   make_option("--adjMethod", action="store", default="BH", type='character',
               help="Method for correcting results for multiple testing"),
-  make_option("--pvalueCutoff_kegg", action="store", default=0.05, type='numeric',
-              help="Method for correcting results for multiple testing"),
-  make_option("--qvalueCutoff_kegg", action="store", default=0.2, type='numeric',
-              help="Method for correcting results for multiple testing"),
-  make_option("--pAdjustMethod_kegg", action="store", default="BH", type='character',
-              help="Method for correcting results for multiple testing"),
-  make_option("--minGSSize_kegg", action="store", default=5, type='numeric',
-              help="Method for correcting results for multiple testing"),
-  make_option("--maxGSSize_kegg", action="store", default=500, type='numeric',
-              help="Method for correcting results for multiple testing"),
+  make_option("--pvalueCutoff", action="store", default=0.05, type='numeric',
+              help="P-value threshold for calling enriched pathways"),
+  make_option("--qvalueCutoff", action="store", default=0.2, type='numeric',
+              help="Q-value threshold for calling enriched pathways"),
+  make_option("--pAdjustMethod", action="store", default="BH", type='character',
+              help="Method for correcting pathways enrichment results for multiple testing"),
+  make_option("--minGSSize", action="store", default=5, type='numeric',
+              help="Minimal size of genes annotated by Ontology term for testing"),
+  make_option("--maxGSSize", action="store", default=500, type='numeric',
+              help="Maximal size of genes annotated by Ontology term for testing"),
+  make_option("--pvalueCutoff_gsea", action="store", default=0.2, type='numeric',
+              help="P-value threshold for calling enriched pathways (GSEA)"),
+  make_option("--pAdjustMethod_gsea", action="store", default="BH", type='character',
+              help="Method for correcting pathways enrichment results for multiple testing (GSEA)"),
+  make_option("--nPerm_gsea", action="store", default=1000, type='numeric',
+              help="Number of permutations for GSEA"),
   make_option("--use_internal_data_kegg", action="store", default=FALSE, type='logical',
-              help="Method for correcting results for multiple testing"),
+              help="Logical to use KEGG.db or latest online KEGG data"),
   make_option("--output_dir", action="store", default=NA, type='character',
               help="Directory for the results folder"),
   make_option("--results_name", action="store", default=NA, type='character',
               help="Prefix for the results files names"),
-  make_option("--seed", action="store", default=99999999, type='numeric',
-              help="Set up a seed for random number generation"),
   make_option("--grch_version", action="store", default=NA, type='integer',
-              help="human reference genome version used for genes annotation")
+              help="human reference genome version used for genes annotation"),
+  make_option("--save_session", action="store", default=TRUE, type='logical',
+              help="Logical to save the session data"),
+  make_option("--seed", action="store", default=99999999, type='numeric',
+              help="Set up a seed for random number generation")
 )
 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -195,17 +207,21 @@ param_list <- list(exprDir = opt$exprDir,
                    lfcThreshold = opt$lfcThreshold,
                    pThreshold = opt$pThreshold,
                    adjMethod = opt$adjMethod,
-                   pvalueCutoff_kegg = opt$pvalueCutoff_kegg,
-                   qvalueCutoff_kegg = opt$qvalueCutoff_kegg,
-                   pAdjustMethod_kegg = opt$pAdjustMethod_kegg,
-                   minGSSize_kegg = opt$minGSSize_kegg,
-                   maxGSSize_kegg = opt$maxGSSize_kegg,
+                   pvalueCutoff = opt$pvalueCutoff,
+                   qvalueCutoff = opt$qvalueCutoff,
+                   pAdjustMethod = opt$pAdjustMethod,
+                   minGSSize = opt$minGSSize,
+                   maxGSSize = opt$maxGSSize,
+                   pvalueCutoff_gsea = opt$pvalueCutoff_gsea,
+                   pAdjustMethod_gsea = opt$pAdjustMethod_gsea,
+                   nPerm_gsea = opt$nPerm_gsea,
                    use_internal_data_kegg = opt$use_internal_data_kegg,
                    output_dir = opt$output_dir,
                    results_name = opt$results_name,
-                   seed = opt$seed,
                    grch_version = as.numeric(opt$grch_version),
-                   ensembl_version = as.numeric(ensembl_version))
+                   ensembl_version = as.numeric(ensembl_version),
+                   save_session = opt$save_session,
+                   seed = opt$seed)
 
 ##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
 rmarkdown::render(input = "combinedExprDataDE.Rmd",
