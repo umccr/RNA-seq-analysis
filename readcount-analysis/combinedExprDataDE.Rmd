@@ -1399,7 +1399,7 @@ Enrichment analysis based on the *[KEGG](https://www.genome.jp/kegg/){target="_b
 </font> 
 </details>
 
-```{r KEGG_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+```{r KEGG_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
 ##### Create folder for storing pathway analysis results plots
 KEGG_dir <- paste(params$output_dir, "KEGG_pathways", sep = "/")
 if ( !file.exists(KEGG_dir) ) {
@@ -1446,8 +1446,8 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Create summary bar and dot plots
         png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichKEGG.png", sep=""))
-        p1 <- barplot(top_enrichKEGG[[i]], orderBy = "p.adjust", decreasing = FALSE) + ylab("Count")
-        p2 <- dotplot(top_enrichKEGG[[i]], orderBy = "p.adjust", decreasing = TRUE)
+        p1 <- barplot(top_enrichKEGG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = FALSE) + ylab("Count")
+        p2 <- dotplot(top_enrichKEGG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = TRUE)
         print(plot_grid(p1, p2, ncol=1, labels=LETTERS[1:2]))
         invisible(dev.off())
       }
@@ -1483,7 +1483,7 @@ for( i in 1:ncol(eb$p.value) ){
       cat("\n###### Table \n")
       
       ##### Summary table
-      cat(paste("\n\nTable presenting summary of enriched KEGG pathways in ", contrastNames[i], " comparison.\n\n", sep=""))
+      cat(paste("\n\nTable presenting summary of enriched KEGG pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
       
       cat(renderTags(top_enrichKEGG_table[[i]])$html)
       cat("\n***\n")
@@ -1500,7 +1500,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Create heatmap-like functional classification
       png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichKEGG_heatmap.png", sep=""))
-      print(heatplot(top_enrichKEGG.genes[[i]], foldChange=data.pathways[[i]]))
+      print(heatplot(top_enrichKEGG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
       invisible(dev.off())
         
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichKEGG_heatmap.png)", sep="")), "\n")
@@ -1620,7 +1620,7 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Create summary bar and dot plots
         png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG.png", sep=""))
-        print(dotplot(top_gseKEGG[[i]], orderBy = "p.adjust", decreasing = TRUE))
+        print(dotplot(top_gseKEGG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = FALSE))
         invisible(dev.off())
       }
     }
@@ -1653,7 +1653,7 @@ for( i in 1:ncol(eb$p.value) ){
       cat("\n###### Table \n")
       
       ##### Summary table
-      cat(paste("\n\nTable presenting summary of enriched KEGG pathways in ", contrastNames[i], " comparison.\n\n", sep=""))
+      cat(paste("\n\nTable presenting summary of enriched KEGG pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
       
       cat(renderTags(top_gseKEGG_table[[i]])$html)
       cat("\n***\n")
@@ -1670,7 +1670,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Create heatmap-like functional classification
       png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG_heatmap.png", sep=""))
-      print(heatplot(top_gseKEGG.genes[[i]], foldChange=data.pathways[[i]]))
+      print(heatplot(top_gseKEGG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
       invisible(dev.off())
         
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG_heatmap.png)", sep="")), "\n")
@@ -1809,8 +1809,8 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Create summary bar and dot plots
         png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN.png", sep=""))
-        p1 <- barplot(enrichDGN[[i]], orderBy = "p.adjust", decreasing = FALSE) + ylab("Count")
-        p2 <- dotplot(enrichDGN[[i]], orderBy = "p.adjust", decreasing = FALSE)
+        p1 <- barplot(enrichDGN[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = FALSE) + ylab("Count")
+        p2 <- dotplot(enrichDGN[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = TRUE)
         print(plot_grid(p1, p2, ncol=1, labels=LETTERS[1:2]))
         invisible(dev.off())
       }
@@ -1861,7 +1861,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Create heatmap-like functional classification
       png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN_heatmap.png", sep=""))
-      print(heatplot(enrichDGN.genes[[i]], foldChange=data.pathways[[i]]))
+      print(heatplot(enrichDGN.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
       invisible(dev.off())
         
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN_heatmap.png)", sep="")), "\n")
@@ -1913,7 +1913,7 @@ for( i in 1:ncol(eb$p.value) ){
 </font> 
 </details>
 
-```{r DisGeNET_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+```{r DisGeNET_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
 ##### Create lists to store pathways enrichemnt results for each comparison
 top_gseNCG <- list()
 top_gseNCG.df <- list()
@@ -1956,11 +1956,11 @@ for (i in 1:ncol(eb$p.value) ) {
         
         top_gseNCG.df[[i]] <- as.data.frame(top_gseNCG.genes[[i]][, c("Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues", "rank", "leading_edge", "core_enrichment")])
         top_gseNCG_table[[i]]<- DT::datatable( data = top_gseNCG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
-        DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
+          DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
         
         ##### Create summary bar and dot plots
         png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png", sep=""))
-        print(dotplot(top_gseNCG[[i]], orderBy = "p.adjust", decreasing = TRUE))
+        print(dotplot(top_gseNCG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = TRUE))
         invisible(dev.off())
       }
     }
@@ -2010,10 +2010,31 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Create heatmap-like functional classification
       png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png", sep=""))
-      print(heatplot(top_gseNCG.genes[[i]], foldChange=data.pathways[[i]]))
+      print(heatplot(top_gseNCG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
       invisible(dev.off())
         
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png)", sep="")), "\n")
+      cat("\n***\n")
+      
+      cat(paste("Enrichment map with DisGeNET enriched terms organised into a network with edges connecting overlapping gene sets. The gradient *color* scale and *point size* illustrate *p-values* observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      
+      ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
+      topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+      emapplot.results <- tryCatch({
+      emapplot(topPathways.genes, foldChange=data.pathways[[i]])}
+      , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+        
+      if ( !is.null(emapplot.results) ) {
+        png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png", sep=""))
+        print(emapplot(topPathways.genes, foldChange=data.pathways[[i]]))
+        invisible(dev.off())
+          
+        cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png)", sep="")), "\n")
+          
+      } else {
+        cat(paste("\nEnrichment map for is **not available** for that comparison\n", sep=""))
+      }
       cat("\n***\n")
       
       cat("\n##### GSEA plots {.tabset} \n")
@@ -2055,35 +2076,6 @@ for( i in 1:ncol(eb$p.value) ){
         
         cat("\n***\n")
       }
-          
-      cat("\n##### Enrichment Maps {.tabset} \n")
-      
-      cat(paste("Enrichment maps with DisGeNET enriched terms organised into a network with edges connecting overlapping gene sets. The gradient *color* scale and *point size* illustrate *p-values* observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_gseNCG.df[[i]]) ) {
-        
-        ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_gseNCG.df[[i]]$Description[j], "\n")
-        
-        topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-        emapplot.results <- tryCatch({
-        print(emapplot(topPathways.genes, foldChange=data.pathways[[i]]))}
-        , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
-        
-        if ( !is.null(gseNCG.results) && nrow(gseNCG.results) > 0 ) {
-          png(file = paste(KEGG_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".enrichment_map.png", sep=""))
-          print(emapplot(topPathways.genes, foldChange=data.pathways[[i]]))
-          invisible(dev.off())
-          
-          cat(paste0("![](", paste(KEGG_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".enrichment_map.png)", sep="")), "\n")
-          
-        } else {
-          cat(paste("\nEnrichment map for \"", top_gseNCG.df[[i]]$Description[j], "\" pathway is **not available** for ", contrastNames[i], " comparison\n", sep=""))
-        }
-        cat("\n***\n")
-      }
-      
     } else {
       cat(paste("\n**No enriched DisGeNET pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
