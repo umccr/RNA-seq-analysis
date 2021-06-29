@@ -942,7 +942,7 @@ detach("package:plotly", unload=FALSE)
 
 ***
 
-## Differential expression analysis {.tabset}
+## Differential expression analysis
 
 <details>
 <summary>Parameters</summary>
