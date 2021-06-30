@@ -49,6 +49,7 @@ dependencies:
         - plotly-orca
         - r-scales
         - r-rcircos
+        - r-upsetr
         - r-ggplot2=3.2
         - r-ggforce
         - r-pdftools
