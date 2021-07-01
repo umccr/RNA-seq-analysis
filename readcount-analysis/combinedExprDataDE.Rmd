@@ -953,7 +953,7 @@ detach("package:plotly", unload=FALSE)
 * transformation: **CPM**
 * normalisation: **TMM**
 
-`r if ( params$adjMethod=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using ", params$adjMethod, " method.")) }`
+`r if ( params$adjMethod=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using **", params$adjMethod, "** method.")) }`
 
 </font> 
 </details>
