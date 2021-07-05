@@ -113,6 +113,7 @@ suppressMessages(library(KEGG.db))
 suppressMessages(library(grid))
 suppressMessages(library(png))
 suppressMessages(library(ComplexHeatmap))
+suppressMessages(library(UpSetR))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
 suppressMessages(library(htmltools))
@@ -1173,6 +1174,7 @@ topGenes.index <- NULL
 
 ##### Create lists to store DE genes for each comparison
 topGenes_list <- list()
+topGenes_list_upset <- list()
 topGenes_list_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
@@ -1186,7 +1188,10 @@ for (i in 1:ncol(eb$p.value) ) {
     colnames(topGenes_list[[i]] ) <- c("ENTREZID", "log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
     
     write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
-  
+    
+    ##### For Upset plot
+    topGenes_list_upset[[i]] <- rownames(topGenes_list[[i]])
+    
     ##### Generate dataTable
     topGenes4table <- topGenes_list[[i]][ , c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))]
     topGenes_list_table[[i]] <- DT::datatable( data = topGenes4table, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
@@ -1198,9 +1203,16 @@ for (i in 1:ncol(eb$p.value) ) {
     
   } else {
     topGenes_list[[i]] <- NA
+    topGenes_list_upset[[i]] <- NA
     topGenes_list_table[[i]] <- paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison!\n", sep="")
   }
 }
+
+##### For Upset plot
+names(topGenes_list_upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+topGenes_list_upset <- Filter(function(a) any(!is.na(a)), topGenes_list_upset)
 
 ######## NEED TO FIX THIS as for one comparisn the summary table in "DE_results_visualisation" chunk is not apprearing
 
@@ -1319,19 +1331,33 @@ if ( length(contrastNames) < 4) {
 
 `r if ( length(contrastNames) < 1 ) { c("***") }`
 
-
-
 `r if ( length(contrastNames) > 1 ) { c("#### Table") }`
 
 ```{r DE_summary_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
 ##### Show DE results across mutliple comparisons
-if ( !is.null(topGenes.index) ) {
+if ( length(contrastNames) > 1 && !is.null(topGenes.index) ) {
   
   DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
       DT::formatStyle( columns = names(eb.decideTests), 'text-align' = 'center' ) %>%
     
       ##### Colour cells according to evidence level and trust rating
       DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
+`r if ( length(contrastNames) > 1 ) { c("#### Upset plot") }`
+
+`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of DE genes detected across multiple comparisons.") }`
+
+```{r DE_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(contrastNames) > 1 ) {
+  UpSet(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison")
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_upset_DE.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  UpSet(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison")
+  dev.off()
 }
 ```
 
@@ -1411,6 +1437,7 @@ setwd(KEGG_dir)
 top_enrichKEGG <- list()
 top_enrichKEGG.df <- list()
 top_enrichKEGG.genes <- list()
+top_enrichKEGG.upset <- list()
 top_enrichKEGG_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
@@ -1418,6 +1445,7 @@ for (i in 1:ncol(eb$p.value) ) {
   top_enrichKEGG[[i]] <- NA
   top_enrichKEGG.df[[i]] <- NA
   top_enrichKEGG.genes[[i]] <- NA
+  top_enrichKEGG.upset[[i]] <- NA
   top_enrichKEGG_table[[i]] <- NA
   
   ##### Run analysis only for comparisons with significant results
@@ -1441,6 +1469,9 @@ for (i in 1:ncol(eb$p.value) ) {
         ##### Substitute ENTREZIDs with Gene symbols
         top_enrichKEGG.genes[[i]] <- setReadable(top_enrichKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
+        ##### For Upset plot
+        top_enrichKEGG.upset[[i]] <- rownames(as.data.frame(top_enrichKEGG.genes[[i]]))
+        
         top_enrichKEGG.df[[i]] <- as.data.frame(top_enrichKEGG.genes[[i]][, c("Description", "GeneRatio", "pvalue", "p.adjust", "qvalue", "Count", "geneID")])
         top_enrichKEGG_table[[i]]<- DT::datatable( data = top_enrichKEGG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE )
         
@@ -1454,7 +1485,31 @@ for (i in 1:ncol(eb$p.value) ) {
     }
   }
 }
+
+##### For Upset plot
+names(top_enrichKEGG.upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+top_enrichKEGG.upset <- Filter(function(a) any(!is.na(a)), top_enrichKEGG.upset)
 ```
+
+`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
+
+`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of KEGG pathways over-representated across multiple comparisons.") }`
+
+```{r KEGG_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(contrastNames) > 1 ) {
+  print(upset(fromList(top_enrichKEGG.upset), order.by = "freq", nsets = length(top_enrichKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_enrichKEGG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(top_enrichKEGG.upset), order.by = "freq", nsets = length(top_enrichKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  dev.off()
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
+#### Comparisons
 
 ```{r KEGG_over_representation_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 setwd(KEGG_dir)
@@ -1578,6 +1633,7 @@ for( i in 1:ncol(eb$p.value) ){
 top_gseKEGG <- list()
 top_gseKEGG.df <- list()
 top_gseKEGG.genes <- list()
+top_gseKEGG.upset <- list()
 top_gseKEGG_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
@@ -1585,6 +1641,7 @@ for (i in 1:ncol(eb$p.value) ) {
   top_gseKEGG[[i]] <- NA
   top_gseKEGG.df[[i]] <- NA
   top_gseKEGG.genes[[i]] <- NA
+  top_gseKEGG.upset[[i]] <- NA
   top_gseKEGG_table[[i]] <- NA
   
   ##### Run analysis only for comparisons with significant results
@@ -1614,6 +1671,9 @@ for (i in 1:ncol(eb$p.value) ) {
         ##### Substitute ENTREZIDs with Gene symbols
         top_gseKEGG.genes[[i]] <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
+        ##### For Upset plot
+        top_gseKEGG.upset[[i]] <- rownames(as.data.frame(top_gseKEGG.genes[[i]]))
+        
         top_gseKEGG.df[[i]] <- as.data.frame(top_gseKEGG.genes[[i]][, c("Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues", "rank", "leading_edge", "core_enrichment")])
         top_gseKEGG_table[[i]]<- DT::datatable( data = top_gseKEGG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
         DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
@@ -1626,7 +1686,32 @@ for (i in 1:ncol(eb$p.value) ) {
     }
   }
 }
+
+##### For Upset plot
+names(top_gseKEGG.upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+top_gseKEGG.upset <- Filter(function(a) any(!is.na(a)), top_gseKEGG.upset)
 ```
+
+`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
+
+`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of KEGG pathways enriched across multiple comparisons.") }`
+
+
+```{r KEGG_gsea_analysis_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(contrastNames) > 1 ) {
+  print(upset(fromList(top_gseKEGG.upset), order.by = "freq", nsets = length(top_gseKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_gseKEGG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(top_gseKEGG.upset), order.by = "freq", nsets = length(top_gseKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
+  dev.off()
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
+#### Comparisons
 
 ```{r KEGG_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 ##### Now once the plots are ready show them in separate tabs
@@ -1772,6 +1857,7 @@ Enrichment analysis based on the *[DisGeNET](https://www.disgenet.org/){target="
 enrichDGN <- list()
 enrichDGN.df <- list()
 enrichDGN.genes <- list()
+enrichDGN.upset <- list()
 enrichDGN_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
@@ -1779,6 +1865,7 @@ for (i in 1:ncol(eb$p.value) ) {
   enrichDGN[[i]] <- NA
   enrichDGN.df[[i]] <- NA
   enrichDGN.genes[[i]] <- NA
+  enrichDGN.upset[[i]] <- NA
   enrichDGN_table[[i]] <- NA
 
   ##### Run analysis only for comparisons with significant results
@@ -1803,7 +1890,10 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Substitute ENTREZIDs with Gene symbols
         enrichDGN.genes[[i]] <- setReadable(enrichDGN[[i]], 'org.Hs.eg.db', 'ENTREZID')
-    
+      
+        ##### For Upset plot
+        enrichDGN.upset[[i]] <- rownames(as.data.frame(enrichDGN.genes[[i]]))
+        
         enrichDGN.df[[i]] <- as.data.frame(enrichDGN.genes[[i]][, c("Description", "GeneRatio", "pvalue", "p.adjust", "qvalue", "Count", "geneID")])
         enrichDGN_table[[i]]<- DT::datatable( data = enrichDGN.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE )
         
@@ -1817,7 +1907,32 @@ for (i in 1:ncol(eb$p.value) ) {
     }
   }
 }
+
+##### For Upset plot
+names(enrichDGN.upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+enrichDGN.upset <- Filter(function(a) any(!is.na(a)), enrichDGN.upset)
 ```
+
+
+`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
+
+`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of DisGeNET pathways over-representated across multiple comparisons.") }`
+
+```{r DisGeNET_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(contrastNames) > 1 ) {
+  print(upset(fromList(enrichDGN.upset), order.by = "freq", nsets = length(enrichDGN.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_enrichDGN_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(enrichDGN.upset), order.by = "freq", nsets = length(enrichDGN.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  dev.off()
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
+#### Comparisons
 
 ```{r DisGeNET_over_representation__visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 ##### Now once the plots are ready show them in separate tabs
@@ -1869,11 +1984,11 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat("\n##### Gene-concept networks {.tabset} \n")
       
-      cat(paste("Linkages of genes involved in over-representated KEGG pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("Linkages of genes involved in over-representated DisGeNET pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       
       for ( j in 1:nrow(enrichDGN.df[[i]]) ) {
         
-        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
+        ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
         cat("\n###### ", enrichDGN.df[[i]]$Description[j], "\n")
         
         topPathways.genes <- setReadable(enrichDGN[[i]], 'org.Hs.eg.db', 'ENTREZID')
@@ -1918,6 +2033,7 @@ for( i in 1:ncol(eb$p.value) ){
 top_gseNCG <- list()
 top_gseNCG.df <- list()
 top_gseNCG.genes <- list()
+top_gseNCG.upset <- list()
 top_gseNCG_table <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
@@ -1925,6 +2041,7 @@ for (i in 1:ncol(eb$p.value) ) {
   top_gseNCG[[i]] <- NA
   top_gseNCG.df[[i]] <- NA
   top_gseNCG.genes[[i]] <- NA
+  top_gseNCG.upset[[i]] <- NA
   top_gseNCG_table[[i]] <- NA
   
   ##### Run analysis only for comparisons with significant results
@@ -1954,6 +2071,9 @@ for (i in 1:ncol(eb$p.value) ) {
         ##### Substitute ENTREZIDs with Gene symbols
         top_gseNCG.genes[[i]] <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
+        ##### For Upset plot
+        top_gseNCG.upset[[i]] <- rownames(as.data.frame(top_gseNCG.genes[[i]]))
+    
         top_gseNCG.df[[i]] <- as.data.frame(top_gseNCG.genes[[i]][, c("Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues", "rank", "leading_edge", "core_enrichment")])
         top_gseNCG_table[[i]]<- DT::datatable( data = top_gseNCG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
           DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
@@ -1966,7 +2086,31 @@ for (i in 1:ncol(eb$p.value) ) {
     }
   }
 }
+
+##### For Upset plot
+names(top_gseNCG.upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+top_gseNCG.upset <- Filter(function(a) any(!is.na(a)), top_gseNCG.upset)
 ```
+
+`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
+
+`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of DisGeNET pathways enriched across multiple comparisons.") }`
+
+```{r DisGeNET_gsea_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(contrastNames) > 1 ) {
+  #print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_gseNCG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
+  dev.off()
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
+#### Comparisons
 
 ```{r DisGeNET_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 ##### Now once the plots are ready show them in separate tabs
