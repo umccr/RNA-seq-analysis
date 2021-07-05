@@ -1331,6 +1331,22 @@ if ( length(contrastNames) < 4) {
 
 `r if ( length(contrastNames) < 1 ) { c("***") }`
 
+`r if ( length(contrastNames) > 1 ) { c("#### Upset plot") }`
+
+`r if ( length(contrastNames) > 1 ) { c("Upset plot showing intersections of differentially expressed (DE) genes detected across multiple comparisons.") }`
+
+```{r DE_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(contrastNames) > 1 ) {
+  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison"))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_upset_DE.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison"))
+  dev.off()
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
 `r if ( length(contrastNames) > 1 ) { c("#### Table") }`
 
 ```{r DE_summary_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
@@ -1342,22 +1358,6 @@ if ( length(contrastNames) > 1 && !is.null(topGenes.index) ) {
     
       ##### Colour cells according to evidence level and trust rating
       DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
-}
-```
-
-`r if ( length(contrastNames) > 1 ) { c("***") }`
-
-`r if ( length(contrastNames) > 1 ) { c("#### Upset plot") }`
-
-`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of DE genes detected across multiple comparisons.") }`
-
-```{r DE_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
-if ( length(contrastNames) > 1 ) {
-  UpSet(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison")
-  
-  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_upset_DE.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
-  UpSet(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison")
-  dev.off()
 }
 ```
 
@@ -1493,9 +1493,7 @@ names(top_enrichKEGG.upset) <- colnames(eb)
 top_enrichKEGG.upset <- Filter(function(a) any(!is.na(a)), top_enrichKEGG.upset)
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
-
-`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of KEGG pathways over-representated across multiple comparisons.") }`
+`r if ( length(contrastNames) > 1 ) { c("Upset plot showing intersections of KEGG pathways over-representated across multiple comparisons.") }`
 
 ```{r KEGG_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 if ( length(contrastNames) > 1 ) {
@@ -1508,8 +1506,6 @@ if ( length(contrastNames) > 1 ) {
 ```
 
 `r if ( length(contrastNames) > 1 ) { c("***") }`
-
-#### Comparisons
 
 ```{r KEGG_over_representation_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 setwd(KEGG_dir)
@@ -1563,7 +1559,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat("\n##### KEGG plots {.tabset} \n")
       
-      cat(paste("Visualization of KEGG pathways over-representated in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
+      cat(paste("Visualization of KEGG pathways over-represented in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
       
       for ( j in 1:nrow(top_enrichKEGG.df[[i]]) ) {
         
@@ -1584,7 +1580,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat("\n##### Gene-concept networks {.tabset} \n")
       
-      cat(paste("Linkages of genes involved in over-representated KEGG pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("Linkages of genes involved in over-represented KEGG pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       
       for ( j in 1:nrow(top_enrichKEGG.df[[i]]) ) {
         
@@ -1602,7 +1598,7 @@ for( i in 1:ncol(eb$p.value) ){
         cat("\n***\n")
       }
     } else {
-      cat(paste("\n**No enriched KEGG pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat(paste("\n**No over-represented KEGG pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
     }
   } else {
@@ -1694,10 +1690,7 @@ names(top_gseKEGG.upset) <- colnames(eb)
 top_gseKEGG.upset <- Filter(function(a) any(!is.na(a)), top_gseKEGG.upset)
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
-
-`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of KEGG pathways enriched across multiple comparisons.") }`
-
+`r if ( length(contrastNames) > 1 ) { c("Upset plot showing intersections of KEGG pathways enriched across multiple comparisons.") }`
 
 ```{r KEGG_gsea_analysis_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 if ( length(contrastNames) > 1 ) {
@@ -1710,8 +1703,6 @@ if ( length(contrastNames) > 1 ) {
 ```
 
 `r if ( length(contrastNames) > 1 ) { c("***") }`
-
-#### Comparisons
 
 ```{r KEGG_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 ##### Now once the plots are ready show them in separate tabs
@@ -1763,7 +1754,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat("\n##### KEGG plots {.tabset} \n")
       
-      cat(paste("Visualization of KEGG pathways over-representated in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
+      cat(paste("Visualization of KEGG pathways enriched in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
       
       for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
         
@@ -1804,7 +1795,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat("\n##### Gene-concept networks {.tabset} \n")
       
-      cat(paste("Linkages of genes involved in over-representated KEGG pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("Linkages of genes involved in enriched KEGG pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       
       for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
         
@@ -1915,10 +1906,7 @@ names(enrichDGN.upset) <- colnames(eb)
 enrichDGN.upset <- Filter(function(a) any(!is.na(a)), enrichDGN.upset)
 ```
 
-
-`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
-
-`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of DisGeNET pathways over-representated across multiple comparisons.") }`
+`r if ( length(contrastNames) > 1 ) { c("Upset plot showing intersections of DisGeNET pathways over-representated across multiple comparisons.") }`
 
 ```{r DisGeNET_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 if ( length(contrastNames) > 1 ) {
@@ -1931,8 +1919,6 @@ if ( length(contrastNames) > 1 ) {
 ```
 
 `r if ( length(contrastNames) > 1 ) { c("***") }`
-
-#### Comparisons
 
 ```{r DisGeNET_over_representation__visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 ##### Now once the plots are ready show them in separate tabs
@@ -1959,7 +1945,7 @@ for( i in 1:ncol(eb$p.value) ){
       cat("\n###### Table \n")
       
       ##### Summary table
-      cat(paste("\n\nTable presenting summary of enriched DisGeNET pathways in ", contrastNames[i], " comparison.\n\n", sep=""))
+      cat(paste("\n\nTable presenting summary of over-represented DisGeNET pathways in ", contrastNames[i], " comparison.\n\n", sep=""))
       
       cat(renderTags(enrichDGN_table[[i]])$html)
       cat("\n***\n")
@@ -1967,12 +1953,12 @@ for( i in 1:ncol(eb$p.value) ){
       cat("\n###### Plots \n")
       
       ##### Bar and dot plots
-      cat(paste("\n\nBar (A) and dot (B) plots of enriched DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("\n\nBar (A) and dot (B) plots of over-represented DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN.png)", sep="")), "\n")
       cat("\n***\n")
       
       
-      cat(paste("\n\nHeatmap of enriched DisGeNET pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
+      cat(paste("\n\nHeatmap of over-represented DisGeNET pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
       
       ##### Create heatmap-like functional classification
       png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN_heatmap.png", sep=""))
@@ -1984,7 +1970,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat("\n##### Gene-concept networks {.tabset} \n")
       
-      cat(paste("Linkages of genes involved in over-representated DisGeNET pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("Linkages of genes involved in over-represented DisGeNET pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       
       for ( j in 1:nrow(enrichDGN.df[[i]]) ) {
         
@@ -2002,7 +1988,7 @@ for( i in 1:ncol(eb$p.value) ){
         cat("\n***\n")
       }
     } else {
-      cat(paste("\n**No enriched DisGeNET pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat(paste("\n**No over-represented DisGeNET pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
     }
   } else {
@@ -2094,13 +2080,11 @@ names(top_gseNCG.upset) <- colnames(eb)
 top_gseNCG.upset <- Filter(function(a) any(!is.na(a)), top_gseNCG.upset)
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("#### Summary") }`
-
-`r if ( length(contrastNames) > 1 ) { c("UpSet plot showing intersections of DisGeNET pathways enriched across multiple comparisons.") }`
+`r if ( length(contrastNames) > 1 ) { c("Upset plot showing intersections of DisGeNET pathways enriched across multiple comparisons.") }`
 
 ```{r DisGeNET_gsea_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 if ( length(contrastNames) > 1 ) {
-  #print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
+  print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
   
   png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_gseNCG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
   print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
@@ -2109,8 +2093,6 @@ if ( length(contrastNames) > 1 ) {
 ```
 
 `r if ( length(contrastNames) > 1 ) { c("***") }`
-
-#### Comparisons
 
 ```{r DisGeNET_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 ##### Now once the plots are ready show them in separate tabs
@@ -2203,7 +2185,7 @@ for( i in 1:ncol(eb$p.value) ){
       
       cat("\n##### Gene-concept networks {.tabset} \n")
       
-      cat(paste("Linkages of genes involved in over-representated DisGeNET pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("Linkages of genes involved in enriched DisGeNET pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       
       for ( j in 1:nrow(top_gseNCG.df[[i]]) ) {
         
