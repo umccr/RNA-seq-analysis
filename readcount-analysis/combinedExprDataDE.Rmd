@@ -1568,7 +1568,7 @@ for( i in 1:ncol(eb$p.value) ){
          
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
+        if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa04510") ) {
           pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
         
           cat(paste0("![](", paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
@@ -1763,7 +1763,7 @@ for( i in 1:ncol(eb$p.value) ){
          
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
+        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa04510") ) {
           pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
         
           cat(paste0("![](", paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
