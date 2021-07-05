@@ -1705,6 +1705,8 @@ if ( length(contrastNames) > 1 ) {
 `r if ( length(contrastNames) > 1 ) { c("***") }`
 
 ```{r KEGG_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
+setwd(KEGG_dir)
+
 ##### Now once the plots are ready show them in separate tabs
 data.pathways <- list()
 
