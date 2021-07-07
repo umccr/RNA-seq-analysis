@@ -1956,11 +1956,11 @@ for (i in 1:ncol(eb$p.value) ) {
           topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
           data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
           
-          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(enrichDGN.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
           
-          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(enrichDGN.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
           
-          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(enrichDGN.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
         }
         
         ##### For Upset plot
@@ -2145,11 +2145,11 @@ for (i in 1:ncol(eb$p.value) ) {
           topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
           data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
           
-          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
           
-          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
           
-          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
         }
         
         ##### For Upset plot
