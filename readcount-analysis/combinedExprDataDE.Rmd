@@ -1165,7 +1165,7 @@ for (i in 1:ncol(eb$p.value) ) {
   rownames(topGenes) <- topGenes[,"SYMBOL"]
   topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
   colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
-    
+  
   write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 }
 
@@ -1188,6 +1188,12 @@ for (i in 1:ncol(eb$p.value) ) {
     colnames(topGenes_list[[i]] ) <- c("ENTREZID", "log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
     
     write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+      
+    ##### Save the normalised expression data for DE genes
+    data2plot_topGenes <- data2plot[ rownames(topGenes_list[[i]]), ]
+    
+    write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
     ##### For Upset plot
     topGenes_list_upset[[i]] <- rownames(topGenes_list[[i]])
