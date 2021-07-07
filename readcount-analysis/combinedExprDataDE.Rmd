@@ -1067,7 +1067,7 @@ if ( all(is.na(targetFile$Replicates)) || all(targetFile$Replicates == "-") ) {
 
 ##### Create matrix of possible comparisons
 ##### Make sure that the comparisons names are valid
-comb <- make.names(levels(factor(targets)))
+comb <- make.names(unique(targets))
 comb <- combn(comb, 2)
 
 #####  Get number of possible comparisons using the following formula:
