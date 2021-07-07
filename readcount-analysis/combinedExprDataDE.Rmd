@@ -1475,6 +1475,16 @@ for (i in 1:ncol(eb$p.value) ) {
         ##### Substitute ENTREZIDs with Gene symbols
         top_enrichKEGG.genes[[i]] <- setReadable(top_enrichKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
+        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### First extract DE genes involved in the pathway
+        for ( j in 1:nrow(top_enrichKEGG.genes[[i]]) ) {
+          topGenes_list.pathway <- top_enrichKEGG.genes[[i]]$geneID[j]
+          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
+          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
+          
+          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+        }
+    
         ##### For Upset plot
         top_enrichKEGG.upset[[i]] <- rownames(as.data.frame(top_enrichKEGG.genes[[i]]))
         
@@ -1672,6 +1682,16 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Substitute ENTREZIDs with Gene symbols
         top_gseKEGG.genes[[i]] <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### First extract DE genes involved in the pathway
+        for ( j in 1:nrow(top_gseKEGG.genes[[i]]) ) {
+          topGenes_list.pathway <- top_gseKEGG.genes[[i]]$core_enrichment[j]
+          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
+          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
+          
+          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+        }
         
         ##### For Upset plot
         top_gseKEGG.upset[[i]] <- rownames(as.data.frame(top_gseKEGG.genes[[i]]))
@@ -1889,7 +1909,17 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Substitute ENTREZIDs with Gene symbols
         enrichDGN.genes[[i]] <- setReadable(enrichDGN[[i]], 'org.Hs.eg.db', 'ENTREZID')
-      
+        
+        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### First extract DE genes involved in the pathway
+        for ( j in 1:nrow(enrichDGN.genes[[i]]) ) {
+          topGenes_list.pathway <- enrichDGN.genes[[i]]$geneID[j]
+          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
+          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
+          
+          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(enrichDGN.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+        }
+        
         ##### For Upset plot
         enrichDGN.upset[[i]] <- rownames(as.data.frame(enrichDGN.genes[[i]]))
         
@@ -2064,6 +2094,16 @@ for (i in 1:ncol(eb$p.value) ) {
         
         ##### Substitute ENTREZIDs with Gene symbols
         top_gseNCG.genes[[i]] <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### First extract DE genes involved in the pathway
+        for ( j in 1:nrow(top_gseNCG.genes[[i]]) ) {
+          topGenes_list.pathway <- top_gseNCG.genes[[i]]$geneID[j]
+          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
+          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
+          
+          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+        }
         
         ##### For Upset plot
         top_gseNCG.upset[[i]] <- rownames(as.data.frame(top_gseNCG.genes[[i]]))
