@@ -1143,6 +1143,10 @@ eb.decideTests <- decideTests(eb, method="separate", adjust.method=params$adjMet
 
 eb.decideTests <- as.data.frame(eb.decideTests)
 
+##### Record log2FC and p-values for all genes across all comparisons
+topGenes_list_log2FC <- NULL
+topGenes_list_p <- NULL
+
 #### Order the decideTests
 if ( ncol(eb.decideTests) > 1 ) {
   eb.decideTests <- eb.decideTests[apply(as.data.frame(eb.decideTests)[,-1], 1, function(x) !all(x==0)),]
@@ -1167,7 +1171,22 @@ for (i in 1:ncol(eb$p.value) ) {
   colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
   
   write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+  ##### Save log2FC values for DE genes
+  topGenes_list_log2FC <- cbind(topGenes_list_log2FC, topGenes$log2FC)
+  
+  ##### Save log2FC values for DE genes
+  topGenes_list_p <- cbind(topGenes_list_p, topGenes[ , paste("p-value", params$adjMethod,sep="_") ])
 }
+
+##### Write log2FC and p-values for all genes across all comparisons into a file
+rownames(topGenes_list_log2FC) <- rownames(topGenes)
+colnames(topGenes_list_log2FC) <- colnames(eb)
+write.table(topGenes_list_log2FC , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_DE_genes_log2FC.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+
+rownames(topGenes_list_p) <- rownames(topGenes)
+colnames(topGenes_list_p) <- colnames(eb)
+write.table(topGenes_list_p , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_DE_genes_p_value.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 
 #####  ... write into a file only differnetially expressed genes
 topGenes.index <- NULL
@@ -1189,11 +1208,15 @@ for (i in 1:ncol(eb$p.value) ) {
     
     write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
-      
     ##### Save the normalised expression data for DE genes
     data2plot_topGenes <- data2plot[ rownames(topGenes_list[[i]]), ]
     
     write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+    ##### Save log2FC and p-values for DE genes
+    write.table(topGenes_list_log2FC[ rownames(topGenes_list[[i]]), ] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_log2FC.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+    write.table(topGenes_list_p[ rownames(topGenes_list[[i]]), ] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_p_value.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
     ##### For Upset plot
     topGenes_list_upset[[i]] <- rownames(topGenes_list[[i]])
@@ -1475,14 +1498,19 @@ for (i in 1:ncol(eb$p.value) ) {
         ##### Substitute ENTREZIDs with Gene symbols
         top_enrichKEGG.genes[[i]] <- setReadable(top_enrichKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### Save the normalised expression data, log2FC and p-values for DE genes in enriched pathways
         ##### First extract DE genes involved in the pathway
         for ( j in 1:nrow(top_enrichKEGG.genes[[i]]) ) {
           topGenes_list.pathway <- top_enrichKEGG.genes[[i]]$geneID[j]
           topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
+          
           data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
           
-          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(data2plot_topGenes , file=paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
         }
     
         ##### For Upset plot
@@ -1683,14 +1711,18 @@ for (i in 1:ncol(eb$p.value) ) {
         ##### Substitute ENTREZIDs with Gene symbols
         top_gseKEGG.genes[[i]] <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### Save the normalised expression data, log2FC and p-values for DE genes in enriched pathways
         ##### First extract DE genes involved in the pathway
         for ( j in 1:nrow(top_gseKEGG.genes[[i]]) ) {
           topGenes_list.pathway <- top_gseKEGG.genes[[i]]$core_enrichment[j]
           topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
           data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
           
-          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(data2plot_topGenes , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
         }
         
         ##### For Upset plot
@@ -1872,6 +1904,13 @@ Enrichment analysis based on the *[DisGeNET](https://www.disgenet.org/){target="
 </details>
 
 ```{r DisGeNET_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+##### Create folder for storing pathway analysis results plots
+DisGeNET_dir <- paste(params$output_dir, "KEGG_pathways", sep = "/")
+if ( !file.exists(DisGeNET_dir) ) {
+  dir.create(DisGeNET_dir, recursive=TRUE)
+}
+setwd(DisGeNET_dir)
+
 ##### Create lists to store pathways enrichemnt results for each comparison
 enrichDGN <- list()
 enrichDGN.df <- list()
@@ -1910,14 +1949,18 @@ for (i in 1:ncol(eb$p.value) ) {
         ##### Substitute ENTREZIDs with Gene symbols
         enrichDGN.genes[[i]] <- setReadable(enrichDGN[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### Save the normalised expression data, log2FC and p-values for DE genes in enriched pathways
         ##### First extract DE genes involved in the pathway
         for ( j in 1:nrow(enrichDGN.genes[[i]]) ) {
           topGenes_list.pathway <- enrichDGN.genes[[i]]$geneID[j]
           topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
           data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
           
-          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(enrichDGN.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
         }
         
         ##### For Upset plot
@@ -1927,7 +1970,7 @@ for (i in 1:ncol(eb$p.value) ) {
         enrichDGN_table[[i]]<- DT::datatable( data = enrichDGN.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE )
         
         ##### Create summary bar and dot plots
-        png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN.png", sep=""))
         p1 <- barplot(enrichDGN[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = FALSE) + ylab("Count")
         p2 <- dotplot(enrichDGN[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = TRUE)
         print(plot_grid(p1, p2, ncol=1, labels=LETTERS[1:2]))
@@ -1992,18 +2035,18 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Bar and dot plots
       cat(paste("\n\nBar (A) and dot (B) plots of over-represented DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN.png)", sep="")), "\n")
+      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN.png)", sep="")), "\n")
       cat("\n***\n")
       
       
       cat(paste("\n\nHeatmap of over-represented DisGeNET pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
       
       ##### Create heatmap-like functional classification
-      png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN_heatmap.png", sep=""))
+      png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN_heatmap.png", sep=""))
       print(heatplot(enrichDGN.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
       invisible(dev.off())
         
-      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN_heatmap.png)", sep="")), "\n")
+      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichDGN_heatmap.png)", sep="")), "\n")
       cat("\n***\n")
       
       cat("\n##### Gene-concept networks {.tabset} \n")
@@ -2017,11 +2060,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(enrichDGN[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/summary_", rownames(enrichDGN.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/summary_", rownames(enrichDGN.df[[i]])[j], ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(KEGG_dir, "/summary_", rownames(enrichDGN.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", rownames(enrichDGN.df[[i]])[j], ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2102,7 +2145,11 @@ for (i in 1:ncol(eb$p.value) ) {
           topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
           data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
           
-          write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes_exprs_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_p[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
         }
         
         ##### For Upset plot
@@ -2113,7 +2160,7 @@ for (i in 1:ncol(eb$p.value) ) {
           DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
         
         ##### Create summary bar and dot plots
-        png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png", sep=""))
         print(dotplot(top_gseNCG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = TRUE))
         invisible(dev.off())
       }
@@ -2176,18 +2223,18 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Bar and dot plots
       cat(paste("\n\nBar (A) and dot (B) plots of enriched DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png)", sep="")), "\n")
+      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png)", sep="")), "\n")
       cat("\n***\n")
       
       
       cat(paste("\n\nHeatmap of enriched DisGeNET pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
       
       ##### Create heatmap-like functional classification
-      png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png", sep=""))
+      png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png", sep=""))
       print(heatplot(top_gseNCG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
       invisible(dev.off())
         
-      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png)", sep="")), "\n")
+      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png)", sep="")), "\n")
       cat("\n***\n")
       
       cat(paste("Enrichment map with DisGeNET enriched terms organised into a network with edges connecting overlapping gene sets. The gradient *color* scale and *point size* illustrate *p-values* observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
@@ -2200,11 +2247,11 @@ for( i in 1:ncol(eb$p.value) ){
       , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
         
       if ( !is.null(emapplot.results) ) {
-        png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png", sep=""))
         print(emapplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
           
-        cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png)", sep="")), "\n")
           
       } else {
         cat(paste("\nEnrichment map for is **not available** for that comparison\n", sep=""))
@@ -2222,11 +2269,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png", sep=""))
         print(gseaplot2(top_gseNCG[[i]], geneSetID = j, title = top_gseNCG[[i]]$Description[1]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(KEGG_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2242,11 +2289,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(KEGG_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
