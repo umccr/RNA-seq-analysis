@@ -1173,6 +1173,11 @@ for (i in 1:ncol(eb$p.value) ) {
   write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
   ##### Save log2FC values for DE genes
+  topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="none", number=nrow(DGEdata.voom))
+  rownames(topGenes) <- topGenes[,"SYMBOL"]
+  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
+  colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+  
   topGenes_list_log2FC <- cbind(topGenes_list_log2FC, topGenes$log2FC)
   
   ##### Save log2FC values for DE genes
@@ -1570,7 +1575,6 @@ for( i in 1:ncol(eb$p.value) ){
       ##### Prepare data with logFC values
       ##### But first remove genes with invalid ENTREZIDs
       data.pathways[[i]] <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-      data.pathways[[i]]  <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
       names(data.pathways[[i]]) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         
       cat("\n##### Summary {.tabset} \n")
@@ -1614,8 +1618,13 @@ for( i in 1:ncol(eb$p.value) ){
         # https://support.bioconductor.org/p/122172/
         if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
           pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
-        
-          cat(paste0("![](", paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
+          
+          ##### Rename pathview plots
+          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".png"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".xml"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png"))
+          
+          cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
         } else {
           cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
         }
@@ -1633,11 +1642,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_enrichKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/summary_", rownames(top_enrichKEGG.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
-        
-        cat(paste0("![](", paste(KEGG_dir, "/summary_", rownames(top_enrichKEGG.df[[i]])[j], ".network.png)", sep="")), "\n")
+          
+        cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -1781,7 +1790,6 @@ for( i in 1:ncol(eb$p.value) ){
       ##### Prepare data with logFC values
       ##### But first remove genes with invalid ENTREZIDs
       data.pathways[[i]] <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-      data.pathways[[i]]  <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
       names(data.pathways[[i]]) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         
       cat("\n##### Summary {.tabset} \n")
@@ -1825,8 +1833,14 @@ for( i in 1:ncol(eb$p.value) ){
         # https://support.bioconductor.org/p/122172/
         if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
           pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
-        
-          cat(paste0("![](", paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
+          
+          ##### Rename pathview plots
+          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".png"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".xml"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png"))
+          
+          cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
+          
         } else {
           cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
         }
@@ -1844,11 +1858,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/summary_", rownames(top_gseKEGG.df[[i]])[j], ".gsea.png", sep=""))
+        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".gsea.png", sep=""))
         print(gseaplot2(top_gseKEGG[[i]], geneSetID = j, title = top_gseKEGG[[i]]$Description[1]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(KEGG_dir, "/summary_", rownames(top_gseKEGG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
+        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -1864,11 +1878,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/summary_", rownames(top_gseKEGG.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(KEGG_dir, "/summary_", rownames(top_gseKEGG.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2018,7 +2032,6 @@ for( i in 1:ncol(eb$p.value) ){
       ##### Prepare data with logFC values
       ##### But first remove genes with invalid ENTREZIDs
       data.pathways[[i]] <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-      data.pathways[[i]]  <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
       names(data.pathways[[i]]) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         
       cat("\n##### Summary {.tabset} \n")
@@ -2060,11 +2073,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(enrichDGN[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(DisGeNET_dir, "/summary_", rownames(enrichDGN.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", rownames(enrichDGN.df[[i]])[j], ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", rownames(enrichDGN.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", rownames(enrichDGN.df[[i]])[j], ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2206,7 +2219,6 @@ for( i in 1:ncol(eb$p.value) ){
       ##### Prepare data with logFC values
       ##### But first remove genes with invalid ENTREZIDs
       data.pathways[[i]] <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-      data.pathways[[i]]  <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
       names(data.pathways[[i]]) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
         
       cat("\n##### Summary {.tabset} \n")
@@ -2269,11 +2281,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png", sep=""))
         print(gseaplot2(top_gseNCG[[i]], geneSetID = j, title = top_gseNCG[[i]]$Description[1]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2289,11 +2301,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", rownames(top_gseNCG.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
