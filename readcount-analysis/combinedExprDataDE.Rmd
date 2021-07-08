@@ -1620,11 +1620,11 @@ for( i in 1:ncol(eb$p.value) ){
           pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
           
           ##### Rename pathview plots
-          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".png"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".xml"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".png"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".xml"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png"))
           
-          cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
+          cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
         } else {
           cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
         }
@@ -1642,11 +1642,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_enrichKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
           
-        cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", rownames(top_enrichKEGG.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -1835,11 +1835,11 @@ for( i in 1:ncol(eb$p.value) ){
           pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
           
           ##### Rename pathview plots
-          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".png"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".xml"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".png"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".xml"))
+          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
           
-          cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png)", sep="")), "\n")
+          cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
           
         } else {
           cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
@@ -1858,11 +1858,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".gsea.png", sep=""))
+        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
         print(gseaplot2(top_gseKEGG[[i]], geneSetID = j, title = top_gseKEGG[[i]]$Description[1]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
+        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -1878,11 +1878,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", rownames(top_gseKEGG.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2073,11 +2073,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(enrichDGN[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", rownames(enrichDGN.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(enrichDGN.genes[[i]]$Description[j]), ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", rownames(enrichDGN.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/enrichDGN_", colnames(eb$p.value)[i], "_", make.names(enrichDGN.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2281,11 +2281,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
         print(gseaplot2(top_gseNCG[[i]], geneSetID = j, title = top_gseNCG[[i]]$Description[1]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".gsea.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
@@ -2301,11 +2301,11 @@ for( i in 1:ncol(eb$p.value) ){
         
         topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
-        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".network.png", sep=""))
+        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".network.png", sep=""))
         print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
         invisible(dev.off())
         
-        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", rownames(top_gseNCG.df[[i]])[j], ".network.png)", sep="")), "\n")
+        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
         
         cat("\n***\n")
       }
