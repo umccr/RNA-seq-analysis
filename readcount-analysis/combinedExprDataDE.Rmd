@@ -1711,7 +1711,7 @@ for (i in 1:ncol(eb$p.value) ) {
       
       gseKEGG.results <- tryCatch({
         gseKEGG( geneList=genes.ENTREZID, organism = 'hsa', pvalueCutoff = params$pvalueCutoff_gsea, pAdjustMethod = params$pAdjustMethod_gsea, minGSSize = params$minGSSize, maxGSSize = params$maxGSSize, use_internal_data = params$use_internal_data_kegg, nPerm = params$nPerm_gsea, seed = seed)}
-        , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+        , error=function(e){cat("\n")})
       
       if ( !is.null(gseKEGG.results) && nrow(gseKEGG.results) > 0 ) {
         
@@ -1954,7 +1954,7 @@ for (i in 1:ncol(eb$p.value) ) {
       
       enrichDGN.results <- tryCatch({
         enrichDGN( gene=genes.ENTREZID, pvalueCutoff = params$pvalueCutoff, pAdjustMethod = params$pAdjustMethod, minGSSize = params$minGSSize, maxGSSize = params$maxGSSize, universe = as.character(data.annot$ENTREZID[ !is.na(data.annot$ENTREZID)]))}
-        , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+        , error=function(e){cat("\n")})
       
       if ( !is.null(enrichDGN.results) && nrow(enrichDGN.results) > 0 ) {
         
@@ -2142,7 +2142,7 @@ for (i in 1:ncol(eb$p.value) ) {
       
       gseNCG.results <- tryCatch({
         gseNCG( geneList=genes.ENTREZID, pvalueCutoff = params$pvalueCutoff_gsea, pAdjustMethod = params$pAdjustMethod_gsea, minGSSize = params$minGSSize, maxGSSize = params$maxGSSize, nPerm = params$nPerm_gsea, seed = seed)}
-        , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+        , error=function(e){cat("\n")})
       
       if ( !is.null(gseNCG.results) && nrow(gseNCG.results) > 0 ) {
         
@@ -2256,7 +2256,7 @@ for( i in 1:ncol(eb$p.value) ){
         
       emapplot.results <- tryCatch({
       emapplot(topPathways.genes, foldChange=data.pathways[[i]])}
-      , error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+      , error=function(e){cat("\n")})
         
       if ( !is.null(emapplot.results) ) {
         png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png", sep=""))
