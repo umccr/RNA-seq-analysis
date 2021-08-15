@@ -138,6 +138,7 @@ targets.colours <- c("red","blue","green","darkgoldenrod","darkred","deepskyblue
   
   return( list(vec.targets, targets.colour) )
 }
+
 ##### Calculate TPM from RPKM (from http://luisvalesilva.com/datasimple/rna-seq_units.html )
 tpm_from_rpkm <- function(x) {
   rpkm.sum <- colSums(x)
@@ -1168,7 +1169,7 @@ dev.off()
 Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
 ```
 
-```{r heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
+```{r heatmap_interactive_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
 suppressMessages(library(heatmaply))
 
 ##### Generate heatmap (PLOTLY)
@@ -1182,7 +1183,7 @@ p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, 
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
-saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.html")), selfcontained = TRUE)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.html")), selfcontained = TRUE)
 
 detach("package:heatmaply", unload=FALSE)
 ```
