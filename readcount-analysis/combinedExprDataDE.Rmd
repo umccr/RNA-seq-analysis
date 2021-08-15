@@ -11,7 +11,7 @@ params:
   transform: 'CPM'
   norm: 'TMM'
   batch_rm: TRUE
-  batch_rm: 'Batch'
+  batch_rm_col: 'Batch'
   filter: TRUE
   filter_perc: 15
   log: TRUE
