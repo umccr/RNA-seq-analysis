@@ -89,7 +89,7 @@ opt = parse_args(OptionParser(option_list=option_list))
 if ( is.na(opt$exprDir) || is.na(opt$exprFile) || is.na(opt$annotFile) || is.na(opt$output_dir) ) {
   
   cat("\nPlease type in required arguments!\n\n")
-  cat("\ncommand example:\n\nRscript  combineExprData.R --exprFile /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --output_dir /Combined_data/CUP\n\n")
+  cat("\ncommand example:\n\nRscript  combineExprData.R --exprDir /Combined_data --exprFile CUP.counts.matrix.txt --annotFile CUP_Target.txt --output_dir /Combined_data/CUP\n\n")
   
   q()
 }
