@@ -26,7 +26,8 @@
 #   filter_perc:  The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis. Default is 10
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
-#   batch_rm:     Remove batch-associated effects between datasets. Available options are: "TRUE" (default) and "FALSE"
+#   batch_rm:     Remove batch-associated effects. Available options are: "TRUE" (default) and "FALSE"
+#   batch_col:    Name of a column in the "annotFile" that specifies batches in the data. Default is "Batch"
 #   lfcThreshold: Fold-change threshold for calling DE genes. Default is 2
 #   pThreshold:   P-value threshold for calling DE genes. Default is 0.05
 #   adjMethod:    Method for correcting DE results for multiple testing. Default is "BH"
@@ -85,6 +86,8 @@ option_list = list(
               help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),
   make_option("--batch_rm", action="store", default=TRUE, type='logical',
               help="Remove batch-associated effects between datasets"),
+  make_option("--batch_col", action="store", default="Batch", type='character',
+              help="Name of a column in the annotFile that specifies batches in the data"),
   make_option("--lfcThreshold", action="store", default=2, type='numeric',
               help="Fold-change threshold for calling DE genes"),
   make_option("--pThreshold", action="store", default=0.05, type='numeric',
@@ -203,6 +206,7 @@ param_list <- list(exprDir = opt$exprDir,
                    log = as.logical(opt$log),
                    top_genes = as.numeric(opt$top_genes),
                    batch_rm = opt$batch_rm,
+                   batch_col = opt$batch_col,
                    lfcThreshold = opt$lfcThreshold,
                    pThreshold = opt$pThreshold,
                    adjMethod = opt$adjMethod,
