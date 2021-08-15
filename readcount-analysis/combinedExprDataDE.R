@@ -16,7 +16,6 @@
 #
 #	 Command line use example: Rscript  combineExprDataDE.R --exprDir /Combined_data --exprFile PRMT5.counts.matrix.txt --annotFile PRMT5_target_D6.txt --transform CPM --norm TMM --filter TRUE --log TRUE --results_name PRMT5_CPM_TMM_DE --output_dir /g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/PRMT5_CPM_TMM_DE
 #
-#   datasets:     List of datasets to be combined
 #   exprDir:      Directory with expression data. This is where the combined expression matrix and accompanying files will be saved
 #   exprFile:     File with expression data (read counts)
 #   annotFile:    Samples annotation file with four columns: (1) "Sample_name", (2) "File_name" (may be blank), (3) "Target" and (4) "Replicates" (may be blank)
