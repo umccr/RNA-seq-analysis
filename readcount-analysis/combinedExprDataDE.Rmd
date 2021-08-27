@@ -882,8 +882,6 @@ saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_nam
 detach("package:heatmaply", unload=FALSE)
 ```
 
-***
-
 ```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
 # Apply LIMMA (lmFit and contrasts.fit; https://www.bioconductor.org/packages/devel/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html#differential-expression-analysis  ) DE models
 batches <- as.character(targetFile[[ params$batch_col ]])
@@ -1121,7 +1119,7 @@ if ( length(targetFile$Target) > 2 ) {
 
 `r if ( params$batch_rm ) { c("### Heatmap") }`
 
-`r if ( params$batch_rm ) { c(paste0("Heatmap presenting expression levels of ", params$top_genes, "genes (y-axis) with the highest expression variance across all samples (x-axis).)) }`
+`r if ( params$batch_rm ) { c(paste0("Heatmap presenting expression levels of **", params$top_genes, "** genes (*y-axis*) with the highest expression variance across all samples (*x-axis*).")) }`
 
 ```{r heatmap_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
 ##### Keep only genes with variance > 0 across all samples
@@ -1414,16 +1412,16 @@ for (i in 1:ncol(eb$p.value) ) {
     
 	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", number=nrow(DGEdata.voom))
   rownames(topGenes) <- topGenes[,"SYMBOL"]
-  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
-  colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","lods","P.Value","adj.P.Val")]
+  colnames(topGenes) <- c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
   
   write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
   ##### Save log2FC values for DE genes
   topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="none", number=nrow(DGEdata.voom))
   rownames(topGenes) <- topGenes[,"SYMBOL"]
-  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","P.Value","adj.P.Val")]
-  colnames(topGenes) <- c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","lods","P.Value","adj.P.Val")]
+  colnames(topGenes) <- c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
   
   topGenes_list_log2FC <- cbind(topGenes_list_log2FC, topGenes$log2FC)
   
@@ -1455,8 +1453,8 @@ for (i in 1:ncol(eb$p.value) ) {
   if ( length(topGenes_list[[i]] ) != 0 ) {
     
     rownames(topGenes_list[[i]]) <- topGenes_list[[i]] [,"SYMBOL"]
-    topGenes_list[[i]]  <- topGenes_list[[i]] [,colnames(topGenes_list[[i]] ) %in% c("ENTREZID", "logFC","t","P.Value","adj.P.Val")]
-    colnames(topGenes_list[[i]] ) <- c("ENTREZID", "log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+    topGenes_list[[i]]  <- topGenes_list[[i]] [,colnames(topGenes_list[[i]] ) %in% c("ENTREZID", "logFC","t","lods","P.Value","adj.P.Val")]
+    colnames(topGenes_list[[i]] ) <- c("ENTREZID", "log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
     
     write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
@@ -1474,10 +1472,10 @@ for (i in 1:ncol(eb$p.value) ) {
     topGenes_list_upset[[i]] <- rownames(topGenes_list[[i]])
     
     ##### Generate dataTable
-    topGenes4table <- topGenes_list[[i]][ , c("log2FC", "t-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))]
+    topGenes4table <- topGenes_list[[i]][ , c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))]
     topGenes_list_table[[i]] <- DT::datatable( data = topGenes4table, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
         DT::formatStyle( columns = names(topGenes4table), 'text-align' = 'center' ) %>%
-        DT::formatRound(columns = c("log2FC", "t-statistic"), 2)
+        DT::formatRound(columns = c("log2FC", "t-statistic", "B-statistic"), 2)
     
     topGenes.index <- unique(c(topGenes.index,rownames(topGenes_list[[i]] )))
     topGenes_list[[i]] <- topGenes_list[[i]] 
