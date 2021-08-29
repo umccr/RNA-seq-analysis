@@ -1412,7 +1412,7 @@ for (i in 1:ncol(eb$p.value) ) {
     
 	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", number=nrow(DGEdata.voom))
   rownames(topGenes) <- topGenes[,"SYMBOL"]
-  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","lods","P.Value","adj.P.Val")]
+  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","B","P.Value","adj.P.Val")]
   colnames(topGenes) <- c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
   
   write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
@@ -1420,7 +1420,7 @@ for (i in 1:ncol(eb$p.value) ) {
   ##### Save log2FC values for DE genes
   topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="none", number=nrow(DGEdata.voom))
   rownames(topGenes) <- topGenes[,"SYMBOL"]
-  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","lods","P.Value","adj.P.Val")]
+  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","B","P.Value","adj.P.Val")]
   colnames(topGenes) <- c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
   
   topGenes_list_log2FC <- cbind(topGenes_list_log2FC, topGenes$log2FC)
@@ -1453,7 +1453,7 @@ for (i in 1:ncol(eb$p.value) ) {
   if ( length(topGenes_list[[i]] ) != 0 ) {
     
     rownames(topGenes_list[[i]]) <- topGenes_list[[i]] [,"SYMBOL"]
-    topGenes_list[[i]]  <- topGenes_list[[i]] [,colnames(topGenes_list[[i]] ) %in% c("ENTREZID", "logFC","t","lods","P.Value","adj.P.Val")]
+    topGenes_list[[i]]  <- topGenes_list[[i]] [,colnames(topGenes_list[[i]] ) %in% c("ENTREZID", "logFC","t","B","P.Value","adj.P.Val")]
     colnames(topGenes_list[[i]] ) <- c("ENTREZID", "log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
     
     write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
