@@ -114,6 +114,7 @@ suppressMessages(library(KEGG.db))
 suppressMessages(library(grid))
 suppressMessages(library(png))
 suppressMessages(library(ComplexHeatmap))
+suppressMessages(library(circlize))
 suppressMessages(library(UpSetR))
 suppressMessages(library(preprocessCore))
 suppressMessages(library(package=paste0("EnsDb.Hsapiens.v", params$ensembl_version), character.only = TRUE))
@@ -856,10 +857,13 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+  
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
 
@@ -1156,15 +1160,21 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h_batch_rm), max(data.h_batch_rm), length = 3), c("blue", "#EEEEEE", "red"))
+  
 #### Heatmap (AFTER batch correction)
-Heatmap(data.h_batch_rm, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+Heatmap(data.h_batch_rm, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.pdf")), width = 8, height = 8)
-Heatmap(data.h_batch_rm, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+Heatmap(data.h_batch_rm, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+  
 #### Heatmap (BEFORE batch correction)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 ```
 
 ```{r heatmap_interactive_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
@@ -1413,6 +1423,7 @@ for (i in 1:ncol(eb$p.value) ) {
 	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", number=nrow(DGEdata.voom))
   rownames(topGenes) <- topGenes[,"SYMBOL"]
   topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","B","P.Value","adj.P.Val")]
+  topGenes <- topGenes[ ,c("logFC","t","B","P.Value","adj.P.Val")]
   colnames(topGenes) <- c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
   
   write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
@@ -1421,6 +1432,7 @@ for (i in 1:ncol(eb$p.value) ) {
   topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="none", number=nrow(DGEdata.voom))
   rownames(topGenes) <- topGenes[,"SYMBOL"]
   topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","B","P.Value","adj.P.Val")]
+  topGenes <- topGenes[ ,c("logFC","t","B","P.Value","adj.P.Val")]
   colnames(topGenes) <- c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
   
   topGenes_list_log2FC <- cbind(topGenes_list_log2FC, topGenes$log2FC)
@@ -1454,6 +1466,7 @@ for (i in 1:ncol(eb$p.value) ) {
     
     rownames(topGenes_list[[i]]) <- topGenes_list[[i]] [,"SYMBOL"]
     topGenes_list[[i]]  <- topGenes_list[[i]] [,colnames(topGenes_list[[i]] ) %in% c("ENTREZID", "logFC","t","B","P.Value","adj.P.Val")]
+    topGenes_list[[i]]  <- topGenes_list[[i]] [ ,c("ENTREZID", "logFC","t","B","P.Value","adj.P.Val")]
     colnames(topGenes_list[[i]] ) <- c("ENTREZID", "log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
     
     write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_genes.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
@@ -1542,11 +1555,14 @@ if ( length(topGenes.index) > 1 ) {
     row_split <- NULL
     column_split <- NULL
   }
-    
-  print(Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split))
+  
+  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+  col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+  
+  print(Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h))
       
   pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
-  Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+  Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
   dev.off()
 }
 ```
