@@ -430,6 +430,7 @@ suppressMessages(library(edgeR))
 suppressMessages(library(tidyverse))
 suppressMessages(library(plotly))
 suppressMessages(library(ComplexHeatmap))
+suppressMessages(library(circlize))
 suppressMessages(library(scales))
 suppressMessages(library(truncnorm))
 suppressMessages(library(RColorBrewer))
@@ -1447,10 +1448,13 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+  
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, ".heatmap.pdf")), width = 8, height = 8)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
 
@@ -1505,10 +1509,13 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+  
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, ".heatmap_scaled.pdf")), width = 8, height = 8)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
+Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
 
