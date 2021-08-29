@@ -31,7 +31,7 @@ params:
   use_internal_data_kegg: FALSE
   grch_version: 38
   ensembl_version: 86
-  save_session: TRUE
+  save_session: FALSE
   seed: 99999999
 output:
   html_document:

@@ -43,7 +43,7 @@
 #   output_dir:   Directory for the results folder
 #   results_name: Desired core name for the results
 #   grch_version:  Human reference genome version used for genes annotation (default is "38")
-#   save_session:  Logical to save the session data. Default is TRUE
+#   save_session:  Logical to save the session data. Default is FALSE
 #   seed:         Set up a seed for random number generation
 #
 ################################################################################
@@ -118,7 +118,7 @@ option_list = list(
               help="Prefix for the results files names"),
   make_option("--grch_version", action="store", default=NA, type='integer',
               help="human reference genome version used for genes annotation"),
-  make_option("--save_session", action="store", default=TRUE, type='logical',
+  make_option("--save_session", action="store", default=FALSE, type='logical',
               help="Logical to save the session data"),
   make_option("--seed", action="store", default=99999999, type='numeric',
               help="Set up a seed for random number generation")
