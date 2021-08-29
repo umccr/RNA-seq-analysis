@@ -1519,7 +1519,7 @@ Heatmap presenting expression levels of `r length(topGenes.index)` **differentia
 ##### Static
 
 ```{r DE_heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
-##### Keep only DE genes
+##### Make sure that any DE genes were detected
 if ( length(topGenes.index) > 1 ) {
   data.h <- data.frame(DGEdata.voom$E[ rownames(DGEdata.voom$E) %in% topGenes.index,])
     
@@ -1543,39 +1543,40 @@ if ( length(topGenes.index) > 1 ) {
     column_split <- NULL
   }
     
-  Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split)
+  print(Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split))
       
   pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
   Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, use_raster = FALSE)
   dev.off()
 }
-
-#### FIX in cases where no DE genes were detecetd if ( !is.null(topGenes.index) ) {
-  
 ```
 
 ***
 
 ##### Interactive
 
-```{r DE_heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'as.is', fig.width = 12, fig.height = 8}
+```{r DE_heatmap_interactive, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, results = 'asis', fig.width = 12, fig.height = 10}
 suppressMessages(library(heatmaply))
 
+##### Build list of outputs
+##### https://stackoverflow.com/questions/49990653/plotly-plot-doesnt-render-within-for-loop-of-rmarkdown-document
+output <- list()
+
 ##### Generate heatmap (PLOTLY)
+##### Make sure that any DE genes were detected
 if ( length(topGenes.index) > 1 ) {
-  p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
-    layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
-    
-  p
+  output[[1]] <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+    layout(autosize = TRUE, width = 800, height = 600, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
     
   ##### Save the heatmap as html (PLOTLY)
   saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
-    
-  detach("package:heatmaply", unload=FALSE)
+} else {
+  output[[1]] <- paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep="")
 }
 
+cat(renderTags(output[[1]])$html)
 
-#### FIX in cases where no DE genes were detecetd if ( !is.null(topGenes.index) ) {
+detach("package:heatmaply", unload=FALSE)
 ```
 
 ***
@@ -1863,12 +1864,17 @@ for( i in 1:ncol(eb$p.value) ){
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
         if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
-          pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
           
-          ##### Rename pathview plots
-          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".png"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".xml"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png"))
+          ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
+          if ( !file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep=""))) {
+            
+            pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
+            
+            ##### Rename pathview plots
+            file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".png"))
+            file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".xml"))
+            file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png"))
+          }
           
           cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
         } else {
@@ -2078,12 +2084,17 @@ for( i in 1:ncol(eb$p.value) ){
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
         if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
-          pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
           
-          ##### Rename pathview plots
-          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".png"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".xml"))
-          file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
+          ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
+          if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep=""))) {
+            
+            pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
+            
+            ##### Rename pathview plots
+            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".png"))
+            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".xml"))
+            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
+          }
           
           cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
           
