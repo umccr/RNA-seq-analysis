@@ -1417,15 +1417,19 @@ if ( ncol(eb.decideTests) > 1 ) {
 
 write.table(eb.decideTests, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_decideTests.txt", sep = ""), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 
+##### Create list to store DE results for ALL genes for each comparison
+topGenes_list_all <- list()
+
 #####  Write the analysis results into a file
 for (i in 1:ncol(eb$p.value) ) {
     
 	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod,  sort.by="p", number=nrow(DGEdata.voom))
   rownames(topGenes) <- topGenes[,"SYMBOL"]
-  topGenes <- topGenes[,colnames(topGenes) %in% c("logFC","t","B","P.Value","adj.P.Val")]
-  topGenes <- topGenes[ ,c("logFC","t","B","P.Value","adj.P.Val")]
-  colnames(topGenes) <- c("log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
-  
+  topGenes <- topGenes[,colnames(topGenes) %in% c("ENTREZID","logFC","t","B","P.Value","adj.P.Val")]
+  topGenes <- topGenes[ ,c("ENTREZID","logFC","t","B","P.Value","adj.P.Val")]
+  colnames(topGenes) <- c("ENTREZID","log2FC", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))
+  topGenes_list_all[[i]] <- topGenes
+    
   write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
     
   ##### Save log2FC values for DE genes
@@ -1571,7 +1575,7 @@ if ( length(topGenes.index) > 1 ) {
 
 ##### Interactive
 
-```{r DE_heatmap_interactive, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, results = 'asis', fig.width = 12, fig.height = 10}
+```{r DE_heatmap_interactive, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, results = 'asis', fig.width = 12, fig.height = 16}
 suppressMessages(library(heatmaply))
 
 ##### Build list of outputs
@@ -1730,12 +1734,14 @@ if ( !file.exists(KEGG_dir) ) {
 }
 setwd(KEGG_dir)
 
-##### Create lists to store pathways enrichemnt results for each comparison
+##### Create lists to store pathways enrichment results for each comparison
 top_enrichKEGG <- list()
 top_enrichKEGG.df <- list()
 top_enrichKEGG.genes <- list()
 top_enrichKEGG.upset <- list()
 top_enrichKEGG_table <- list()
+
+##### NOTE, use only DE genes for pathways enrichment analysis
 
 for (i in 1:ncol(eb$p.value) ) {
   
@@ -1825,6 +1831,8 @@ setwd(KEGG_dir)
 ##### Now once the plots are ready show them in separate tabs
 data.pathways <- list()
 
+##### NOTE, use only DE genes for pathways enrichment analysis
+
 for( i in 1:ncol(eb$p.value) ){
     
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
@@ -1882,7 +1890,7 @@ for( i in 1:ncol(eb$p.value) ){
         if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
           
           ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
-          if ( !file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep=""))) {
+          if ( !file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
             
             pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
             
@@ -1953,6 +1961,8 @@ top_gseKEGG.genes <- list()
 top_gseKEGG.upset <- list()
 top_gseKEGG_table <- list()
 
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+
 for (i in 1:ncol(eb$p.value) ) {
   
   top_gseKEGG[[i]] <- NA
@@ -1965,10 +1975,10 @@ for (i in 1:ncol(eb$p.value) ) {
   if ( !is.na(topGenes_list[[i]]) ) {
     
     ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
-    genes.ENTREZID <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-    names(genes.ENTREZID) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
+    genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+    names(genes.ENTREZID) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
       
-    ##### Sort genes by expression values
+    ##### Sort genes by FC values
     genes.ENTREZID <- sort(genes.ENTREZID, decreasing = TRUE)
     
     ##### Keep only unique genes
@@ -2045,6 +2055,8 @@ setwd(KEGG_dir)
 ##### Now once the plots are ready show them in separate tabs
 data.pathways <- list()
 
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+
 for( i in 1:ncol(eb$p.value) ){
     
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
@@ -2057,9 +2069,12 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Prepare data with logFC values
       ##### But first remove genes with invalid ENTREZIDs
-      data.pathways[[i]] <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-      names(data.pathways[[i]]) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-        
+      data.pathways[[i]] <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      names(data.pathways[[i]]) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      
+      ##### Sort genes by FC values
+      data.pathways[[i]] <- sort(data.pathways[[i]], decreasing = TRUE)
+    
       cat("\n##### Summary {.tabset} \n")
       
       cat("\n###### Table \n")
@@ -2198,12 +2213,14 @@ if ( !file.exists(DisGeNET_dir) ) {
 }
 setwd(DisGeNET_dir)
 
-##### Create lists to store pathways enrichemnt results for each comparison
+##### Create lists to store pathways enrichment results for each comparison
 enrichDGN <- list()
 enrichDGN.df <- list()
 enrichDGN.genes <- list()
 enrichDGN.upset <- list()
 enrichDGN_table <- list()
+
+##### NOTE, use only DE genes for pathways enrichment analysis
 
 for (i in 1:ncol(eb$p.value) ) {
   
@@ -2291,6 +2308,8 @@ if ( length(enrichDGN.upset) > 1 ) {
 ```{r DisGeNET_over_representation__visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
 ##### Now once the plots are ready show them in separate tabs
 data.pathways <- list()
+
+##### NOTE, use only DE genes for pathways enrichment analysis
 
 for( i in 1:ncol(eb$p.value) ){
     
@@ -2389,6 +2408,8 @@ top_gseNCG.genes <- list()
 top_gseNCG.upset <- list()
 top_gseNCG_table <- list()
 
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+
 for (i in 1:ncol(eb$p.value) ) {
   
   top_gseNCG[[i]] <- NA
@@ -2398,13 +2419,13 @@ for (i in 1:ncol(eb$p.value) ) {
   top_gseNCG_table[[i]] <- NA
   
   ##### Run analysis only for comparisons with significant results
-  if ( !is.na(topGenes_list[[i]]) ) {
+  if ( !is.na(topGenes_list_all[[i]]) ) {
     
     ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
-    genes.ENTREZID <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-    names(genes.ENTREZID) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
+    genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+    names(genes.ENTREZID) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
       
-    ##### Sort genes by expression values
+    ##### Sort genes by FC values
     genes.ENTREZID <- sort(genes.ENTREZID, decreasing = TRUE)
     
     ##### Keep only unique genes
@@ -2479,6 +2500,8 @@ if ( length(top_gseNCG.upset) > 1 ) {
 ##### Now once the plots are ready show them in separate tabs
 data.pathways <- list()
 
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+
 for( i in 1:ncol(eb$p.value) ){
     
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
@@ -2491,9 +2514,12 @@ for( i in 1:ncol(eb$p.value) ){
       
       ##### Prepare data with logFC values
       ##### But first remove genes with invalid ENTREZIDs
-      data.pathways[[i]] <- topGenes_list[[i]]$log2FC[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-      names(data.pathways[[i]]) <- topGenes_list[[i]]$ENTREZID[ !is.na(topGenes_list[[i]]$ENTREZID) ]
-        
+      data.pathways[[i]] <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      names(data.pathways[[i]]) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      
+      ##### Sort genes by expression values
+      data.pathways[[i]] <- sort(data.pathways[[i]], decreasing = TRUE)
+      
       cat("\n##### Summary {.tabset} \n")
       
       cat("\n###### Table \n")
