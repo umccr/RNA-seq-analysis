@@ -857,13 +857,16 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+##### Scale rows the data first (row scale)
+data.h.z <- t(scale(t(data.h)))
   
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
+  
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
 
@@ -1160,21 +1163,27 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
+##### Scale rows the data first (row scale)
+data.h_batch_rm.z <- t(scale(t(data.h_batch_rm)))
+  
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-col.h = colorRamp2(seq(min(data.h_batch_rm), max(data.h_batch_rm), length = 3), c("blue", "#EEEEEE", "red"))
+col.h = colorRamp2(seq(min(data.h_batch_rm.z), max(data.h_batch_rm.z), length = 3), c("blue", "#EEEEEE", "red"))
   
 #### Heatmap (AFTER batch correction)
-Heatmap(data.h_batch_rm, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.pdf")), width = 8, height = 8)
-Heatmap(data.h_batch_rm, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 
+##### Scale rows the data first (row scale)
+data.h.z <- t(scale(t(data.h)))
+  
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
   
 #### Heatmap (BEFORE batch correction)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 ```
 
 ```{r heatmap_interactive_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
@@ -1560,13 +1569,16 @@ if ( length(topGenes.index) > 1 ) {
     column_split <- NULL
   }
   
-  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-  col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+  ##### Scale rows the data first (row scale)
+  data.h.z <- t(scale(t(data.h)))
   
-  print(Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h))
-      
+  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+  col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
+  
+  print(Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h))
+
   pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
-  Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+  Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
   dev.off()
 }
 ```
@@ -1656,20 +1668,16 @@ if ( length(topGenes_list_upset) > 1 ) {
 }
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("***") }`
+***
 
-`r if ( length(contrastNames) > 1 ) { c("#### Table") }`
+#### Table
 
 ```{r DE_summary_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
-##### Show DE results across mutliple comparisons
-if ( length(contrastNames) > 1 && !is.null(topGenes.index) ) {
-  
-  DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
       DT::formatStyle( columns = names(eb.decideTests), 'text-align' = 'center' ) %>%
     
-      ##### Colour cells according to evidence level and trust rating
-      DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
-}
+    ##### Colour cells according to evidence level and trust rating
+    DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
 ```
 
 `r if ( length(contrastNames) > 1 ) { c("***") }`
