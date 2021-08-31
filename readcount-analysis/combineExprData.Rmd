@@ -1060,13 +1060,16 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+##### Scale rows the data first (row scale)
+data.h.z <- t(scale(t(data.h)))
   
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
+  
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
 
@@ -1140,13 +1143,16 @@ if ( length(unique(targetFile$Target)) > 1 ) {
   column_split <- NULL
 }
 
-##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-col.h = colorRamp2(seq(min(data.h), max(data.h), length = 3), c("blue", "#EEEEEE", "red"))
+##### Scale rows the data first (row scale)
+data.h.z <- t(scale(t(data.h)))
   
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
+  
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = 8)
-Heatmap(data.h, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
 
