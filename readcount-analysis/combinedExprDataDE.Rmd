@@ -1922,7 +1922,13 @@ for( i in 1:ncol(eb$p.value) ){
             file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png"))
           }
           
-          cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+          ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
+          if ( file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+            cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+          } else {
+            cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+          }
+          
         } else {
           cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
         }
@@ -1953,7 +1959,13 @@ for( i in 1:ncol(eb$p.value) ){
             file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.all_genes.png"))
           }
           
-          cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.all_genes.png)", sep="")), "\n")
+          ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
+          if ( file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.all_genes.png", sep="") ) ) {
+            cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.all_genes.png)", sep="")), "\n")
+          } else {
+            cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+          }
+          
         } else {
           cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
         }
@@ -2170,7 +2182,7 @@ for( i in 1:ncol(eb$p.value) ){
         if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
           
           ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
-          if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep=""))) {
+          if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
             
             pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
             
@@ -2180,7 +2192,12 @@ for( i in 1:ncol(eb$p.value) ){
             file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
           }
           
-          cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+          ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
+          if ( file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+            cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+          } else {
+            cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+          }
           
         } else {
           cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
