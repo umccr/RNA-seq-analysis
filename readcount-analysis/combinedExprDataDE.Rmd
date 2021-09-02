@@ -1905,7 +1905,7 @@ for( i in 1:ncol(eb$p.value) ){
          
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
+        if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322") ) {
           
           ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
           if ( !file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
@@ -2138,7 +2138,7 @@ for( i in 1:ncol(eb$p.value) ){
          
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206") ) {
+        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322") ) {
           
           ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
           if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
@@ -2166,7 +2166,7 @@ for( i in 1:ncol(eb$p.value) ){
 
       cat("\n##### GSEA plots {.tabset} \n")
       
-      cat(paste("Plots presenting GSEA results. The *top* panel illustrates running *enrichment score* (ES), which reflects the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes, for the ", top_gseKEGG.df[[i]]$Description[j], " gene set as the analysis walks down the ranked list. Gene sets with a distinct peak at the beginning or end of the ranked list are generally the most interesting. The *bottom* panel shows the value of the ranking metric as you move down the list of ranked genes. The ranking metric measures a gene’s correlation with a phenotype. The value of the ranking metric goes from positive to negative as you move down the ranked list. A positive value indicates correlation with the first phenotype and a negative value indicates correlation with the second phenotype..\n\n", sep=""))
+      cat(paste("Plots presenting GSEA results. The *top* panel illustrates running *enrichment score* (ES), which reflects the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes, for the ", top_gseKEGG.df[[i]]$Description[j], " gene set as the analysis walks down the ranked list. Gene sets with a distinct peak at the beginning or end of the ranked list are generally the most interesting. The *bottom* panel shows the value of the ranking metric as you move down the list of ranked genes. The ranking metric measures a genes correlation with a phenotype. The value of the ranking metric goes from positive to negative as you move down the ranked list. A positive value indicates correlation with the first phenotype and a negative value indicates correlation with the second phenotype.\n\n", sep=""))
       
       for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
         
