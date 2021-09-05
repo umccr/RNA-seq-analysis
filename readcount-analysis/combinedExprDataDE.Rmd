@@ -1905,7 +1905,7 @@ for( i in 1:ncol(eb$p.value) ){
          
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322") ) {
+        if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
           
           ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
           if ( !file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
@@ -2138,7 +2138,7 @@ for( i in 1:ncol(eb$p.value) ){
          
         ##### NOTE: Some pathways are problematic. Skip these pathways
         # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322") ) {
+        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
           
           ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
           if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
