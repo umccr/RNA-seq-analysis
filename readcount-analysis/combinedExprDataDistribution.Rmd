@@ -729,7 +729,7 @@ for ( subset in targets_mod.list ) {
     
     ##### Keep genes with CPM of at least 1 in more than user-defined percentage of samples
   #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
-    keep <- rowSums(y[[subset]]>1) >= ncol(data)*params$filter_perc/100
+    keep <- rowSums(cpm(y[[subset]])>1) >= ncol(data)*params$filter_perc/100
   
     ##### Keep the genes of interest too
     keep[ names(keep) %in% genes ] <- TRUE
