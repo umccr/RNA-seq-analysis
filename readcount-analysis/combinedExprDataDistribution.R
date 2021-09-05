@@ -27,14 +27,15 @@
 #
 #   datasets:     List of datasets to be combined
 #   transform:    Transformation method to be used when converting read counts. Available options are: "CPM" (default) and "TPM"
-#   norm:         Normalisation method. Currently, "TMM","TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "sizeFactors" and "quantile" normalisation are used for TPM-transformed data. "None" (default) is available for both transformation methods
+#   norm:         Normalisation method. Currently, "TMM" (default),"TMMwzp", "RLE" and "upperquartile" methods are available for CPM-transformed data and "sizeFactors" and "quantile" normalisation are used for TPM-transformed data. "None" is available for both transformation methods
 #   batch_rm:     Method used to remove batch-associated effects between datasets. Available options are: "none" (default), "limma" and "combat"
 #   batch_par:    Use parametric adjustments in ComBat. Available options are: "TRUE" (default, parametric adjustment) and "FALSE" (nonparametric adjustment)
 #   filter:       Filtering out low expressed genes. Available options are: "TRUE" (default) and "FALSE"
+#   filter_perc:  The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis. Default is 10
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   scaling:      Apply z-score transformation, either row-wise (across samples) or column-wise (across genes in a sample). Available options are: "sample-wise" (across samples, default) or "gene-wise" (across genes)
 #   genes:        List of genes to be considered. Up to 10 genes are allowed, each separated by comma. 
-#   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
+#   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 500
 #   ensembl:      Is input data annotated using ensembl gene IDs? Available options are: "TRUE" (default) and "FALSE"
 #   samples (optional):  ID of samples of interest
 #   output_dir:   Directory for the results folder
@@ -73,13 +74,15 @@ option_list = list(
               help="Use parametric adjustments in ComBat"),
   make_option("--filter", action="store", default=TRUE, type='logical',
               help="Filtering out low expressed genes"),
+  make_option("--filter_perc", action="store", default=10, type='numeric',
+              help="The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis"),
   make_option("--log", action="store", default=TRUE, type='logical',
               help="Log (base 2) transform data before normalisation"),
   make_option("--scaling", action="store", default="gene-wise", type='character',
               help="Scaling for z-score transformation (sample-wise or gene-wise"),
   make_option("--genes", action="store", default=NA, type='character',
               help="List of genes to be considered"),
-  make_option(c("--top_genes"), action="store", default=400, type='numeric',
+  make_option(c("--top_genes"), action="store", default=500, type='numeric',
               help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),  
   make_option("--ensembl", action="store", default=TRUE, type='logical',
               help="Are genes annotated using ensembl IDs?"),
@@ -147,6 +150,7 @@ param_list <- list(datasets = opt$datasets,
                    batch_rm = opt$batch_rm,
                    batch_par = opt$batch_par,
                    filter = opt$filter,
+                   filter_perc = as.numeric(opt$filter_perc),
                    log = opt$log,
                    scaling = opt$scaling,
                    genes = opt$genes,

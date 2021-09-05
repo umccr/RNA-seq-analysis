@@ -16,14 +16,15 @@ output:
 params:
   datasets: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset/TCGA_PAAD_datasets_list.txt'
   output_dir: '/Library/WebServer/Documents/PIEdb/piedb_backoffice/data/expr_data_integration/datasets_prep/TCGA-PAAD_dataset'
-  transform: 'TPM'
-  norm: 'quantile'
+  transform: 'CPM'
+  norm: 'TMM'
   batch_rm: 'combat'
   batch_par: TRUE
   filter: TRUE
+  filter_perc: 15
   log: TRUE
   genes: 'KRAS,MKI67,TP53,PTEN,SMAD4,BRCA1,BRCA2,CDKN2A,CDKN2B,BRAF'
-  top_genes: 400
+  top_genes: 500
   ensembl: TRUE
   samples: 'TCGA-3A-A9I9-01A-11R-A38C-07'
   results_name: 'TCGA-PAAD_dataset'
@@ -48,6 +49,7 @@ The aim of this report is to investigate changes to the read count data at vario
 * **batch_rm**: `r params$batch_rm`
 * **batch_par**: `r params$batch_par`
 * **filter**: `r params$filter`
+* **filter_perc**: `r params$filter_perc`
 * **log**: `r params$log`
 * **genes**: `r params$genes`
 * **top_genes**: `r params$top_genes`
@@ -725,9 +727,10 @@ for ( subset in targets_mod.list ) {
     ##### Create EdgeR DGEList object
     y[[subset]] <- edgeR::DGEList(counts=data,  group=target$Dataset)
     
-    ##### Remove genes with CPM of at least 1 in less than 10% of samples
-    keep <- rowSums(edgeR::cpm(y[[subset]])>1) >= ncol(data)/10
-    
+    ##### Keep genes with CPM of at least 1 in more than user-defined percentage of samples
+  #cat("The CPM of 1 (cut-off for removing low expressed genes) corresponds to", round(min(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the lowest sequencing depth, and", round(max(as.numeric(colSums(data)*1e-6)), digits=0), "reads in sample with the greatest sequencing depth\n")
+    keep <- rowSums(y[[subset]]>1) >= ncol(data)*params$filter_perc/100
+  
     ##### Keep the genes of interest too
     keep[ names(keep) %in% genes ] <- TRUE
     y[[subset]]$filtered <- y[[subset]][keep, , keep.lib.sizes=FALSE]
@@ -766,9 +769,9 @@ for ( subset in targets_mod.list ) {
     ##### Convert data into RPKM
     y[[subset]]$transformed <- edgeR::rpkm(y[[subset]], gene.length = gene.length, normalized.lib.sizes=FALSE, log=FALSE)
     
-    ##### Remove genes with TPM of at least 0.2 in less than 10% of samples
-    keep <- rowSums(y[[subset]]$transformed>0.2) >= ncol(y[[subset]]$transformed)/10
-    
+    ##### Keep genes with TPM of at least 0.2 in more than user-defined of samples
+    keep <- rowSums(y[[subset]]$transformed>0.2) >= ncol(data)*params$filter_perc/100
+  
     ##### Keep the genes of interest too
     keep[ names(keep) %in% genes ] <- TRUE
     y[[subset]]$filtered <- y[[subset]][keep, ]
