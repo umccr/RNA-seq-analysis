@@ -1325,7 +1325,7 @@ if ( all(is.na(targetFile$Replicates)) || all(targetFile$Replicates == "-") ) {
   }
     
   corfit <- duplicateCorrelation(DGEdata.voom, design=mod, ndups = 1, block = biolrep)
-  fit <- lmFit(DGEdata.voom, mod, block = biolrep, cor = corfit$consensus)
+  fit <- lmFit(DGEdata.voom, mod, block = biolrep, correlation = corfit$consensus.correlation)
 }
 
 
