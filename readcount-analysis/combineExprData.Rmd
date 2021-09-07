@@ -1123,7 +1123,6 @@ detach("package:heatmaply", unload=FALSE)
 `r if ( runGOI ) { paste0("</font>") }`
 `r if ( runGOI ) { paste0("</details>") }`
 
-
 ```{r heatmap_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = runGOI}
 ##### Keep only genes of interest
 data.h_goi <- data.frame(data[ rownames(data) %in% goi_list,])
@@ -1161,7 +1160,7 @@ Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, clu
 dev.off()
 ```
 
-```{r heatmap_interactive_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+```{r heatmap_interactive_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = runGOI}
 suppressMessages(library(heatmaply))
 
 ##### Generate heatmap (PLOTLY)
@@ -1173,7 +1172,6 @@ saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_nam
 
 detach("package:heatmaply", unload=FALSE)
 ```
-
 
 ```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
 # Apply LIMMA (lmFit and contrasts.fit; https://www.bioconductor.org/packages/devel/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html#differential-expression-analysis  ) DE models
@@ -1491,8 +1489,6 @@ saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_nam
 
 detach("package:heatmaply", unload=FALSE)
 ```
-
-***
 
 ```{r write_data_final, comment = NA, message=FALSE, warning=FALSE}
 ##### Define the name base on input parameters
