@@ -75,6 +75,7 @@ set.seed(seed)
 ### Load libraries
 suppressMessages(library(preprocessCore))
 suppressMessages(library(edgeR))
+suppressMessages(library(Glimma))
 suppressMessages(library(EDASeq))
 suppressMessages(library(ComplexHeatmap))
 suppressMessages(library(circlize))
