@@ -1126,7 +1126,7 @@ detach("package:heatmaply", unload=FALSE)
 
 ```{r heatmap_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = runGOI}
 ##### Keep only genes of interest
-data.h <- data.frame(data[ rownames(data) %in% goi_list,])
+data.h_goi <- data.frame(data[ rownames(data) %in% goi_list,])
 
 ##### Prepare heatmap annotation (samples)
 Target.col  <- targets.colour[[1]]
@@ -1134,10 +1134,10 @@ names(Target.col) <- sort(unique(targetFile$Target))
 ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
 
 ##### Cluster genes
-hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+hc <- hclust(as.dist(1-cor(data.h_goi, method="pearson")), method="ward.D2")
 
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+hr <- hclust(as.dist(dist(data.h_goi, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
 if ( length(unique(targetFile$Target)) > 1 ) {
@@ -1149,15 +1149,15 @@ if ( length(unique(targetFile$Target)) > 1 ) {
 }
 
 ##### Scale rows the data first (row scale)
-data.h.z <- t(scale(t(data.h)))
+data.h_goi.z <- t(scale(t(data.h_goi)))
   
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
+col.h = colorRamp2(seq(min(data.h_goi.z), max(data.h_goi.z), length = 3), c("blue", "#EEEEEE", "red"))
   
-Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = 8)
-Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
 
@@ -1165,7 +1165,7 @@ dev.off()
 suppressMessages(library(heatmaply))
 
 ##### Generate heatmap (PLOTLY)
-p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+p <- heatmaply(data.frame(data.h_goi), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
@@ -1183,6 +1183,8 @@ batches <- as.character(targetFile[[ params$batch_col ]])
 if ( length(unique(batches)) > 1 ) {
   data_before_batch_rm <- data
   data <- limma::removeBatchEffect(data_before_batch_rm, batch = batches)
+  
+  ##### Also keep the annotated data for heatmaps
   data2plot <- data
 }
 ```
