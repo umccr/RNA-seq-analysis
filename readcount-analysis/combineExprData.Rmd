@@ -1274,7 +1274,7 @@ p
 
 `r if ( params$batch_rm ) { c("***") }`
 
-`r if ( params$batch_rm ) { c("### Pariwise plot") }`
+`r if ( params$batch_rm ) { c("#### Pariwise plot") }`
 
 `r if ( params$batch_rm ) { c("Scatter plots for all combinations between the first 5 principal components (PCs) to help determine which PCs explain the biological and/or potential batch effects.") }`
 
@@ -1337,7 +1337,7 @@ p
 
 `r if ( params$batch_rm ) { c("***") }`
 
-`r if ( params$batch_rm ) { c("### Scree plot") }`
+`r if ( params$batch_rm ) { c("#### Scree plot") }`
 
 `r if ( params$batch_rm ) { c("Scree plot presenting the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance.") }`
 
@@ -1453,7 +1453,9 @@ data.h_batch_rm.z <- t(scale(t(data.h_batch_rm)))
   
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
 col.h = colorRamp2(seq(min(data.h_batch_rm.z), max(data.h_batch_rm.z), length = 3), c("blue", "#EEEEEE", "red"))
-  
+
+cat("After batch correction")
+
 #### Heatmap (AFTER batch correction)
 Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 
@@ -1461,12 +1463,22 @@ pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_r
 Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 
+
+#### Heatmap (BEFORE batch correction)
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data_before_batch_rm, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data_before_batch_rm, method="euclidean")), method="ward.D2")
+
 ##### Scale rows the data first (row scale)
 data.h.z <- t(scale(t(data.h)))
   
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
 col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
-  
+
+cat("Before batch correction")
+
 #### Heatmap (BEFORE batch correction)
 Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 ```
@@ -1489,6 +1501,8 @@ saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_nam
 
 detach("package:heatmaply", unload=FALSE)
 ```
+
+***
 
 ```{r write_data_final, comment = NA, message=FALSE, warning=FALSE}
 ##### Define the name base on input parameters
