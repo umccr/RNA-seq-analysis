@@ -1472,7 +1472,7 @@ hc <- hclust(as.dist(1-cor(data_before_batch_rm, method="pearson")), method="war
 hr <- hclust(as.dist(dist(data_before_batch_rm, method="euclidean")), method="ward.D2")
 
 ##### Scale rows the data first (row scale)
-data.h.z <- t(scale(t(data.h)))
+data.h.z <- t(scale(t(data_before_batch_rm)))
   
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
 col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
