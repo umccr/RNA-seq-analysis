@@ -12,6 +12,8 @@ params:
   filter_perc: 10
   norm: 'TMM'
   log: TRUE
+  batch_rm: TRUE
+  batch_col: 'Batch'
   output_dir: 
   results_name: 
   top_genes: 400
@@ -57,6 +59,8 @@ set.seed(seed)
 * **filter_perc**: `r params$filter_perc`
 * **norm**: `r params$norm`
 * **log**: `r params$log`
+* **batch_rm**: `r params$batch_rm`
+* **batch_col**: `r params$batch_col`
 * **results_name**: `r params$results_name`
 * **top_genes**: `r params$top_genes`
 * **goi**: `r params$goi`
@@ -1104,7 +1108,7 @@ detach("package:heatmaply", unload=FALSE)
 `r if ( runGOI ) { paste0("<summary>Input genes</summary>") }`
 `r if ( runGOI ) { paste0("<font size=\"2\">") }`
 
-*`r if ( runGOI ) { paste(goi_list[ goi_list %in% rownames(data) ], collapse = ", ") }`*
+`r if ( runGOI ) { paste(goi_list[ goi_list %in% rownames(data) ], collapse = ", ") }`
 
 `r if ( runGOI ) { paste0("</font>") }`
 `r if ( runGOI ) { paste0("</details>") }`
@@ -1113,7 +1117,7 @@ detach("package:heatmaply", unload=FALSE)
 `r if ( runGOI ) { paste0("<summary>Missing genes</summary>") }`
 `r if ( runGOI ) { paste0("<font size=\"2\">") }`
 
-*`r if ( runGOI ) { paste(goi_list[ goi_list %!in% rownames(data) ], collapse = ", ") }`*
+`r if ( runGOI ) { paste(goi_list[ goi_list %!in% rownames(data) ], collapse = ", ") }`
 
 `r if ( runGOI ) { paste0("</font>") }`
 `r if ( runGOI ) { paste0("</details>") }`
@@ -1168,6 +1172,327 @@ saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_nam
 
 detach("package:heatmaply", unload=FALSE)
 ```
+
+
+```{r batch_effect_correction, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
+# Apply LIMMA (lmFit and contrasts.fit; https://www.bioconductor.org/packages/devel/workflows/vignettes/RNAseq123/inst/doc/limmaWorkflow.html#differential-expression-analysis  ) DE models
+batches <- as.character(targetFile[[ params$batch_col ]])
+
+##### Perform batch-effect correction using limma
+if ( length(unique(batches)) > 1 ) {
+  data_before_batch_rm <- data
+  data <- limma::removeBatchEffect(data_before_batch_rm, batch = batches)
+  data2plot <- data
+}
+```
+
+
+```{r write_data, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
+##### Write combined data into a file
+write.table(data, file = paste0(params$output_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+
+##### Write list genes into a file
+write.table(rownames(data), file = paste0(params$output_dir, "/", params$results_name,".combined_genes.txt"), sep="\t", quote=FALSE, row.names=FALSE, col.names=FALSE, append = FALSE )
+```
+
+`r if ( params$batch_rm ) { c("***") }`
+
+`r if ( params$batch_rm ) { c("## Batch-effects correction {.tabset .tabset-fade}") }`
+
+`r if ( params$batch_rm ) { c("### PCA {.tabset .tabset-fade}") }`
+
+`r if ( params$batch_rm ) { c("#### 2D plot") }`
+
+`r if ( params$batch_rm ) { c("Scatter-plots of the first 2 principal components (PCs) constituting the primary source of variation in the data before and after batch effects correction. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.") }`
+
+```{r PCA_plot_2D_batch_rm, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
+suppressMessages(library(plotly))
+##### Keep only genes with variance > 0 across all samples
+rsd <- apply(data,1,sd)
+data.subset <- data[rsd>0,]
+rsd <- rsd[rsd>0]
+
+if ( nrow(data.subset) < params$top_genes ) {
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(data.subset)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
+}
+
+##### Subset genes
+data.subset <- data.frame(data.subset[sel,])
+
+##### Perform PCA
+data.subset_pca <- prcomp(t(data.subset), scale=FALSE)
+
+##### Get variance importance for all principal components
+importance_pca_batch_rm <- summary(data.subset_pca)$importance[2,]
+importance_pca_batch_rm <- paste(round(100*importance_pca_batch_rm, 2), "%", sep="")
+names(importance_pca_batch_rm) <- names(summary(data.subset_pca)$importance[2,])
+  
+##### Prepare data frame
+data.subset_pca.df <- data.frame(targetFile$Target, data.subset_pca$x[,"PC1"], data.subset_pca$x[,"PC2"], data.subset_pca$x[,"PC3"])
+colnames(data.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+
+##### Generate PCA 2-D plot (AFTER batch correction)
+p <- plot_ly(data.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(data.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
+layout(title = "\nAfter batch correction", xaxis = list(title = paste( "PC1", " (",importance_pca_batch_rm["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca_batch_rm["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+p
+
+##### Save PCA plot as html
+saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_2d_batch_rm.html")))
+
+##### Generate PCA 2-D plot (BEFORE batch correction)
+p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
+layout(title = "\nBefore batch correction", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+p
+```
+
+`r if ( params$batch_rm ) { c("***") }`
+
+`r if ( params$batch_rm ) { c("#### 3D plot") }`
+
+`r if ( params$batch_rm ) { c("Scatter-plots of the first 3 principal components (PCs) constituting the primary source of variation in the data before and after batch effects correction. Each point represents the orientation of a sample in the transcriptional space projected on the PCA, with different colours representing the biological group of the sample.") }`
+
+```{r PCA_plot_3D_batch_rm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval=params$batch_rm}
+##### Generate PCA 3-D plot (AFTER batch correction)
+p <- plot_ly(data.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(data.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
+layout(title = "\nAfter batch correction", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca_batch_rm["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca_batch_rm["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca_batch_rm["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
+
+p
+
+##### Save PCA plot as html
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_3d_batch_rm.html")))
+
+##### Generate PCA 3-D plot (BEFORE batch correction)
+p <- plot_ly(y$norm.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(y$norm.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
+layout(title = "\nBefore batch correction", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
+
+p
+```
+
+`r if ( params$batch_rm ) { c("***") }`
+
+`r if ( params$batch_rm ) { c("### Pariwise plot") }`
+
+`r if ( params$batch_rm ) { c("Scatter plots for all combinations between the first 5 principal components (PCs) to help determine which PCs explain the biological and/or potential batch effects.") }`
+
+```{r PCA_pairwise_plot_batch_rm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval=params$batch_rm}
+##### Plot all combinations between the first 5 PCs (AFTER batch correction)
+##### Preapre colours for plot exis
+p <- as.data.frame(data.subset_pca$x[,1:5]) %>%
+  plot_ly(width = 800, height = 800) %>%
+  add_trace( type = 'splom', dimensions = list(
+      list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+    ),
+  text=paste(targetFile$Target, rownames(data.subset_pca$x), sep=": "),
+    marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
+    )
+  ) %>%
+  layout(
+    title= "After batch correction",
+    hovermode="closest",
+    plot_bgcolor="rgba(240,240,240, 0.95)",
+    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
+)
+
+p
+
+##### Save pairwise PCA plot as html
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise_batch_rm.html")))
+
+##### Plot all combinations between the first 5 PCs
+#pairs(data.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+##### Save the plot as pdf file
+#pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise_batch_rm.pdf")), width=10, height=10)
+#pairs(data.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+#invisible(dev.off())
+
+##### Plot all combinations between the first 5 PCs (BEFORE batch correction)
+##### Preapre colours for plot exis
+axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
+p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
+  plot_ly(width = 800, height = 800) %>%
+  add_trace( type = 'splom', dimensions = list(
+      list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+    ),
+  text=paste(targetFile$Target, rownames(y$norm.subset_pca$x), sep=": "),
+    marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
+    )
+  ) %>%
+  layout(
+    title= "Before batch correction",
+    hovermode="closest",
+    plot_bgcolor="rgba(240,240,240, 0.95)",
+    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
+)
+
+p
+```
+
+`r if ( params$batch_rm ) { c("***") }`
+
+`r if ( params$batch_rm ) { c("### Scree plot") }`
+
+`r if ( params$batch_rm ) { c("Scree plot presenting the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance.") }`
+
+```{r Scree_plot_batch_rm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval=params$batch_rm}
+##### Generate scree plot (AFTER batch correction)
+##### Prepare data frame
+data.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca_batch_rm))), as.numeric(gsub("%", "",importance_pca_batch_rm)))
+colnames(data.subset_scree.df) <- c("PC", "Variances")
+
+##### The default order will be alphabetized unless specified as below
+data.subset_scree.df$PC <- factor(data.subset_scree.df$PC, levels = data.subset_scree.df[["PC"]])
+p <- plot_ly(data.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  layout(title = "The variances captured by principal components after batch correction", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+
+p
+
+##### Save scree plot as html
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_scree_plot_batch_rm.html")))
+
+glMDSPlot(data, launch=FALSE)
+
+##### Generate scree plot (BEFORE batch correction)
+##### Prepare data frame
+y$norm.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
+colnames(y$norm.subset_scree.df) <- c("PC", "Variances")
+
+##### The default order will be alphabetized unless specified as below
+y$norm.subset_scree.df$PC <- factor(y$norm.subset_scree.df$PC, levels = y$norm.subset_scree.df[["PC"]])
+p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  layout(title = "The variances captured by principal components before batch correction", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+
+p
+
+glMDSPlot(y$norm, launch=FALSE)
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+`r if ( params$batch_rm ) { c("***") }`
+
+`r if ( params$batch_rm ) { c("### RLE") }`
+
+`r if ( params$batch_rm ) { c("The relative log expression (RLE) plot is a useful diagnostic plot to visualize the differences between the distributions of read counts across samples. It shows boxplots of the log-ratios of the gene-level read counts of each sample to those of a reference sample (defined as the median across the samples). Ideally, the distributions should be centered around the zero line and as tight as possible. Clear deviations indicate the need for normalisation and/or the presence of outlying samples.") }`
+
+```{r RLE_batch_rm, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval=params$batch_rm}
+if ( length(targetFile$Target) > 2 ) {
+  
+  #### RLE (AFTER batch correction)
+  par(mar=c((max(nchar(colnames(data)))+3)/2, 5, 3, 2))
+  plotRLE(data, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2), main = "After batch correction")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_RLE_batch_rm.pdf")), width=8, height=8)
+  par(mar=c(max(nchar(colnames(data)))/2, 5, 3, 2))
+  plotRLE(data, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2), main = "After batch correction")
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  invisible(dev.off())
+  
+  #### RLE (BEFORE batch correction)
+  par(mar=c((max(nchar(colnames(y$norm)))+3)/2, 5, 3, 2))
+  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+}
+```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
+
+`r if ( params$batch_rm ) { c("***") }`
+
+`r if ( params$batch_rm ) { c("### Heatmap") }`
+
+`r if ( params$batch_rm ) { c(paste0("Heatmap presenting expression levels of **", params$top_genes, "** genes (*y-axis*) with the highest expression variance across all samples (*x-axis*).")) }`
+
+```{r heatmap_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
+##### Keep only genes with variance > 0 across all samples
+rsd <- apply(data2plot,1,sd)
+data.h_batch_rm <- data2plot[rsd>0,]
+rsd <- rsd[rsd>0]
+
+if ( nrow(data.h_batch_rm) < params$top_genes ) {
+    sel<-order(rsd, decreasing=TRUE)[1:nrow(data.h_batch_rm)]
+} else {
+    sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
+}
+
+##### Subset genes
+data.h_batch_rm <- data.frame(data[sel,])
+
+##### Prepare heatmap annotation (samples)
+Target.col  <- targets.colour[[1]]
+names(Target.col) <- sort(unique(targetFile$Target))
+ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
+
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h_batch_rm, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h_batch_rm, method="euclidean")), method="ward.D2")
+
+##### Generate heatmap (complexHeatmap)
+if ( length(unique(targetFile$Target)) > 1 ) {
+  row_split <- length(unique(targetFile$Target))
+  column_split <- length(unique(targetFile$Target))
+} else {
+  row_split <- NULL
+  column_split <- NULL
+}
+
+##### Scale rows the data first (row scale)
+data.h_batch_rm.z <- t(scale(t(data.h_batch_rm)))
+  
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h_batch_rm.z), max(data.h_batch_rm.z), length = 3), c("blue", "#EEEEEE", "red"))
+  
+#### Heatmap (AFTER batch correction)
+Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.pdf")), width = 8, height = 8)
+Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+dev.off()
+
+##### Scale rows the data first (row scale)
+data.h.z <- t(scale(t(data.h)))
+  
+##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
+  
+#### Heatmap (BEFORE batch correction)
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+```
+
+```{r heatmap_interactive_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
+suppressMessages(library(heatmaply))
+
+##### Generate heatmap (PLOTLY)
+col_side_colors <- as.data.frame(targetFile[, "Target"])
+colnames(col_side_colors) <- "Target"
+
+col_side_palette <- targets.colour[[2]]
+names(col_side_palette) <- col_side_colors$Target
+
+p <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
+
+##### Save the heatmap as html (PLOTLY)
+saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.html")), selfcontained = TRUE)
+
+detach("package:heatmaply", unload=FALSE)
+```
+
+
+
+
 
 ***
 
