@@ -1186,7 +1186,6 @@ if ( length(unique(batches)) > 1 ) {
 }
 ```
 
-
 ```{r write_data, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
 ##### Write combined data into a file
 write.table(data, file = paste0(params$output_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
@@ -1490,13 +1489,9 @@ saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_nam
 detach("package:heatmaply", unload=FALSE)
 ```
 
-
-
-
-
 ***
 
-```{r write_data, comment = NA, message=FALSE, warning=FALSE}
+```{r write_data_final, comment = NA, message=FALSE, warning=FALSE}
 ##### Define the name base on input parameters
 if ( params$filter ) {
   
