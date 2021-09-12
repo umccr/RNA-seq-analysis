@@ -686,37 +686,39 @@ saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_nam
 ```{r PCA_pairwise_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
 ##### Plot all combinations between the first 5 PCs
 
-##### Preapre colours for plot exis
-axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
-p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
-  plot_ly(width = 800, height = 800) %>%
-  add_trace( type = 'splom', dimensions = list(
-      list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
-    ),
-  text=paste(targetFile$Target, rownames(y$norm.subset_pca$x), sep=": "),
-    marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
-    )
-  ) %>%
-  layout(
-    title= "",
-    hovermode="closest",
-    plot_bgcolor="rgba(240,240,240, 0.95)",
-    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
-    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
-    xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
-)
-
-p
-
-##### Save pairwise PCA plot as html
-saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.html")))
-
-##### Plot all combinations between the first 5 PCs
-#pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
-##### Save the plot as pdf file
-#pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
-#pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
-#invisible(dev.off())
+if ( ncol(data) > 4 ) {
+  ##### Preapre colours for plot exis
+  axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
+  p <- as.data.frame(y$norm.subset_pca$x[,1:5]) %>%
+    plot_ly(width = 800, height = 800) %>%
+    add_trace( type = 'splom', dimensions = list(
+        list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+      ),
+    text=paste(targetFile$Target, rownames(y$norm.subset_pca$x), sep=": "),
+      marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
+      )
+    ) %>%
+    layout(
+      title= "",
+      hovermode="closest",
+      plot_bgcolor="rgba(240,240,240, 0.95)",
+      xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+      yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+      xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
+  )
+  
+  p
+  
+  ##### Save pairwise PCA plot as html
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.html")))
+  
+  ##### Plot all combinations between the first 5 PCs
+  #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  ##### Save the plot as pdf file
+  #pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
+  #pairs(y$norm.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  #invisible(dev.off())
+}
 ```
 
 ***
