@@ -17,6 +17,7 @@ params:
   output_dir: 
   results_name: 
   top_genes: 400
+  split: FALSE
   goi: 'none'
   seed: 99999999
   grch_version: 38
@@ -63,6 +64,7 @@ set.seed(seed)
 * **batch_col**: `r params$batch_col`
 * **results_name**: `r params$results_name`
 * **top_genes**: `r params$top_genes`
+* **split**: `r params$split`
 * **goi**: `r params$goi`
 * **grch_version**: `r params$grch_version`
 * **ensembl_version**: `r params$ensembl_version`
@@ -1057,7 +1059,7 @@ hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
 hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
-if ( length(unique(targetFile$Target)) > 1 ) {
+if ( params$split && length(unique(targetFile$Target)) > 1 ) {
   row_split <- length(unique(targetFile$Target))
   column_split <- length(unique(targetFile$Target))
 } else {
@@ -1139,7 +1141,7 @@ hc <- hclust(as.dist(1-cor(data.h_goi, method="pearson")), method="ward.D2")
 hr <- hclust(as.dist(dist(data.h_goi, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
-if ( length(unique(targetFile$Target)) > 1 ) {
+if ( params$split && length(unique(targetFile$Target)) > 1 ) {
   row_split <- length(unique(targetFile$Target))
   column_split <- length(unique(targetFile$Target))
 } else {
@@ -1440,7 +1442,7 @@ hc <- hclust(as.dist(1-cor(data.h_batch_rm, method="pearson")), method="ward.D2"
 hr <- hclust(as.dist(dist(data.h_batch_rm, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
-if ( length(unique(targetFile$Target)) > 1 ) {
+if ( params$split && length(unique(targetFile$Target)) > 1 ) {
   row_split <- length(unique(targetFile$Target))
   column_split <- length(unique(targetFile$Target))
 } else {
