@@ -18,6 +18,8 @@ params:
   results_name: 
   top_genes: 400
   split: FALSE
+  clust_samples: TRUE
+  clust_genes: TRUE
   goi: 'none'
   seed: 99999999
   grch_version: 38
@@ -65,6 +67,8 @@ set.seed(seed)
 * **results_name**: `r params$results_name`
 * **top_genes**: `r params$top_genes`
 * **split**: `r params$split`
+* **clust_samples**: `r params$clust_samples`
+* **clust_genes**: `r params$clust_genes`
 * **goi**: `r params$goi`
 * **grch_version**: `r params$grch_version`
 * **ensembl_version**: `r params$ensembl_version`
@@ -1052,11 +1056,19 @@ Target.col  <- targets.colour[[1]]
 names(Target.col) <- sort(unique(targetFile$Target))
 ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
 
-##### Cluster genes
-hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
-
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+if ( params$clust_samples ) {
+  hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+} else {
+  hc <- FALSE
+}
+
+##### Cluster genes
+if ( params$clust_genes ) {
+  hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+} else {
+  hr <- FALSE
+}
 
 ##### Generate heatmap (complexHeatmap)
 if ( params$split && length(unique(targetFile$Target)) > 1 ) {
@@ -1134,11 +1146,19 @@ Target.col  <- targets.colour[[1]]
 names(Target.col) <- sort(unique(targetFile$Target))
 ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
 
-##### Cluster genes
-hc <- hclust(as.dist(1-cor(data.h_goi, method="pearson")), method="ward.D2")
-
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data.h_goi, method="euclidean")), method="ward.D2")
+if ( params$clust_samples ) {
+  hc <- hclust(as.dist(1-cor(data.h_goi, method="pearson")), method="ward.D2")
+} else {
+  hc <- FALSE
+}
+
+##### Cluster genes
+if ( params$clust_genes ) {
+  hr <- hclust(as.dist(dist(data.h_goi, method="euclidean")), method="ward.D2")
+} else {
+  hr <- FALSE
+}
 
 ##### Generate heatmap (complexHeatmap)
 if ( params$split && length(unique(targetFile$Target)) > 1 ) {
@@ -1435,11 +1455,19 @@ Target.col  <- targets.colour[[1]]
 names(Target.col) <- sort(unique(targetFile$Target))
 ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
 
-##### Cluster genes
-hc <- hclust(as.dist(1-cor(data.h_batch_rm, method="pearson")), method="ward.D2")
-
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data.h_batch_rm, method="euclidean")), method="ward.D2")
+if ( params$clust_samples ) {
+  hc <- hclust(as.dist(1-cor(data.h_batch_rm, method="pearson")), method="ward.D2")
+} else {
+  hc <- FALSE
+}
+
+##### Cluster genes
+if ( params$clust_genes ) {
+  hr <- hclust(as.dist(dist(data.h_batch_rm, method="euclidean")), method="ward.D2")
+} else {
+  hr <- FALSE
+}
 
 ##### Generate heatmap (complexHeatmap)
 if ( params$split && length(unique(targetFile$Target)) > 1 ) {

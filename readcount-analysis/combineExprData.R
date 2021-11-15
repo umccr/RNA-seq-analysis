@@ -27,6 +27,8 @@
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
 #   split:        Split heatmap samples and genes based on clustering results. Default is FALSE
+#   clust_samples:Cluster samples for heatmap. Default is TRUE
+#   clust_genes:  Cluster samples for heatmap. Default is TRUE
 #   batch_rm:     Remove batch-associated effects. Available options are: "TRUE" (default) and "FALSE"
 #   batch_col:    Name of a column in the "annotFile" that specifies batches in the data. Default is "Batch"
 #   goi:          File listing the genes of interest
@@ -76,6 +78,10 @@ option_list = list(
               help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),
   make_option("--split", action="store", default=FALSE, type='logical',
               help="Split heatmap samples and genes based on clustering results"),
+  make_option("--clust_samples", action="store", default=TRUE, type='logical',
+              help="Cluster samples for heatmap"),
+  make_option("--clust_genes", action="store", default=TRUE, type='logical',
+              help="Cluster genes for heatmap"),
   make_option("--batch_rm", action="store", default=TRUE, type='logical',
               help="Remove batch-associated effects between datasets"),
   make_option("--batch_col", action="store", default="Batch", type='character',
@@ -174,6 +180,8 @@ param_list <- list(exprDir = opt$exprDir,
                    log = as.logical(opt$log),
                    top_genes = as.numeric(opt$top_genes),
                    split = opt$split,
+                   clust_samples = opt$clust_samples,
+                   clust_genes = opt$clust_genes,
                    batch_rm = opt$batch_rm,
                    batch_col = opt$batch_col,
                    goi = opt$goi,
