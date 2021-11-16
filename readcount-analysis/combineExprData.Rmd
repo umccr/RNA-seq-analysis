@@ -1094,18 +1094,18 @@ dev.off()
 ##### Return matrix with row/column sorting as in heatmap
 ##### Cluster samples
 if ( params$clust_samples ) {
-  data.h.heatmap <- data.h[, hc$labels[hc$order]]
+  data.h.z.heatmap <- data.h.z[, hc$labels[hc$order]]
 } else {
-  data.h.heatmap <- data.h
+  data.h.z.heatmap <- data.h.z
 }
 
 ##### Cluster genes
 if ( params$clust_genes ) {
-  data.h.heatmap <- data.h.heatmap[hr$labels[hr$order], ]
+  data.h.z.heatmap <- data.h.z.heatmap[hr$labels[hr$order], ]
 }
 
 ##### Write data from the heatmap into a file
-write.table(data.h.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+write.table(data.h.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 ```
 
 ```{r heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
@@ -1200,18 +1200,18 @@ dev.off()
 ##### Return matrix with row/column sorting as in heatmap
 ##### Cluster samples
 if ( params$clust_samples ) {
-  data.h_goi.heatmap <- data.h_goi[, hc$labels[hc$order]]
+  data.h_goi.z.heatmap <- data.h_goi.z[, hc$labels[hc$order]]
 } else {
-  data.h_goi.heatmap <- data.h_goi
+  data.h_goi.z.heatmap <- data.h_goi.z
 }
 
 ##### Cluster genes
 if ( params$clust_genes ) {
-  data.h_goi.heatmap <- data.h_goi.heatmap[hr$labels[hr$order], ]
+  data.h_goi.z.heatmap <- data.h_goi.z.heatmap[hr$labels[hr$order], ]
 }
 
 ##### Write data from the heatmap into a file
-write.table(data.h_goi.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+write.table(data.h_goi.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 ```
 
 ```{r heatmap_interactive_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = runGOI}
@@ -1528,18 +1528,18 @@ dev.off()
 ##### Return matrix with row/column sorting as in heatmap
 ##### Cluster samples
 if ( params$clust_samples ) {
-  data.h_batch_rm.heatmap <- data.h_batch_rm[, hc$labels[hc$order]]
+  data.h_batch_rm.z.heatmap <- data.h_batch_rm.z[, hc$labels[hc$order]]
 } else {
-  data.h_batch_rm.heatmap <- data.h_batch_rm
+  data.h_batch_rm.z.heatmap <- data.h_batch_rm.z
 }
 
 ##### Cluster genes
 if ( params$clust_genes ) {
-  data.h_batch_rm.heatmap <- data.h_batch_rm.heatmap[hr$labels[hr$order], ]
+  data.h_batch_rm.z.heatmap <- data.h_batch_rm.z.heatmap[hr$labels[hr$order], ]
 }
 
 ##### Write data from the heatmap into a file
-write.table(data.h_batch_rm.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+write.table(data.h_batch_rm.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 
 
 #### Heatmap (BEFORE batch correction)
