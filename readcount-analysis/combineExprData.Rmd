@@ -1090,6 +1090,22 @@ Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
 Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
+
+##### Return matrix with row/column sorting as in heatmap
+##### Cluster samples
+if ( params$clust_samples ) {
+  data.h.z.heatmap <- data.h.z[, hc$labels[hc$order]]
+} else {
+  data.h.z.heatmap <- data.h.z
+}
+
+##### Cluster genes
+if ( params$clust_genes ) {
+  data.h.z.heatmap <- data.h.z.heatmap[hr$labels[hr$order], ]
+}
+
+##### Write data from the heatmap into a file
+write.table(data.h.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 ```
 
 ```{r heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
@@ -1180,6 +1196,22 @@ Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, clu
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = 8)
 Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
+
+##### Return matrix with row/column sorting as in heatmap
+##### Cluster samples
+if ( params$clust_samples ) {
+  data.h_goi.z.heatmap <- data.h_goi.z[, hc$labels[hc$order]]
+} else {
+  data.h_goi.z.heatmap <- data.h_goi.z
+}
+
+##### Cluster genes
+if ( params$clust_genes ) {
+  data.h_goi.z.heatmap <- data.h_goi.z.heatmap[hr$labels[hr$order], ]
+}
+
+##### Write data from the heatmap into a file
+write.table(data.h_goi.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 ```
 
 ```{r heatmap_interactive_goi, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = runGOI}
@@ -1492,6 +1524,22 @@ Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.pdf")), width = 8, height = 8)
 Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
+
+##### Return matrix with row/column sorting as in heatmap
+##### Cluster samples
+if ( params$clust_samples ) {
+  data.h_batch_rm.z.heatmap <- data.h_batch_rm.z[, hc$labels[hc$order]]
+} else {
+  data.h_batch_rm.z.heatmap <- data.h_batch_rm.z
+}
+
+##### Cluster genes
+if ( params$clust_genes ) {
+  data.h_batch_rm.z.heatmap <- data.h_batch_rm.z.heatmap[hr$labels[hr$order], ]
+}
+
+##### Write data from the heatmap into a file
+write.table(data.h_batch_rm.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 
 
 #### Heatmap (BEFORE batch correction)
