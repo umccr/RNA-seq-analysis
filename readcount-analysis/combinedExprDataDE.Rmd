@@ -1605,7 +1605,7 @@ if ( length(topGenes.index) > 1 ) {
     layout(autosize = TRUE, width = 800, height = 700, margin = list(l=150, r=50, b=100, t=50, pad=4), showlegend = FALSE)
     
   ##### Save the heatmap as html (PLOTLY)
-  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
+  saveWidgetFix(output[[1]], file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
 } else {
   output[[1]] <- paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep="")
 }
