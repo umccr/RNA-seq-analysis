@@ -813,9 +813,11 @@ if ( length(lib_size_plot) == 1 ) {
 
 ### PCA {.tabset .tabset-fade}
 
+`r if ( runGOI ) { c("#### Most variable genes") }`
+
 Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **`r params$top_genes` genes** with the highest expression variance across all samples were use for PCA.
 
-#### 2D plot
+`r if ( runGOI ) { c("##### 2D plot") } else { c("#### 2D plot") }`
 
 Scatter plot of the first 2 principal components (PCs) constituting the primary source of variation in the data.
 
@@ -864,7 +866,7 @@ if ( length(targetFile$Target) > 2 ) {
 
 ***
 
-#### 3D plot
+`r if ( runGOI ) { c("##### 3D plot") } else { c("#### 3D plot") }`
 
 Scatter plot of the first 3 principal components (PCs) constituting the primary source of variation in the data.
 
@@ -885,7 +887,7 @@ if ( length(targetFile$Target) > 2 ) {
 
 ***
 
-#### Pariwise plot
+`r if ( runGOI ) { c("##### Pariwise plot") } else { c("#### Pariwise plot") }`
 
 Scatter plots for all combinations between the first 5 principal components (PCs) to help determine which PCs explain the biological and/or potential batch effects.
 
@@ -932,7 +934,7 @@ if ( length(targetFile$Target) > 4 ) {
 
 ***
 
-#### Scree plot
+`r if ( runGOI ) { c("##### Scree plot") } else { c("#### Scree plot") }`
 
 Scree plot presenting the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance. 
 
@@ -947,6 +949,181 @@ if ( length(targetFile$Target) > 2 ) {
   ##### The default order will be alphabetized unless specified as below
   y$norm.subset_scree.df$PC <- factor(y$norm.subset_scree.df$PC, levels = y$norm.subset_scree.df[["PC"]])
   p <- plot_ly(y$norm.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+    layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
+  
+  ##### Save scree plot as html
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_scree_plot.html")))
+  
+  p
+}
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
+
+`r if ( runGOI ) { c("***") }`
+
+`r if ( runGOI ) { c("#### Genes of interest") }`
+
+`r if ( runGOI ) { c("Principal component analysis (PCA) transforms the data into a coordinate system and presents them in an orthogonal projection. This reduces the dimensionality of the data and facilitates exploration of their global structure, as well as the key *components* of variation of the data. The colours indicate sample groups. **Genes of interest** were used for PCA.") }`
+
+`r if ( runGOI ) { paste0("**<span style=\"color:#ff0000\">NOTE</span>**: expression data for ", length(goi_list[ goi_list %!in% rownames(data) ]), " genes were not available.") }`
+
+`r if ( runGOI ) { paste0("<details>") }`
+`r if ( runGOI ) { paste0("<summary>Input genes</summary>") }`
+`r if ( runGOI ) { paste0("<font size=\"2\">") }`
+
+`r if ( runGOI ) { paste(goi_list[ goi_list %in% rownames(data) ], collapse = ", ") }`
+
+`r if ( runGOI ) { paste0("</font>") }`
+`r if ( runGOI ) { paste0("</details>") }`
+
+`r if ( runGOI ) { paste0("<details>") }`
+`r if ( runGOI ) { paste0("<summary>Missing genes</summary>") }`
+`r if ( runGOI ) { paste0("<font size=\"2\">") }`
+
+`r if ( runGOI ) { paste(goi_list[ goi_list %!in% rownames(data) ], collapse = ", ") }`
+
+`r if ( runGOI ) { paste0("</font>") }`
+`r if ( runGOI ) { paste0("</details>") }`
+
+`r if ( runGOI ) { c("##### 2D plot") } else { c("#### 2D plot") }`
+
+`r if ( runGOI ) { c("Scatter plot of the first 2 principal components (PCs) constituting the primary source of variation in the data.") }`
+
+```{r PCA_plot_2D, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval = runGOI}
+suppressMessages(library(plotly))
+
+##### Keep only genes of interest
+data.h_goi <- data.frame(data[ rownames(data) %in% goi_list,])
+
+if ( length(targetFile$Target) > 2 ) {
+  ##### Keep only genes with variance > 0 across all samples
+  rsd <- apply(data.h_goi,1,sd)
+  data.h_goi.subset <- data.h_goi[rsd>0,]
+  rsd <- rsd[rsd>0]
+  
+  if ( nrow(data.h_goi.subset) < params$top_genes ) {
+      sel<-order(rsd, decreasing=TRUE)[1:nrow(data.h_goi.subset)]
+  } else {
+      sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
+  }
+  
+  ##### Subset genes
+  data.h_goi.subset <- data.frame(data.h_goi.subset[sel,])
+
+  ##### Perform PCA
+  data.h_goi.subset_pca <- prcomp(t(data.h_goi.subset), scale=FALSE)
+  
+  ##### Get variance importance for all principal components
+  importance_pca <- summary(data.h_goi.subset_pca)$importance[2,]
+  importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
+  names(importance_pca) <- names(summary(data.h_goi.subset_pca)$importance[2,])
+    
+  ##### Prepare data frame
+  data.h_goi.subset_pca.df <- data.frame(targetFile$Target, data.h_goi.subset_pca$x[,"PC1"], data.h_goi.subset_pca$x[,"PC2"], data.h_goi.subset_pca$x[,"PC3"])
+  colnames(data.h_goi.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+  
+  ##### Generate PCA 2-D plot
+  p <- plot_ly(data.h_goi.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(data.h_goi.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
+  layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
+
+  ##### Save PCA plot as html
+  saveWidgetFix(as_widget(p), paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_2d.html")))
+  
+  p
+}
+```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
+
+`r if ( runGOI ) { c("***") }`
+
+`r if ( runGOI ) { c("##### 3D plot") } else { c("#### 3D plot") }`
+
+`r if ( runGOI ) { c("Scatter plot of the first 3 principal components (PCs) constituting the primary source of variation in the data.") }`
+
+```{r PCA_plot_3D, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval = runGOI}
+##### Generate PCA 3-D plot
+if ( length(targetFile$Target) > 2 ) {
+  p <- plot_ly(data.h_goi.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(data.h_goi.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
+  layout(title = "", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
+  
+  ##### Save PCA plot as html
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_3d.html")))
+  
+  p
+}
+```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
+
+`r if ( runGOI ) { c("***") }`
+
+`r if ( runGOI ) { c("##### Pariwise plot") } else { c("#### Pariwise plot") }`
+
+`r if ( runGOI ) { c("Scatter plots for all combinations between the first 5 principal components (PCs) to help determine which PCs explain the biological and/or potential batch effects.") }`
+
+```{r PCA_pairwise_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval = runGOI}
+##### Plot all combinations between the first 5 PCs
+##### Preapre colours for plot exis
+axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
+
+if ( length(targetFile$Target) > 4 ) {
+  
+  p <- as.data.frame(data.h_goi.subset_pca$x[,1:5]) %>%
+    plot_ly(width = 800, height = 800) %>%
+    add_trace( type = 'splom', dimensions = list(
+        list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
+      ),
+    text=paste(targetFile$Target, rownames(data.h_goi.subset_pca$x), sep=": "),
+      marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
+      )
+    ) %>%
+    layout(
+      title= "",
+      hovermode="closest",
+      plot_bgcolor="rgba(240,240,240, 0.95)",
+      xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+      yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+      xaxis2=axis, xaxis3=axis, xaxis4=axis, xaxis5=axis, yaxis2=axis, yaxis3=axis, yaxis4=axis, yaxis5=axis, legend = list(orientation = "v", y = 0.9)
+  )
+  
+  ##### Save pairwise PCA plot as html
+  saveWidgetFix(p, file = paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.html")))
+  
+  p
+  
+  ##### Plot all combinations between the first 5 PCs
+  #pairs(data.h_goi.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  ##### Save the plot as pdf file
+  #pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise.pdf")), width=10, height=10)
+  #pairs(data.h_goi.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  #invisible(dev.off())
+}
+```
+
+`r if ( length(targetFile$Target) < 5 ) { c("**Less than five samples were analysed!**") }`
+
+`r if ( runGOI ) { c("***") }`
+
+`r if ( runGOI ) { c("##### Scree plot") } else { c("#### Scree plot") }`
+
+`r if ( runGOI ) { c("Scree plot presenting the fraction of total variance (y-axis) attributed to each PC (x-axis). The PCs are ordered by decreasing order of contribution to total variance. ") }`
+
+```{r Scree_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval = runGOI}
+##### Generate scree plot
+##### Prepare data frame
+if ( length(targetFile$Target) > 2 ) {
+  
+  data.h_goi.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
+  colnames(data.h_goi.subset_scree.df) <- c("PC", "Variances")
+  
+  ##### The default order will be alphabetized unless specified as below
+  data.h_goi.subset_scree.df$PC <- factor(data.h_goi.subset_scree.df$PC, levels = data.h_goi.subset_scree.df[["PC"]])
+  p <- plot_ly(data.h_goi.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
     layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
   
   ##### Save scree plot as html
@@ -1190,7 +1367,7 @@ data.h_goi.z <- t(scale(t(data.h_goi)))
   
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
 col.h = colorRamp2(seq(min(data.h_goi.z), max(data.h_goi.z), length = 3), c("blue", "#EEEEEE", "red"))
-  
+
 Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 
 ##### Set heatmaps height
