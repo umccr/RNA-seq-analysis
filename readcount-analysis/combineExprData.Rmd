@@ -1057,6 +1057,8 @@ rm(data.df, edb, keys)
 `r if ( runGOI ) { paste0("</font>") }`
 `r if ( runGOI ) { paste0("</details>") }`
 
+`r if ( runGOI ) { c(" ") }`
+
 `r if ( runGOI ) { c("##### 2D plot") } else { c("#### 2D plot") }`
 
 `r if ( runGOI ) { c("Scatter plot of the first 2 principal components (PCs) constituting the primary source of variation in the data.") }`
