@@ -961,6 +961,49 @@ if ( length(targetFile$Target) > 2 ) {
 detach("package:plotly", unload=FALSE)
 ```
 
+```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
+##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
+data <- y$norm
+data.df <- as.data.frame(cbind(rownames(data), data))
+colnames(data.df)[1] <- "ENSEMBL"
+
+##### Get genes annotation and genomic locations
+edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
+  
+##### Get keytypes for gene SYMBOL
+keys <- keys(edb, keytype="GENEID")
+  
+##### Get genes genomic coordiantes
+gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENENAME"), keytype="GENEID")
+names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
+names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
+  
+##### Limit genes annotation to those genes for which sample expression measurments are available
+gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
+  
+##### Remove rows with duplicated ENSEMBL IDs
+gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
+rownames(gene_info) <- gene_info$ENSEMBL
+  
+##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
+gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
+  
+##### Merge genes genomic coordinates info with their annotation and expression data
+data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
+rownames(data.annot) <- data.annot$ENSEMBL
+
+##### Keep only genes fo which gene symbol is available
+data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
+rownames(data.annot) <- data.annot$SYMBOL
+  
+##### Get data matrix with gene symbols
+data <- apply(data.annot[, colnames(data)], 2, as.numeric)
+rownames(data) <- data.annot$SYMBOL
+
+##### Clean the space
+rm(data.df, edb, keys)
+```
+
 `r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
 
 `r if ( runGOI ) { c("***") }`
@@ -1169,49 +1212,6 @@ if ( length(targetFile$Target) > 2 ) {
 `r if ( runGOI ) { c("#### Most variable genes") }`
 
 Heatmap presenting expression levels of **`r params$top_genes` genes** (*y-axis*) with the highest expression variance across all samples (*x-axis*).
-
-```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
-##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
-data <- y$norm
-data.df <- as.data.frame(cbind(rownames(data), data))
-colnames(data.df)[1] <- "ENSEMBL"
-
-##### Get genes annotation and genomic locations
-edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
-  
-##### Get keytypes for gene SYMBOL
-keys <- keys(edb, keytype="GENEID")
-  
-##### Get genes genomic coordiantes
-gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENENAME"), keytype="GENEID")
-names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
-names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
-  
-##### Limit genes annotation to those genes for which sample expression measurments are available
-gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
-  
-##### Remove rows with duplicated ENSEMBL IDs
-gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
-rownames(gene_info) <- gene_info$ENSEMBL
-  
-##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
-gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
-  
-##### Merge genes genomic coordinates info with their annotation and expression data
-data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
-rownames(data.annot) <- data.annot$ENSEMBL
-
-##### Keep only genes fo which gene symbol is available
-data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
-rownames(data.annot) <- data.annot$SYMBOL
-  
-##### Get data matrix with gene symbols
-data <- apply(data.annot[, colnames(data)], 2, as.numeric)
-rownames(data) <- data.annot$SYMBOL
-
-##### Clean the space
-rm(data.df, edb, keys)
-```
 
 ```{r heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 ##### Keep only genes with variance > 0 across all samples
