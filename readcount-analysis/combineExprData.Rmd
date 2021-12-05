@@ -1194,7 +1194,7 @@ col.h = colorRamp2(seq(min(data.h_goi.z), max(data.h_goi.z), length = 3), c("blu
 Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 
 ##### Set heatmaps height
-if ( nrow(data.h.z) < 10 ) {
+if ( nrow(data.h_goi.z) < 10 ) {
   heatmap_goi_height <- 4
 } else {
   heatmap_goi_height <- 8
