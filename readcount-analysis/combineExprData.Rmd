@@ -1086,7 +1086,7 @@ data.h.z <- t(scale(t(data.h)))
 col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
   
 Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
-  
+
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
 Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
@@ -1192,8 +1192,15 @@ data.h_goi.z <- t(scale(t(data.h_goi)))
 col.h = colorRamp2(seq(min(data.h_goi.z), max(data.h_goi.z), length = 3), c("blue", "#EEEEEE", "red"))
   
 Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
-  
-pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = 8)
+
+##### Set heatmaps height
+if ( nrow(data.h.z) < 10 ) {
+  heatmap_goi_height <- 4
+} else {
+  heatmap_goi_height <- 8
+}
+
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_goi.pdf")), width = 8, height = heatmap_goi_height)
 Heatmap(data.h_goi.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 
