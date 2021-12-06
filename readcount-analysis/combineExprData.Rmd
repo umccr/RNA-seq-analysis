@@ -1067,37 +1067,37 @@ rm(data.df, edb, keys)
 suppressMessages(library(plotly))
 
 ##### Keep only genes of interest
-data.h_goi <- data.frame(data[ rownames(data) %in% goi_list,])
+data_goi <- data.frame(data[ rownames(data) %in% goi_list,])
 
 if ( length(targetFile$Target) > 2 ) {
   ##### Keep only genes with variance > 0 across all samples
-  rsd <- apply(data.h_goi,1,sd)
-  data.h_goi.subset <- data.h_goi[rsd>0,]
+  rsd <- apply(data_goi,1,sd)
+  data_goi.subset <- data_goi[rsd>0,]
   rsd <- rsd[rsd>0]
   
-  if ( nrow(data.h_goi.subset) < params$top_genes ) {
-      sel<-order(rsd, decreasing=TRUE)[1:nrow(data.h_goi.subset)]
+  if ( nrow(data_goi.subset) < params$top_genes ) {
+      sel<-order(rsd, decreasing=TRUE)[1:nrow(data_goi.subset)]
   } else {
       sel<-order(rsd, decreasing=TRUE)[1:params$top_genes]
   }
   
   ##### Subset genes
-  data.h_goi.subset <- data.frame(data.h_goi.subset[sel,])
+  data_goi.subset <- data.frame(data_goi.subset[sel,])
 
   ##### Perform PCA
-  data.h_goi.subset_pca <- prcomp(t(data.h_goi.subset), scale=FALSE)
+  data_goi.subset_pca <- prcomp(t(data_goi.subset), scale=FALSE)
   
   ##### Get variance importance for all principal components
-  importance_pca <- summary(data.h_goi.subset_pca)$importance[2,]
+  importance_pca <- summary(data_goi.subset_pca)$importance[2,]
   importance_pca <- paste(round(100*importance_pca, 2), "%", sep="")
-  names(importance_pca) <- names(summary(data.h_goi.subset_pca)$importance[2,])
+  names(importance_pca) <- names(summary(data_goi.subset_pca)$importance[2,])
     
   ##### Prepare data frame
-  data.h_goi.subset_pca.df <- data.frame(targetFile$Target, data.h_goi.subset_pca$x[,"PC1"], data.h_goi.subset_pca$x[,"PC2"], data.h_goi.subset_pca$x[,"PC3"])
-  colnames(data.h_goi.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
+  data_goi.subset_pca.df <- data.frame(targetFile$Target, data_goi.subset_pca$x[,"PC1"], data_goi.subset_pca$x[,"PC2"], data_goi.subset_pca$x[,"PC3"])
+  colnames(data_goi.subset_pca.df) <- c("Target", "PC1", "PC2", "PC3")
   
   ##### Generate PCA 2-D plot
-  p <- plot_ly(data.h_goi.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(data.h_goi.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
+  p <- plot_ly(data_goi.subset_pca.df, x = ~PC1, y = ~PC2, color = ~Target, text=paste(targetFile$Target, rownames(data_goi.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter', mode = "markers", marker = list(size=10, opacity = 0.7), width = 600, height = 400) %>%
   layout(title = "", xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), margin = list(l=50, r=50, b=50, t=20, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.9))
 
   ##### Save PCA plot as html
@@ -1118,7 +1118,7 @@ if ( length(targetFile$Target) > 2 ) {
 ```{r PCA_plot_3D_goi, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8, eval = runGOI}
 ##### Generate PCA 3-D plot
 if ( length(targetFile$Target) > 2 ) {
-  p <- plot_ly(data.h_goi.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(data.h_goi.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
+  p <- plot_ly(data_goi.subset_pca.df, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Target, text=paste(targetFile$Target, rownames(data_goi.subset_pca.df), sep=": "), colors = targets.colour[[1]], type='scatter3d', mode = "markers", marker = list(size=6, opacity = 0.7), width = 600, height = 600) %>%
   layout(title = "", scene = list(xaxis = list(title = paste( "PC1", " (",importance_pca["PC1"],")",sep="")), yaxis = list(title = paste( "PC2", " (",importance_pca["PC2"],")",sep="")), zaxis = list(title = paste( "PC3", " (",importance_pca["PC3"],")",sep=""))) , margin = list(l=50, r=50, b=50, t=10, pad=4), autosize = FALSE, showlegend = TRUE, legend = list(orientation = "v", y = 0.7))
   
   ##### Save PCA plot as html
@@ -1143,12 +1143,12 @@ axis = list(showline=FALSE, zeroline=FALSE, gridcolor='#ffff', ticklen=5)
 
 if ( length(targetFile$Target) > 4 ) {
   
-  p <- as.data.frame(data.h_goi.subset_pca$x[,1:5]) %>%
+  p <- as.data.frame(data_goi.subset_pca$x[,1:5]) %>%
     plot_ly(width = 800, height = 800) %>%
     add_trace( type = 'splom', dimensions = list(
         list(label='PC1', values=~PC1), list(label='PC2', values=~PC2), list(label='PC3', values=~PC3), list(label='PC4', values=~PC4), list(label='PC5', values=~PC5)
       ),
-    text=paste(targetFile$Target, rownames(data.h_goi.subset_pca$x), sep=": "),
+    text=paste(targetFile$Target, rownames(data_goi.subset_pca$x), sep=": "),
       marker = list( color = targets.colour[[2]], size = 7, opacity = 0.7
       )
     ) %>%
@@ -1167,10 +1167,10 @@ if ( length(targetFile$Target) > 4 ) {
   p
   
   ##### Plot all combinations between the first 5 PCs
-  #pairs(data.h_goi.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  #pairs(data_goi.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
   ##### Save the plot as pdf file
   #pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_PCA_pairwise_goi.pdf")), width=10, height=10)
-  #pairs(data.h_goi.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
+  #pairs(data_goi.subset_pca$x[,1:5], pch=16, col=targets.colour[[2]])
   #invisible(dev.off())
 }
 ```
@@ -1188,12 +1188,12 @@ if ( length(targetFile$Target) > 4 ) {
 ##### Prepare data frame
 if ( length(targetFile$Target) > 2 ) {
   
-  data.h_goi.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
-  colnames(data.h_goi.subset_scree.df) <- c("PC", "Variances")
+  data_goi.subset_scree.df <- data.frame(paste0("PC ", c(1:length(importance_pca))), as.numeric(gsub("%", "",importance_pca)))
+  colnames(data_goi.subset_scree.df) <- c("PC", "Variances")
   
   ##### The default order will be alphabetized unless specified as below
-  data.h_goi.subset_scree.df$PC <- factor(data.h_goi.subset_scree.df$PC, levels = data.h_goi.subset_scree.df[["PC"]])
-  p <- plot_ly(data.h_goi.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
+  data_goi.subset_scree.df$PC <- factor(data_goi.subset_scree.df$PC, levels = data_goi.subset_scree.df[["PC"]])
+  p <- plot_ly(data_goi.subset_scree.df, x = ~PC, y = ~Variances, type = 'bar', width = 600, height = 400) %>%
     layout(title = "The variances captured by principal components", xaxis = list(title = ""), margin = list(l=50, r=50, b=100, t=100, pad=4), autosize = F)
   
   ##### Save scree plot as html
@@ -1788,6 +1788,9 @@ write.table(y$norm, file=paste0(params$output_dir, "/", paste0(params$results_na
 
 ##### Same for annotated genes
 write.table(data, file=paste0(params$output_dir, "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+
+##### And for GOIs
+write.table(data_goi, file=paste0(params$output_dir, "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot_goi.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 ```
 
 The combined `r params$transform` expression data were saved in **`r paste0(params$results_name, "_", filtered, "_", logged, ".txt")`**.
