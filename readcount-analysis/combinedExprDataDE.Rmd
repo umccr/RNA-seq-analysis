@@ -1703,12 +1703,6 @@ for( i in 1:ncol(eb$p.value) ){
   
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
   
-  ##### Present p-value histograms
-  cat("\n##### P-values distribution \n")
-  
-  cat(paste0("![](", paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_P_hist.png)", sep="")), "\n")
-  cat("\n***\n")
-  
   ##### Present volcano plots
   cat("\n##### Volcano plot \n")
   
@@ -1720,6 +1714,12 @@ for( i in 1:ncol(eb$p.value) ){
   
   cat(renderTags(topGenes_list_table[[i]])$html)
   
+  cat("\n***\n")
+  
+  ##### Present p-value histograms
+  cat("\n##### P-values distribution \n")
+  
+  cat(paste0("![](", paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_P_hist.png)", sep="")), "\n")
   cat("\n***\n")
 }
 ```
