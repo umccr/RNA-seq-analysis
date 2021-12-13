@@ -611,6 +611,30 @@ if ( length(lib_size_plot) == 1 ) {
 
 ***
 
+## Relative log expression
+
+The relative log expression (RLE) plot is a useful diagnostic plot to visualize the differences between the distributions of read counts across samples. It shows boxplots of the log-ratios of the gene-level read counts of each sample to those of a reference sample (defined as the median across the samples). Ideally, the distributions should be centered around the zero line and as tight as possible. Clear deviations indicate the need for normalisation and/or the presence of outlying samples.
+
+```{r RLE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
+if ( length(targetFile$Target) > 2 ) {
+  
+  par(mar=c((max(nchar(colnames(y$norm)))+3)/2, 5, 3, 2))
+  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  
+  ##### Save the plot as pdf file
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_RLE.pdf")), width=8, height=8)
+  par(mar=c(max(nchar(colnames(y$norm)))/2, 5, 3, 2))
+  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
+  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
+  invisible(dev.off())
+}
+```
+
+`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
+
+***
+
 ## Clustering analysis {.tabset .tabset-fade}
 
 ### PCA {.tabset .tabset-fade}
@@ -749,30 +773,6 @@ glMDSPlot(y$norm, launch=FALSE)
 ##### Detach plotly package. Otherwise it clashes with other graphics devices
 detach("package:plotly", unload=FALSE)
 ```
-
-***
-
-### RLE
-
-The relative log expression (RLE) plot is a useful diagnostic plot to visualize the differences between the distributions of read counts across samples. It shows boxplots of the log-ratios of the gene-level read counts of each sample to those of a reference sample (defined as the median across the samples). Ideally, the distributions should be centered around the zero line and as tight as possible. Clear deviations indicate the need for normalisation and/or the presence of outlying samples.
-
-```{r RLE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 8}
-if ( length(targetFile$Target) > 2 ) {
-  
-  par(mar=c((max(nchar(colnames(y$norm)))+3)/2, 5, 3, 2))
-  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
-  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-  
-  ##### Save the plot as pdf file
-  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_RLE.pdf")), width=8, height=8)
-  par(mar=c(max(nchar(colnames(y$norm)))/2, 5, 3, 2))
-  plotRLE(y$norm, col=targets.colour[[2]], pch=".", las=2, ylim=c(-2,2))
-  legend("topright", legend=levels(factor(targetFile$Target)), fill=targets.colour[[1]], horiz=TRUE, bg = "transparent", box.col="transparent")
-  invisible(dev.off())
-}
-```
-
-`r if ( length(targetFile$Target) < 3 ) { c("**Only two samples were analysed!**") }`
 
 ***
 
