@@ -26,6 +26,7 @@
 #   filter_perc:  The percentage of samples in which individual genes must have at least 0.2 TPM or 1 CPM to be kept for downstream analysis. Default is 10
 #   log:          Log (base 2) transform data before normalisation. Available options are: "TRUE" (default) and "FALSE"
 #   top_genes:    Number of genes with highest variation across all samples to be used for PCA and heatmap. Default is 400
+#   split:        Split heatmap samples and genes based on clustering results. Default is FALSE
 #   batch_rm:     Remove batch-associated effects. Available options are: "TRUE" (default) and "FALSE"
 #   batch_col:    Name of a column in the "annotFile" that specifies batches in the data. Default is "Batch"
 #   lfcThreshold: Fold-change threshold for calling DE genes. Default is 2
@@ -84,6 +85,8 @@ option_list = list(
               help="Log (base 2) transform data before normalisation"),
   make_option("--top_genes", action="store", default=400, type='numeric',
               help="Number of genes with highest variation across all samples to be used for PCA and heatmap"),
+  make_option("--split", action="store", default=FALSE, type='logical',
+              help="Split heatmap samples and genes based on clustering results"),
   make_option("--batch_rm", action="store", default=TRUE, type='logical',
               help="Remove batch-associated effects between datasets"),
   make_option("--batch_col", action="store", default="Batch", type='character',
@@ -205,6 +208,7 @@ param_list <- list(exprDir = opt$exprDir,
                    filter_perc = as.numeric(opt$filter_perc),
                    log = as.logical(opt$log),
                    top_genes = as.numeric(opt$top_genes),
+                   split = opt$split,
                    batch_rm = opt$batch_rm,
                    batch_col = opt$batch_col,
                    lfcThreshold = opt$lfcThreshold,

@@ -16,6 +16,7 @@ params:
   filter_perc: 15
   log: TRUE
   top_genes: 500
+  split: FALSE
   results_name: 'PRMT5_CPM_TMM_DE'
   lfcThreshold: 2
   adjMethod: "BH"
@@ -87,7 +88,7 @@ set.seed(seed)
 * **nPerm_gsea**: `r params$nPerm`
 * **use_internal_data_kegg**: `r params$use_internal_data_kegg`
 * **top_genes**: `r params$top_genes`
-* **top_genes**: `r params$top_genes`
+* **split**: `r params$split`
 * **results_name**: `r params$results_name`
 * **output_dir**: `r params$output_dir`
 * **grch_version**: `r params$grch_version`
@@ -853,7 +854,7 @@ hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
 hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
-if ( length(unique(targetFile$Target)) > 1 ) {
+if ( params$split && length(unique(targetFile$Target)) > 1 ) {
   row_split <- length(unique(targetFile$Target))
   column_split <- length(unique(targetFile$Target))
 } else {
@@ -1159,7 +1160,7 @@ hc <- hclust(as.dist(1-cor(data.h_batch_rm, method="pearson")), method="ward.D2"
 hr <- hclust(as.dist(dist(data.h_batch_rm, method="euclidean")), method="ward.D2")
 
 ##### Generate heatmap (complexHeatmap)
-if ( length(unique(targetFile$Target)) > 1 ) {
+if ( params$split && length(unique(targetFile$Target)) > 1 ) {
   row_split <- length(unique(targetFile$Target))
   column_split <- length(unique(targetFile$Target))
 } else {
@@ -1565,7 +1566,7 @@ if ( length(topGenes.index) > 1 ) {
   hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
     
   ##### Generate heatmap (complexHeatmap)
-  if ( length(unique(targetFile$Target)) > 1 ) {
+  if ( params$split && length(unique(targetFile$Target)) > 1 ) {
     row_split <- length(unique(targetFile$Target))
     column_split <- length(unique(targetFile$Target))
   } else {
