@@ -1549,7 +1549,7 @@ Heatmap presenting expression levels of `r length(topGenes.index)` **differentia
 
 ##### Static
 
-```{r DE_heatmap, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+```{r DE_heatmap, warning = FALSE, echo = TRUE, comment = TRUE, message = TRUE, results = 'hide', fig.width = 12, fig.height = 10}
 ##### Make sure that any DE genes were detected
 if ( length(topGenes.index) > 1 ) {
   data.h <- data.frame(DGEdata.voom$E[ rownames(DGEdata.voom$E) %in% topGenes.index,])
