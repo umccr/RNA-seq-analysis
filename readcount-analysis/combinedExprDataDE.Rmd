@@ -1585,6 +1585,8 @@ if ( length(topGenes.index) > 1 ) {
   pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
   Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
   dev.off()
+} else {
+  cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
 }
 ```
 
