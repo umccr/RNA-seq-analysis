@@ -1768,7 +1768,6 @@ top_enrichKEGG.upset <- list()
 top_enrichKEGG_table <- list()
 
 ##### NOTE, use only DE genes for pathways enrichment analysis
-
 for (i in 1:ncol(eb$p.value) ) {
   
   top_enrichKEGG[[i]] <- NA
@@ -1858,7 +1857,6 @@ setwd(KEGG_dir)
 data.pathways <- list()
 
 ##### NOTE, use only DE genes for pathways enrichment analysis
-
 for( i in 1:ncol(eb$p.value) ){
     
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
@@ -1994,7 +1992,6 @@ top_gseKEGG.upset <- list()
 top_gseKEGG_table <- list()
 
 ##### NOTE, use all genes (NOT only DE genes) for GSEA!
-
 for (i in 1:ncol(eb$p.value) ) {
   
   top_gseKEGG[[i]] <- NA
@@ -2004,7 +2001,7 @@ for (i in 1:ncol(eb$p.value) ) {
   top_gseKEGG_table[[i]] <- NA
   
   ##### Run analysis only for comparisons with significant results
-  if ( !is.na(topGenes_list[[i]]) ) {
+  #if ( !is.na(topGenes_list[[i]]) ) {
     
     ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
     genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
@@ -2057,7 +2054,7 @@ for (i in 1:ncol(eb$p.value) ) {
         invisible(dev.off())
       }
     }
-  }
+#  }
 }
 
 ##### For Upset plot
@@ -2088,13 +2085,12 @@ setwd(KEGG_dir)
 data.pathways <- list()
 
 ##### NOTE, use all genes (NOT only DE genes) for GSEA!
-
 for( i in 1:ncol(eb$p.value) ){
     
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
   
   ##### Run analysis only for comparisons with significant results
-  if ( length(topGenes_list[[i]]) > 1 ) {
+  #if ( length(topGenes_list[[i]]) > 1 ) {
     
     ##### Loop through pathways if available
     if ( !is.na(top_gseKEGG[[i]]) ) {
@@ -2215,10 +2211,10 @@ for( i in 1:ncol(eb$p.value) ){
       cat(paste("\n**No enriched KEGG pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
     }
-  } else {
-    cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
-    cat("\n***\n")
-  }
+  #} else {
+  #  cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
+  #  cat("\n***\n")
+  #}
 }
 ```
 
@@ -2258,7 +2254,6 @@ enrichDGN.upset <- list()
 enrichDGN_table <- list()
 
 ##### NOTE, use only DE genes for pathways enrichment analysis
-
 for (i in 1:ncol(eb$p.value) ) {
   
   enrichDGN[[i]] <- NA
@@ -2347,7 +2342,6 @@ if ( length(enrichDGN.upset) > 1 ) {
 data.pathways <- list()
 
 ##### NOTE, use only DE genes for pathways enrichment analysis
-
 for( i in 1:ncol(eb$p.value) ){
     
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
@@ -2446,7 +2440,6 @@ top_gseNCG.upset <- list()
 top_gseNCG_table <- list()
 
 ##### NOTE, use all genes (NOT only DE genes) for GSEA!
-
 for (i in 1:ncol(eb$p.value) ) {
   
   top_gseNCG[[i]] <- NA
@@ -2456,7 +2449,7 @@ for (i in 1:ncol(eb$p.value) ) {
   top_gseNCG_table[[i]] <- NA
   
   ##### Run analysis only for comparisons with significant results
-  if ( !is.na(topGenes_list_all[[i]]) ) {
+  #if ( !is.na(topGenes_list_all[[i]]) ) {
     
     ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
     genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
@@ -2509,7 +2502,7 @@ for (i in 1:ncol(eb$p.value) ) {
         invisible(dev.off())
       }
     }
-  }
+#  }
 }
 
 ##### For Upset plot
@@ -2538,13 +2531,12 @@ if ( length(top_gseNCG.upset) > 1 ) {
 data.pathways <- list()
 
 ##### NOTE, use all genes (NOT only DE genes) for GSEA!
-
 for( i in 1:ncol(eb$p.value) ){
     
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
   
   ##### Run analysis only for comparisons with significant results
-  if ( length(topGenes_list[[i]]) > 1 ) {
+  #if ( length(topGenes_list[[i]]) > 1 ) {
     
     ##### Loop through pathways if available
     if ( !is.na(top_gseNCG[[i]]) ) {
@@ -2649,10 +2641,10 @@ for( i in 1:ncol(eb$p.value) ){
       cat(paste("\n**No enriched DisGeNET pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
     }
-  } else {
-    cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
-    cat("\n***\n")
-  }
+  #} else {
+  #  cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
+  #  cat("\n***\n")
+  #}
 }
 ```
 
