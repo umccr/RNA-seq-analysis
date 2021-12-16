@@ -2181,7 +2181,7 @@ for( i in 1:ncol(eb$p.value) ){
         topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
         png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
-        print(gseaplot2(top_gseKEGG[[i]], geneSetID = j, title = top_gseKEGG[[i]]$Description[1]))
+        print(gseaplot2(top_gseKEGG[[i]], geneSetID = j, title = top_gseKEGG[[i]]$Description[j]))
         invisible(dev.off())
         
         cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
@@ -2615,7 +2615,7 @@ for( i in 1:ncol(eb$p.value) ){
         topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
         
         png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
-        print(gseaplot2(top_gseNCG[[i]], geneSetID = j, title = top_gseNCG[[i]]$Description[1]))
+        print(gseaplot2(top_gseNCG[[i]], geneSetID = j, title = top_gseNCG[[i]]$Description[j]))
         invisible(dev.off())
         
         cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
