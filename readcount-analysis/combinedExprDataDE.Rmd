@@ -1549,7 +1549,7 @@ Heatmap presenting expression levels of `r length(topGenes.index)` **differentia
 
 ##### Static
 
-```{r DE_heatmap, warning = FALSE, echo = TRUE, comment = TRUE, message = TRUE, results = 'hide', fig.width = 12, fig.height = 10}
+```{r DE_heatmap, warning = FALSE, echo = FALSE, comment = FALSE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 ##### Make sure that any DE genes were detected
 if ( length(topGenes.index) > 1 ) {
   data.h <- data.frame(DGEdata.voom$E[ rownames(DGEdata.voom$E) %in% topGenes.index,])
@@ -1585,10 +1585,10 @@ if ( length(topGenes.index) > 1 ) {
   pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
   Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
   dev.off()
-} else {
-  c(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
 }
 ```
+
+`r if ( length(topGenes.index) < 2 ) { c("\n**No differentially expressed genes** detected.\n") }`
 
 ***
 
@@ -1610,7 +1610,7 @@ if ( length(topGenes.index) > 1 ) {
   ##### Save the heatmap as html (PLOTLY)
   saveWidgetFix(output[[1]], file = paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.html")), selfcontained = TRUE)
 } else {
-  output[[1]] <- paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep="")
+  output[[1]] <- c("\n**No differentially expressed genes** detected\n")
 }
 
 cat(renderTags(output[[1]])$html)
