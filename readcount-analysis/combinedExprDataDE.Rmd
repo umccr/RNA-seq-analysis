@@ -1586,7 +1586,7 @@ if ( length(topGenes.index) > 1 ) {
   Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
   dev.off()
 } else {
-  cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
+  c(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
 }
 ```
 
@@ -1634,7 +1634,8 @@ detach("package:heatmaply", unload=FALSE)
 
 `r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
 
-***
+
+`r if ( length(contrastNames) < 1 ) { c("***") }`
 
 `r if ( length(contrastNames) < 1 ) { c("#### Venn diagram") }`
 
@@ -1659,7 +1660,7 @@ if ( length(contrastNames) < 4) {
 }
 ```
 
-`r if ( length(topGenes_list_upset) < 1 ) { c("***") }`
+`r if ( length(topGenes_list_upset) > 1 ) { c("***") }`
 
 `r if ( length(topGenes_list_upset) > 1 ) { c("#### Upset plot") }`
 
