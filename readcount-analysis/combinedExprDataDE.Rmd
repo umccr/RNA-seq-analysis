@@ -1356,7 +1356,7 @@ contrastNames <- NULL
 
 #####  Create string with possible contrasts
 for (i in 1:combNo) {
-  contrasts <- c(contrasts, paste(paste(comb[1,i], comb[2,i], sep="vs"),paste(comb[1,i], comb[2,i], sep=" -"), sep="="))
+  contrasts <- c(contrasts, paste(paste(comb[1,i], comb[2,i], sep="_vs_"),paste(comb[1,i], comb[2,i], sep=" -"), sep="="))
   contrastNames[i] <- paste(comb[1,i], comb[2,i], sep=" vs ")
 }
 contrasts <- paste(contrasts, collapse=", ")
