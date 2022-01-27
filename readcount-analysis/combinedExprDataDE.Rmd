@@ -845,7 +845,71 @@ data.h <- data.frame(data[sel,])
 ##### Prepare heatmap annotation (samples)
 Target.col  <- targets.colour[[1]]
 names(Target.col) <- sort(unique(targetFile$Target))
-ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
+
+##### Add colours for Bailey subtypes (if provided)
+HeatmapAnnotation.col.list <- "Target"
+if ( "Bailey" %in% annotFeatures ) {
+  Target.col <- c(Target.col, c("ADEX" = "darkorchid", "Immunogenic" = "firebrick2", "Squamous" = "goldenrod1", "Progenitor" = "dodgerblue3", "Unknown" = "gray"))
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "Bailey")
+}
+
+##### Add colours for Collisson subtypes (if provided)
+if ( "Collisson" %in% annotFeatures ) {
+  Target.col <- c(Target.col, c("Exocrine-like" = "darkorchid", "Quasimesenchymal" = "goldenrod1", "Classical" = "dodgerblue3", "Unknown" = "gray"))
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "Collisson")
+}
+
+##### Add colours for Moffitt subtypes (if provided)
+if ( "Moffitt" %in% annotFeatures ) {
+  Target.col <- c(Target.col, c("Basal-like" = "goldenrod1", "Classical" = "dodgerblue3", "Unknown" = "gray"))
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "Moffitt")
+}
+
+##### Add colours for Moffitt_ss (single subject) subtypes (if provided)
+if ( "Moffitt_ss" %in% annotFeatures ) {
+  Target.col <- c(Target.col, c("Basal-like" = "goldenrod1", "Classical" = "dodgerblue3", "Unknown" = "gray"))
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "Moffitt_ss")
+}
+
+##### Add colours for PuRIST subtypes (if provided)
+if ( "PuRIST" %in% annotFeatures ) {
+  Target.col <- c(Target.col, c("Basal-like" = "goldenrod1", "Classical" = "dodgerblue3", "Unknown" = "gray"))
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "PuRIST")
+}
+
+##### Add colours for PuRIST subtypes (if provided)
+if ( "PAMG" %in% annotFeatures ) {
+  Target.col <- c(Target.col, c("Basal-like" = "goldenrod1", "Classical" = "dodgerblue3", "Mixed" = "gray"))
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "PAMG")
+}
+
+##### Add colours for PuRIST subtypes (if provided)
+if ( "Metabolic" %in% annotFeatures ) {
+  Target.col <- c(Target.col, c("Quiescent" = "darkgoldenrod3", "Glycolytic" = "darkslategray", "Cholesterogenic" = "darkolivegreen3", "Mixed" = "tan4"))
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "Metabolic")
+}
+
+##### Add colours for PuRIST scores (if provided)
+if ( all(c("PuRIST_score","PAMG_score") %in% annotFeatures) ) {
+  PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
+  
+  PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col, PAMG_score=PAMG_score.col)"))))
+  
+} else if ( "PuRIST_score" %in% annotFeatures ) {
+  PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col)"))))
+  
+} else if ( "PAMG_score" %in% annotFeatures ) {
+  PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PAMG_score=PAMG_score.col)"))))
+  
+} else {
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ")"))))
+}
 
 ##### Cluster genes
 hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
@@ -870,7 +934,7 @@ col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EE
   
 Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
-pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 8, height = 8)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 12, height = 12)
 Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 ```
@@ -1148,11 +1212,6 @@ if ( nrow(data.h_batch_rm) < params$top_genes ) {
 ##### Subset genes
 data.h_batch_rm <- data.frame(data[sel,])
 
-##### Prepare heatmap annotation (samples)
-Target.col  <- targets.colour[[1]]
-names(Target.col) <- sort(unique(targetFile$Target))
-ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
-
 ##### Cluster genes
 hc <- hclust(as.dist(1-cor(data.h_batch_rm, method="pearson")), method="ward.D2")
 
@@ -1177,7 +1236,7 @@ col.h = colorRamp2(seq(min(data.h_batch_rm.z), max(data.h_batch_rm.z), length = 
 #### Heatmap (AFTER batch correction)
 Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
 
-pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.pdf")), width = 8, height = 8)
+pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.pdf")), width = 12, height = 12)
 Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 
@@ -1554,11 +1613,6 @@ Heatmap presenting expression levels of `r length(topGenes.index)` **differentia
 if ( length(topGenes.index) > 1 ) {
   data.h <- data.frame(DGEdata.voom$E[ rownames(DGEdata.voom$E) %in% topGenes.index,])
     
-  ##### Prepare heatmap annotation (samples)
-  Target.col  <- targets.colour[[1]]
-  names(Target.col) <- sort(unique(targetFile$Target))
-  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = list(Target = Target.col ))
-    
   ##### Cluster genes
   hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
     
@@ -1582,8 +1636,8 @@ if ( length(topGenes.index) > 1 ) {
   
   print(Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h))
 
-  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 8, height = 8)
-  Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 12, height = 12)
+  print(Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE))
   dev.off()
 }
 ```
