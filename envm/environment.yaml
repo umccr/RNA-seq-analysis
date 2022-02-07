@@ -27,6 +27,7 @@ dependencies:
         - bioconductor-clusterprofiler
         - bioconductor-pathview
         - bioconductor-kegg.db
+        - bioconductor-gsva
         - bioconductor-preprocesscore
         - bioconductor-tximport
         - bioconductor-rhdf5
