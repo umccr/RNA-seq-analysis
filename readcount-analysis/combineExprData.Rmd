@@ -22,6 +22,7 @@ params:
   clust_genes: TRUE
   goi: 'none'
   seed: 99999999
+  convert2gene_symbol: TRUE
   grch_version: 38
   ensembl_version: 86
 output:
@@ -70,6 +71,7 @@ set.seed(seed)
 * **clust_samples**: `r params$clust_samples`
 * **clust_genes**: `r params$clust_genes`
 * **goi**: `r params$goi`
+* **convert2gene_symbol**: `r params$convert2gene_symbol`
 * **grch_version**: `r params$grch_version`
 * **ensembl_version**: `r params$ensembl_version`
 * **seed**: `r seed`
@@ -218,32 +220,32 @@ detach("package:plotly", unload=FALSE)
 Plot presenting the biotypes and frequencies of genes detected in investigated samples. It is expected that most of the genes
 will be protein-coding so detecting an enrichment of any other biotype could point to a potential contamination or at least provide information on the samples composition. The stripped and solid red bars correspond to the percentage of individual biotypes detected across all samples. The vertical green line separates the most abundant biotypes (in the left-hand side, corresponding to the left axis scale) from the rest (in the right-hand side, corresponding to the right axis scale).
 
-```{r gene_annot_count_data, comment = NA, message=FALSE, warning=FALSE}
+```{r gene_annot_count_data, comment = NA, message=FALSE, warning=FALSE, eval=params$convert2gene_symbol}
 ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
 data.df <- as.data.frame(cbind(rownames(data), data))
 colnames(data.df)[1] <- "ENSEMBL"
 
 ##### Get genes annotation and genomic locations
 edb <- eval(parse(text = paste0("EnsDb.Hsapiens.v", params$ensembl_version)))
-  
+
 ##### Get keytypes for gene SYMBOL
 keys <- keys(edb, keytype="GENEID")
-  
+
 ##### Get genes genomic coordiantes
 gene_info <- ensembldb::select(edb, keys=keys, columns=c("GENEID", "GENEBIOTYPE", "GENENAME", "SEQNAME", "GENESEQSTART", "GENESEQEND"), keytype="GENEID")
 names(gene_info) <- gsub("GENEID", "ENSEMBL", names(gene_info))
 names(gene_info) <- gsub("GENENAME", "SYMBOL", names(gene_info))
-  
+
 ##### Limit genes annotation to those genes for which sample expression measurments are available
 gene_info <-  gene_info[ gene_info$ENSEMBL %in% data.df$ENSEMBL,  ]
-  
+ 
 ##### Remove rows with duplicated ENSEMBL IDs
 gene_info = gene_info[!duplicated(gene_info$ENSEMBL),]
 rownames(gene_info) <- gene_info$ENSEMBL
-  
+
 ##### Remove rows with duplicated gene symbols (Y_RNAs, SNORs, LINC0s etc)
 gene_info = gene_info[!duplicated(gene_info$SYMBOL),]
-  
+
 ##### Merge genes genomic coordinates info with their annotation and expression data
 data.annot <- merge(gene_info, data.df, by = "ENSEMBL", all.x = FALSE)
 rownames(data.annot) <- data.annot$ENSEMBL
@@ -251,7 +253,7 @@ rownames(data.annot) <- data.annot$ENSEMBL
 ##### Keep only genes fo which gene symbol is available
 data.annot <- data.annot[!(is.na(data.annot$SYMBOL) | data.annot$SYMBOL==""), ]
 rownames(data.annot) <- data.annot$SYMBOL
-  
+
 ##### Save the annotated data matrix into a file
 write.table(data.annot, file=paste0(params$output_dir, "/", paste0(params$results_name, "_annot.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 
@@ -259,7 +261,7 @@ write.table(data.annot, file=paste0(params$output_dir, "/", paste0(params$result
 rm(data.df, edb, keys)
 ```
 
-```{r biotype_detection, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+```{r biotype_detection, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval=params$convert2gene_symbol}
 ##### Make sure that only genes with available annotations are used for biotype detection
 data_NOISeq <-  data[ rownames(data) %in% gene_info$ENSEMBL,  ]
 
@@ -306,7 +308,7 @@ for ( i in 1:ncol(data_NOISeq) ) {
 
 Count distribution per biotype across all samples. At the upper part of the plot, the number of detected features within each biotype group is displayed. The values used for the boxplots (*y-axis*) are counts per million.
 
-```{r count_per_biotype, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+```{r count_per_biotype, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval=params$convert2gene_symbol}
 ##### Count distribution per biotype
 countsbio_group = quiet(NOISeq::dat(data_NOISeq, type = "countsbio", factor = "group"))
 
@@ -333,7 +335,7 @@ for ( i in 1:ncol(data_NOISeq) ) {
 
 Distribution of counts in all samples. The values used for the boxplots (*y-axis*) are counts per million.
 
-```{r count_per_sample, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+```{r count_per_sample, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval=params$convert2gene_symbol}
 ##### Generate count distribution per sample plot
 explo.plot(countsbio_samples, toplot = 1, samples = NULL, plottype = "boxplot")
 
@@ -349,7 +351,7 @@ invisible(dev.off())
 
 The saturation plot shows the number of features in the genome detected with the actual sequencing depth in individual samples, as well as with higher and lower simulated sequencing depths. The lines show how the number of detected features increases with depth. *Y axis* illustrates the number of detected genes at each sequencing depth. The solid point in each line corresponds to the real sequencing depth. The other sequencing depths are simulated from this total sequencing depth. Up to 10 samples are displayed on one plot.
  
-```{r saturation, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+```{r saturation, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval=params$convert2gene_symbol}
 ##### Count distribution per biotype
 saturation = quiet(NOISeq::dat(data_NOISeq, k = 0, ndepth = 7, type = "saturation"))
 
@@ -406,7 +408,7 @@ for ( i in 1:ncol(data_NOISeq) ) {
 
 Features with low counts are, in general, less reliable and may introduce noise in the data that makes more difficult to extract the relevant information, for instance, the differentially expressed features. The sensitivity plot helps to decide the threshold to remove low-count features by indicating the proportion of such features that are present in the data. The bars show the percentage of features within each sample having more than 0 counts per million (CPM), or more than 1, 2, 5 and 10 CPM. The *horizontal lines* are the corresponding percentage of features with those CPM in at least one of the samples. In the upper side of the plot, the sequencing depth of each sample (in million reads) is given.
  
-```{r sensitivity, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+```{r sensitivity, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6, eval=params$convert2gene_symbol}
 ##### Generate count distribution per sample plots for all and each sample
 explo.plot(countsbio_samples, toplot = 1, samples = NULL, plottype = "barplot")
 
@@ -548,7 +550,7 @@ if ( params$filter && params$transform == "CPM" ) {
 ##### Collect the most extreme density values for set the x-axis and y-axis boundaries
 den.x <- density(y$transformed[,1])$x
 den.y <- density(y$transformed[,1])$y
-  
+
 for (i in 2:ncol(y$transformed)) {
     
   den <- density(y$transformed[,i])

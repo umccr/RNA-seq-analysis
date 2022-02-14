@@ -35,6 +35,7 @@
 #   output_dir:   Directory for the results folder
 #   results_name: Desired core name for the results
 #   seed:         Set up a seed for random number generation
+#   convert2gene_symbol:  Convert gene IDs to Gene Symbols. Default is TRUE
 #   grch_version:  Human reference genome version used for genes annotation (default is "38")
 #
 ################################################################################
@@ -94,6 +95,8 @@ option_list = list(
               help="Prefix for the results files names"),
   make_option("--seed", action="store", default=99999999, type='numeric',
               help="Set up a seed for random number generation"),
+  make_option("--convert2gene_symbol", action="store", default=TRUE, type='logical',
+              help="Convert gene IDs to Gene Symbols"),
   make_option("--grch_version", action="store", default=NA, type='integer',
               help="human reference genome version used for genes annotation")
 )
@@ -188,6 +191,7 @@ param_list <- list(exprDir = opt$exprDir,
                    output_dir = opt$output_dir,
                    results_name = opt$results_name,
                    seed = opt$seed,
+                   convert2gene_symbol = opt$convert2gene_symbol,
                    grch_version = as.numeric(opt$grch_version),
                    ensembl_version = as.numeric(ensembl_version))
 
