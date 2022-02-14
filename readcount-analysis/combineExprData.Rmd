@@ -1858,7 +1858,9 @@ write.table(y$norm, file=paste0(params$output_dir, "/", paste0(params$results_na
 write.table(data, file=paste0(params$output_dir, "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
 
 ##### And for GOIs
-write.table(data_goi, file=paste0(params$output_dir, "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot_goi.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+if ( runGOI ) {
+  write.table(data_goi, file=paste0(params$output_dir, "/", paste0(params$results_name, "_", filtered, "_", logged, "_annot_goi.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+}
 ```
 
 The combined `r params$transform` expression data were saved in **`r paste0(params$results_name, "_", filtered, "_", logged, ".txt")`**.
