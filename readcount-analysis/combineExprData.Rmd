@@ -992,7 +992,7 @@ if ( length(targetFile$Target) > 2 ) {
 detach("package:plotly", unload=FALSE)
 ```
 
-```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE}
+```{r gene_annotation, comment = NA, message=FALSE, warning=FALSE, eval=params$convert2gene_symbol}
 ##### Convert data into a data frame to make the Ensembl ID and gene symbol matches (with merge function)
 data <- y$norm
 data.df <- as.data.frame(cbind(rownames(data), data))
