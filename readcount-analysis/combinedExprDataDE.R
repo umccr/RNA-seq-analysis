@@ -35,6 +35,10 @@
 #   pvalueCutoff:    P-value threshold for calling enriched pathways (over-representation analysis). Default is 0.05
 #   qvalueCutoff:    Q-value threshold for calling enriched pathways (over-representation analysis). Default is 0.2
 #   pAdjustMethod:   Method for correcting pathways enrichment results for multiple testing (over-representation analysis). Default is "BH"
+#   eScoreThreshold:       Enrichment score threshold for calling DE pathways. Default is 0.2
+#   pThreshold_pathways:   P-value threshold for calling DE pathways. Default is 0.05
+#   adjMethod_pathways:    Method for correcting DE (at pathway level) results for multiple testing. Default is "none"
+#   poi:          File listing the pathways of interest
 #   minGSSize:    Minimal size of genes annotated by Ontology term for testing. Default is 5
 #   maxGSSize:    Maximal size of genes annotated by Ontology term for testing. Default is 500
 #   pvalueCutoff_gsea:    P-value threshold for calling enriched pathways (GSEA). Default is 0.2
@@ -103,6 +107,14 @@ option_list = list(
               help="Q-value threshold for calling enriched pathways"),
   make_option("--pAdjustMethod", action="store", default="BH", type='character',
               help="Method for correcting pathways enrichment results for multiple testing"),
+  make_option("--eScoreThreshold", action="store", default=0.2, type='numeric',
+              help="Enrichment score threshold for calling DE pathways"),
+  make_option("--pThreshold_pathways", action="store", default=0.05, type='numeric',
+              help="P-value threshold for calling DE pathways"),
+  make_option("--adjMethod_pathways", action="store", default="none", type='character',
+              help="Method for correcting DE (at pathway level) results for multiple testing"),
+  make_option("--poi", action="store", default="none", type='character',
+              help="File listing the pathways of interest"),
   make_option("--minGSSize", action="store", default=5, type='numeric',
               help="Minimal size of genes annotated by Ontology term for testing"),
   make_option("--maxGSSize", action="store", default=500, type='numeric',
@@ -217,6 +229,10 @@ param_list <- list(exprDir = opt$exprDir,
                    pvalueCutoff = opt$pvalueCutoff,
                    qvalueCutoff = opt$qvalueCutoff,
                    pAdjustMethod = opt$pAdjustMethod,
+                   eScoreThreshold = opt$eScoreThreshold,
+                   pThreshold_pathways = opt$pThreshold_pathways,
+                   adjMethod_pathways = opt$adjMethod_pathways,
+                   poi = opt$poi,
                    minGSSize = opt$minGSSize,
                    maxGSSize = opt$maxGSSize,
                    pvalueCutoff_gsea = opt$pvalueCutoff_gsea,

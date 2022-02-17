@@ -19,11 +19,15 @@ params:
   split: FALSE
   results_name: 'PRMT5_CPM_TMM_DE'
   lfcThreshold: 2
-  adjMethod: "BH"
   pThreshold: 0.05
+  adjMethod: "BH"
   pvalueCutoff: 0.05
   qvalueCutoff: 0.2
   pAdjustMethod: "BH"
+  eScoreThreshold: 0.2
+  pThreshold_pathways: 0.001
+  adjMethod_pathways: "none"
+  poi: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data//pathways_of_interest.txt'
   minGSSize: 5
   maxGSSize: 500
   pvalueCutoff_gsea: 0.2
@@ -76,11 +80,15 @@ set.seed(seed)
 * **batch_col**: `r params$batch_col`
 * **top_genes**: `r params$top_genes`
 * **lfcThreshold**: `r params$lfcThreshold`
-* **adjMethod**: `r params$adjMethod`
 * **pThreshold**: `r params$pThreshold`
+* **adjMethod**: `r params$adjMethod`
 * **pvalueCutoff**: `r params$pvalueCutoff`
 * **qvalueCutoff**: `r params$qvalueCutoff`
 * **pAdjustMethod**: `r params$pAdjustMethod`
+* **eScoreThreshold**: `r params$eScoreThreshold`
+* **pThreshold_pathways**: `r params$pThreshold_pathways`
+* **adjMethod_pathways**: `r params$adjMethod_pathways`
+* **poi**: `r params$poi`
 * **minGSSize**: `r params$minGSSize`
 * **maxGSSize**: `r params$maxGSSize`
 * **pvalueCutoff_gsea**: `r params$pvalueCutoff_gsea`
@@ -114,7 +122,11 @@ suppressMessages(library(DOSE))
 suppressMessages(library(KEGG.db))
 suppressMessages(library(grid))
 suppressMessages(library(png))
+suppressMessages(library(stringr))
 suppressMessages(library(ComplexHeatmap))
+suppressMessages(library(GSVA))
+suppressMessages(library(msigdbr))
+suppressMessages(library(reactome.db))
 suppressMessages(library(circlize))
 suppressMessages(library(UpSetR))
 suppressMessages(library(preprocessCore))
@@ -187,6 +199,18 @@ if ( !all( colnames(data) %in% rownames(targetFile) , na.rm = FALSE)  ) {
 
 ##### Set up annotation features to be used for plots
 annotFeatures <- unique(c("Target", unlist(strsplit(params$annotFeatures, split=',', fixed=TRUE))))
+
+##### Change "Metabolic" subtyping to "Karasinska"
+annotFeatures <- gsub("Metabolic", "Karasinska", annotFeatures)
+names(targetFile) <-gsub("Metabolic", "Karasinska", names(targetFile))
+
+##### Define pathways of interest (if specified)
+if ( params$poi != "none" ) {
+  poi_list <- unique(read.table(params$poi, sep="\t", as.is=TRUE, header=FALSE, row.names=NULL, quote="")[,1])
+  runPOI <- TRUE
+} else {
+  runPOI <- FALSE
+}
 ```
 
 `r c(paste0("In total **", ncol(data), "** samples were analysed."))`
@@ -884,23 +908,46 @@ if ( "PAMG" %in% annotFeatures ) {
 }
 
 ##### Add colours for PuRIST subtypes (if provided)
-if ( "Metabolic" %in% annotFeatures ) {
+if ( "Karasinska" %in% annotFeatures ) {
   Target.col <- c(Target.col, c("Quiescent" = "darkgoldenrod3", "Glycolytic" = "darkslategray", "Cholesterogenic" = "darkolivegreen3", "Mixed" = "tan4"))
-  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "Metabolic")
+  HeatmapAnnotation.col.list <- c(HeatmapAnnotation.col.list, "Karasinska")
 }
 
 ##### Add colours for PuRIST scores (if provided)
-if ( all(c("PuRIST_score","PAMG_score") %in% annotFeatures) ) {
+if ( all(c("PuRIST_score","PAMG_score","EMT_score") %in% annotFeatures) ) {
+  PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
+  
+  PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
+  
+  EMT_score.col <- colorRamp2(sort(targetFile$EMT_score), colorspace::diverge_hcl(n=length(targetFile$EMT_score), h=c(246, 40), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col, PAMG_score=PAMG_score.col, EMT_score=EMT_score.col)"))))
+  
+} else if ( all(c("PuRIST_score","PAMG_score") %in% annotFeatures) ) {
   PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
   
   PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
   
   ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col, PAMG_score=PAMG_score.col)"))))
   
+} else if ( all(c("PuRIST_score","EMT_score") %in% annotFeatures) ) {
+  PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
+  
+  EMT_score.col <- colorRamp2(sort(targetFile$EMT_score), colorspace::diverge_hcl(n=length(targetFile$EMT_score), h=c(246, 40), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col, EMT_score=EMT_score.col)"))))
+  
 } else if ( "PuRIST_score" %in% annotFeatures ) {
   PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
   
   ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col)"))))
+  
+} else if ( all(c("PAMG_score","EMT_score") %in% annotFeatures) ) {
+  PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
+  
+  EMT_score.col <- colorRamp2(sort(targetFile$EMT_score), colorspace::diverge_hcl(n=length(targetFile$EMT_score), h=c(246, 40), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PAMG_score=PAMG_score.col, EMT_score=EMT_score.col)"))))
   
 } else if ( "PAMG_score" %in% annotFeatures ) {
   PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
@@ -937,6 +984,16 @@ Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap.pdf")), width = 12, height = 12)
 Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
+
+##### Return matrix with row/column sorting as in heatmap
+##### Cluster samples
+data.h.z.heatmap <- data.h.z[, hc$labels[hc$order]]
+
+##### Cluster genes
+data.h.z.heatmap <- data.h.z.heatmap[hr$labels[hr$order], ]
+
+##### Write data from the heatmap into a file
+write.table(data.h.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 ```
 
 ```{r heatmap_interactive, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
@@ -971,7 +1028,7 @@ if ( length(unique(batches)) > 1 ) {
 ```
 
 
-```{r write_data, comment = NA, message=FALSE, warning=FALSE, eval=params$batch_rm}
+```{r write_data, comment = NA, message=FALSE, warning=FALSE}
 ##### Write combined data into a file
 write.table(data, file = paste0(params$output_dir, "/", paste0(params$results_name, ".combined.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 
@@ -1240,6 +1297,16 @@ pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_r
 Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
 dev.off()
 
+##### Return matrix with row/column sorting as in heatmap
+##### Cluster samples
+data.h_batch_rm.z.heatmap <- data.h_batch_rm.z[, hc$labels[hc$order]]
+
+##### Cluster genes
+data.h_batch_rm.z.heatmap <- data.h_batch_rm.z.heatmap[hr$labels[hr$order], ]
+
+##### Write data from the heatmap into a file
+write.table(data.h_batch_rm.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+
 ##### Scale rows the data first (row scale)
 data.h.z <- t(scale(t(data.h)))
   
@@ -1271,7 +1338,7 @@ detach("package:heatmaply", unload=FALSE)
 
 ***
 
-## Differential expression analysis
+## Differential expression (genes)
 
 <details>
 <summary>Parameters</summary>
@@ -1450,11 +1517,11 @@ for (i in 1:ncol(eb$p.value) ) {
   dev.off()
   
   
-  #####  Volcano plots of log2 fold-changes versus significance (adjusted p-values, +label top 10)
+  #####  Volcano plots of log2 fold-changes versus significance (p-values, +label top 10)
   topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod, sort.by="none", number=nrow(DGEdata.voom))
   
   png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_volcano_plot", ".png", sep = ""), width = 6, height = 4, units = "in", res = 300, pointsize = 10)
-  plot(topGenes[,"logFC"],-log2(topGenes[,"adj.P.Val"]),pch=16,cex=0.5,xlab="Log2 fold-change",ylab="-log2(adjusted p-value)",main="",col="grey")
+  plot(topGenes[,"logFC"],-log2(topGenes[,"adj.P.Val"]),pch=16,cex=0.5,xlab="Log2 fold-change",ylab="-log2(p-value)",main="",col="grey")
   #####  Highlight genes with logFC above specified threshold
   points(topGenes[abs(topGenes[,"logFC"])>params$lfcThreshold,"logFC"],-log2(topGenes[abs(topGenes[,"logFC"])>params$lfcThreshold,"adj.P.Val"]),cex=0.5,pch=16)
   abline(h=-log2(params$pThreshold),col="red", lty = 2)
@@ -1573,7 +1640,7 @@ for (i in 1:ncol(eb$p.value) ) {
   } else {
     topGenes_list[[i]] <- NA
     topGenes_list_upset[[i]] <- NA
-    topGenes_list_table[[i]] <- paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison!\n", sep="")
+    topGenes_list_table[[i]] <- paste("\n**No differentially expressed genes** were detected in ", contrastNames[i], " comparison!\n", sep="")
   }
 }
 
@@ -1636,9 +1703,19 @@ if ( length(topGenes.index) > 1 ) {
   
   print(Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h))
 
-  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 12, height = 12)
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE.pdf")), width = 12, height = 16)
   print(Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE))
   dev.off()
+  
+  ##### Return matrix with row/column sorting as in heatmap
+  ##### Cluster samples
+  data.h.z.heatmap <- data.h.z[, hc$labels[hc$order]]
+  
+  ##### Cluster genes
+  data.h.z.heatmap <- data.h.z.heatmap[hr$labels[hr$order], ]
+
+  ##### Write data from the heatmap into a file
+  write.table(data.h.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_DE_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
 }
 ```
 
@@ -1722,10 +1799,10 @@ if ( length(contrastNames) < 4) {
 
 ```{r DE_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 if ( length(topGenes_list_upset) > 1 ) {
-  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison"))
+  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes", text.scale = 2))
   
   png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_upset_DE.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
-  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes per comparison"))
+  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE genes", text.scale = 2))
   dev.off()
 }
 ```
@@ -1786,11 +1863,633 @@ for( i in 1:ncol(eb$p.value) ){
 save.image(file = paste0(params$output_dir, "/", paste0(params$results_name, "_session.RData")))
 ```
 
-## KEGG pathways
+## Gene set enrichment analysis
 
-Enrichment analysis based on the *[KEGG](https://www.genome.jp/kegg/){target="_blank"}* repository.
+<details>
+<summary>Parameters</summary>
+<font size="2">
 
-### Over-representation analysis {.tabset}
+* p-value: **`r  params$pvalueCutoff_gsea`**
+* Permutation numbers: **`r  params$nPerm_gsea`**
+* Minimal size of each geneset: **`r  params$minGSSize`**
+* Maximal size of each geneset: **`r  params$maxGSSize`**
+
+`r if ( params$pAdjustMethod_gsea=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using ", params$pAdjustMethod_gsea, " method.")) }`
+
+</font> 
+</details>
+
+### KEGG pathways {.tabset}
+
+Gene set enrichment analysis based on the *[KEGG](https://www.genome.jp/kegg/){target="_blank"}* repository.
+
+```{r KEGG_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+##### Create folder for storing pathway analysis results plots
+KEGG_dir <- paste(params$output_dir, "KEGG_pathways", sep = "/")
+if ( !file.exists(KEGG_dir) ) {
+  dir.create(KEGG_dir, recursive=TRUE)
+}
+setwd(KEGG_dir)
+
+##### Create lists to store pathways enrichemnt results for each comparison
+top_gseKEGG <- list()
+top_gseKEGG.df <- list()
+top_gseKEGG.genes <- list()
+top_gseKEGG.upset <- list()
+top_gseKEGG_table <- list()
+topGenes_list.pathway.genes <- list()
+
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+for (i in 1:ncol(eb$p.value) ) {
+  
+  top_gseKEGG[[i]] <- NA
+  top_gseKEGG.df[[i]] <- NA
+  top_gseKEGG.genes[[i]] <- NA
+  top_gseKEGG.upset[[i]] <- NA
+  top_gseKEGG_table[[i]] <- NA
+  topGenes_list.pathway.genes[[i]] <- NA
+  
+  ##### Run analysis only for comparisons with significant results
+  #if ( !is.na(topGenes_list[[i]]) ) {
+    
+    ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
+    genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+    names(genes.ENTREZID) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      
+    ##### Sort genes by FC values
+    genes.ENTREZID <- sort(genes.ENTREZID, decreasing = TRUE)
+    
+    ##### Keep only unique genes
+    genes.ENTREZID <- genes.ENTREZID[ unique(names(genes.ENTREZID)) ]
+    
+    ##### Run analysis only for > 1 gene
+    if ( length(genes.ENTREZID) > 1 ) {
+      
+      gseKEGG.results <- tryCatch({
+        gseKEGG( geneList=genes.ENTREZID, organism = 'hsa', pvalueCutoff = params$pvalueCutoff_gsea, pAdjustMethod = params$pAdjustMethod_gsea, minGSSize = params$minGSSize, maxGSSize = params$maxGSSize, use_internal_data = params$use_internal_data_kegg, nPerm = params$nPerm_gsea, seed = seed)}
+        , error=function(e){cat("\n")})
+      
+      if ( !is.null(gseKEGG.results) && nrow(gseKEGG.results) > 0 ) {
+        
+        top_gseKEGG[[i]] <- gseKEGG.results
+        
+        ##### Substitute ENTREZIDs with Gene symbols
+        top_gseKEGG.genes[[i]] <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        ##### Collect genes for each pathway for GSVA
+        for ( j in 1:nrow(top_gseKEGG.genes[[i]]) ) {
+          
+          ##### Skip already existing pathways
+          if ( top_gseKEGG.genes[[i]]$Description[j] %!in% names(topGenes_list.pathway.genes) ) {
+            topGenes_list.pathway.genes.list <- list(top_gseKEGG.genes[[i]]$core_enrichment[j])
+            topGenes_list.pathway.genes.list[[1]] <- unique(unlist(strsplit(topGenes_list.pathway.genes.list[[1]], split='/', fixed=TRUE)))
+            names(topGenes_list.pathway.genes.list)[1] <- top_gseKEGG.genes[[i]]$Description[j]
+            
+            topGenes_list.pathway.genes[[i]] <- c(topGenes_list.pathway.genes[[i]], topGenes_list.pathway.genes.list)
+          }
+        }
+        
+        ##### Save the normalised expression data, log2FC and p-values for DE genes in enriched pathways
+        ##### First extract DE genes involved in the pathway
+        for ( j in 1:nrow(top_gseKEGG.genes[[i]]) ) {
+          topGenes_list.pathway <- top_gseKEGG.genes[[i]]$core_enrichment[j]
+          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
+          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
+          
+          write.table(data2plot_topGenes , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_p[ rownames(topGenes_list_p) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+        }
+        
+        ##### For Upset plot
+        top_gseKEGG.upset[[i]] <- rownames(as.data.frame(top_gseKEGG.genes[[i]]))
+        
+        top_gseKEGG.df[[i]] <- as.data.frame(top_gseKEGG.genes[[i]][, c("Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues", "rank", "leading_edge", "core_enrichment")])
+        top_gseKEGG_table[[i]]<- DT::datatable( data = top_gseKEGG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+        DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
+        
+        ##### Create summary bar and dot plots
+        png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG.png", sep=""))
+        print(dotplot(top_gseKEGG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = FALSE))
+        invisible(dev.off())
+      }
+    }
+#  }
+}
+
+##### For Upset plot
+names(top_gseKEGG.upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+top_gseKEGG.upset <- Filter(function(a) any(!is.na(a)), top_gseKEGG.upset)
+```
+
+```{r KEGG_gsea_analysis_heatmap, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
+ht <- list()
+
+for (i in 1:ncol(eb$p.value) ) {
+  #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)
+  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]])
+  
+  if ( nrow(gsva.results) > 1 ) {
+    ##### Cluster genes
+    hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+    
+    ##### Cluster samples
+    hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
+    
+    ##### Generate heatmap (complexHeatmap)
+    ##### Scale rows the data first (row scale)
+    gsva.results.z <- t(scale(t(gsva.results)))
+      
+    ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+    col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      
+    ht[[i]] <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+    
+    pdf(paste0(KEGG_dir, "/gseKEGG_summary_heatmap_", colnames(eb$p.value)[i], ".pdf"), width = 12, height = 16)
+    draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+    dev.off()
+    
+    ##### Return matrix with row/column sorting as in heatmap
+    ##### Cluster samples
+    gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+    
+    ##### Cluster genes
+    gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
+  
+    write.table(gsva.results.z.heatmap, paste0(KEGG_dir, "/gseKEGG_summary_heatmap_", colnames(eb$p.value)[i], ".txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+    
+  } else {
+    ht[[i]] <- NULL
+  }
+}
+```
+
+`r if ( length(top_gseKEGG.upset) > 1 ) { c("Upset plot showing intersections of KEGG pathways enriched across multiple comparisons.") }`
+
+```{r KEGG_gsea_analysis_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=FALSE}
+if ( length(top_gseKEGG.upset) > 1 ) {
+  print(upset(fromList(top_gseKEGG.upset), order.by = "freq", nsets = length(top_gseKEGG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways", text.scale = 2))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_gseKEGG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(top_gseKEGG.upset), order.by = "freq", nsets = length(top_gseKEGG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways", text.scale = 2))
+  dev.off()
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
+```{r KEGG_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results="asis"}
+setwd(KEGG_dir)
+
+##### Now once the plots are ready show them in separate tabs
+data.pathways <- list()
+
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+for( i in 1:ncol(eb$p.value) ){
+    
+  cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
+  
+  ##### Run analysis only for comparisons with significant results
+  #if ( length(topGenes_list[[i]]) > 1 ) {
+    
+    ##### Loop through pathways if available
+    if ( !is.na(top_gseKEGG[[i]]) ) {
+      
+      ##### Prepare data with logFC values
+      ##### But first remove genes with invalid ENTREZIDs
+      data.pathways[[i]] <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      names(data.pathways[[i]]) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      
+      ##### Sort genes by FC values
+      data.pathways[[i]] <- sort(data.pathways[[i]], decreasing = TRUE)
+    
+      cat("\n##### Summary {.tabset} \n")
+      
+      cat("\n###### Table \n")
+      
+      ##### Summary table
+      cat(paste("\n\nTable presenting summary of enriched KEGG pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
+      
+      cat(renderTags(top_gseKEGG_table[[i]])$html)
+      cat("\n***\n")
+      
+      if ( !is.null(ht[[i]]) ) {
+        cat("\n###### Heatmap \n")
+        
+        ##### Summary heatmap
+        cat(paste("\n\nHeatmap presenting Gene Set Variation Analysis (GSVA) **enrichment scores** in enriched pathways (*y-axis*) across all samples (*x-axis*) in **", contrastNames[i], "** comparison.\n\n", sep=""))
+        print(draw(ht[[i]]))
+        
+        cat("\n\n")
+        cat("\n***\n")
+      }
+      
+      cat("\n###### Plots \n")
+      
+      ##### Bar and dot plots
+      cat(paste("\n\nBar (A) and dot (B) plots of enriched KEGG pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG.png)", sep="")), "\n")
+      cat("\n***\n")
+      
+      
+      cat(paste("\n\nHeatmap of enriched KEGG pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
+      
+      ##### Create heatmap-like functional classification
+      png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG_heatmap.png", sep=""))
+      print(heatplot(top_gseKEGG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
+      invisible(dev.off())
+        
+      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG_heatmap.png)", sep="")), "\n")
+      cat("\n***\n")
+      
+      cat("\n##### KEGG plots {.tabset} \n")
+      
+      cat(paste("Visualization of KEGG pathways enriched in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
+      
+      for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
+        
+        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
+        cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
+         
+        ##### NOTE: Some pathways are problematic. Skip these pathways
+        # https://support.bioconductor.org/p/122172/
+        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
+          
+          ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
+          if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+            
+            pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
+            
+            ##### Rename pathview plots
+            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".png"))
+            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".xml"))
+            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
+          }
+          
+          ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
+          if ( file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+            cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+          } else {
+            cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+          }
+          
+        } else {
+          cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+        }
+        cat("\n***\n")
+      }
+
+      cat("\n##### GSEA plots {.tabset} \n")
+      
+      cat(paste("Plots presenting GSEA results. The *top* panel illustrates running *enrichment score* (ES), which reflects the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes, for the ", top_gseKEGG.df[[i]]$Description[j], " gene set as the analysis walks down the ranked list. Gene sets with a distinct peak at the beginning or end of the ranked list are generally the most interesting. The *bottom* panel shows the value of the ranking metric as you move down the list of ranked genes. The ranking metric measures a genes correlation with a phenotype. The value of the ranking metric goes from positive to negative as you move down the ranked list. A positive value indicates correlation with the first phenotype and a negative value indicates correlation with the second phenotype.\n\n", sep=""))
+      
+      for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
+        
+        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
+        cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
+        
+        topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
+        print(gseaplot2(top_gseKEGG[[i]], geneSetID = j, title = top_gseKEGG[[i]]$Description[j]))
+        invisible(dev.off())
+        
+        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
+        
+        cat("\n***\n")
+      }
+      
+      cat("\n##### Gene-concept networks {.tabset} \n")
+      
+      cat(paste("Linkages of genes involved in enriched KEGG pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      
+      for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
+        
+        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
+        cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
+        
+        topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".network.png", sep=""))
+        print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
+        invisible(dev.off())
+        
+        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
+        
+        cat("\n***\n")
+      }
+    } else {
+      cat(paste("\n**No enriched KEGG pathways** were detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat("\n***\n")
+    }
+  #} else {
+  #  cat(paste("\n**No differentially expressed genes** were detected in ", contrastNames[i], " comparison\n", sep=""))
+  #  cat("\n***\n")
+  #}
+}
+```
+
+### DisGeNET pathways {.tabset}
+
+Gene set enrichment analysis based on the *[DisGeNET](https://www.disgenet.org/){target="_blank"}* repository.
+
+```{r DisGeNET_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
+##### Create folder for storing pathway analysis results plots
+DisGeNET_dir <- paste(params$output_dir, "DisGeNET_pathways", sep = "/")
+if ( !file.exists(DisGeNET_dir) ) {
+  dir.create(DisGeNET_dir, recursive=TRUE)
+}
+setwd(DisGeNET_dir)
+
+##### Create lists to store pathways enrichemnt results for each comparison
+top_gseNCG <- list()
+top_gseNCG.df <- list()
+top_gseNCG.genes <- list()
+top_gseNCG.upset <- list()
+top_gseNCG_table <- list()
+topGenes_list.pathway.genes <- list()
+
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+for (i in 1:ncol(eb$p.value) ) {
+  
+  top_gseNCG[[i]] <- NA
+  top_gseNCG.df[[i]] <- NA
+  top_gseNCG.genes[[i]] <- NA
+  top_gseNCG.upset[[i]] <- NA
+  top_gseNCG_table[[i]] <- NA
+  topGenes_list.pathway.genes[[i]] <- NA
+  
+  ##### Run analysis only for comparisons with significant results
+  #if ( !is.na(topGenes_list_all[[i]]) ) {
+    
+    ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
+    genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+    names(genes.ENTREZID) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      
+    ##### Sort genes by FC values
+    genes.ENTREZID <- sort(genes.ENTREZID, decreasing = TRUE)
+    
+    ##### Keep only unique genes
+    genes.ENTREZID <- genes.ENTREZID[ unique(names(genes.ENTREZID)) ]
+    
+    ##### Run analysis only for > 1 gene
+    if ( length(genes.ENTREZID) > 1 ) {
+      
+      gseNCG.results <- tryCatch({
+        gseNCG( geneList=genes.ENTREZID, pvalueCutoff = params$pvalueCutoff_gsea, pAdjustMethod = params$pAdjustMethod_gsea, minGSSize = params$minGSSize, maxGSSize = params$maxGSSize, nPerm = params$nPerm_gsea, seed = seed)}
+        , error=function(e){cat("\n")})
+      
+      if ( !is.null(gseNCG.results) && nrow(gseNCG.results) > 0 ) {
+        
+        top_gseNCG[[i]] <- gseNCG.results
+        
+        ##### Substitute ENTREZIDs with Gene symbols
+        top_gseNCG.genes[[i]] <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        ##### Collect genes for each pathway for GSVA
+        for ( j in 1:nrow(top_gseNCG.genes[[i]]) ) {
+          
+          ##### Skip already existing pathways
+          if ( top_gseNCG.genes[[i]]$Description[j] %!in% names(topGenes_list.pathway.genes) ) {
+            topGenes_list.pathway.genes.list <- list(top_gseNCG.genes[[i]]$core_enrichment[j])
+            topGenes_list.pathway.genes.list[[1]] <- unique(unlist(strsplit(topGenes_list.pathway.genes.list[[1]], split='/', fixed=TRUE)))
+            names(topGenes_list.pathway.genes.list)[1] <- top_gseNCG.genes[[i]]$Description[j]
+            
+            topGenes_list.pathway.genes[[i]] <- c(topGenes_list.pathway.genes[[i]], topGenes_list.pathway.genes.list)
+          }
+        }
+        
+        ##### Save the normalised expression data for DE genes in enriched pathways
+        ##### First extract DE genes involved in the pathway
+        for ( j in 1:nrow(top_gseNCG.genes[[i]]) ) {
+          topGenes_list.pathway <- top_gseNCG.genes[[i]]$core_enrichment[j]
+          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
+          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
+          
+          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+          
+          write.table(topGenes_list_p[ rownames(topGenes_list_p) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+        }
+        
+        ##### For Upset plot
+        top_gseNCG.upset[[i]] <- rownames(as.data.frame(top_gseNCG.genes[[i]]))
+    
+        top_gseNCG.df[[i]] <- as.data.frame(top_gseNCG.genes[[i]][, c("Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues", "rank", "leading_edge", "core_enrichment")])
+        top_gseNCG_table[[i]]<- DT::datatable( data = top_gseNCG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+          DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
+        
+        ##### Create summary bar and dot plots
+        png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png", sep=""))
+        print(dotplot(top_gseNCG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = TRUE))
+        invisible(dev.off())
+      }
+    }
+#  }
+}
+
+##### For Upset plot
+names(top_gseNCG.upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+top_gseNCG.upset <- Filter(function(a) any(!is.na(a)), top_gseNCG.upset)
+```
+
+```{r DisGeNET_gsea_analysis_heatmap, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide', eval = FALSE}
+##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
+ht <- list()
+
+for (i in 1:ncol(eb$p.value) ) {
+  #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)
+  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]])
+  
+  if ( nrow(gsva.results) > 1 ) {
+    ##### Cluster genes
+    hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+    
+    ##### Cluster samples
+    hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
+    
+    ##### Generate heatmap (complexHeatmap)
+    ##### Scale rows the data first (row scale)
+    gsva.results.z <- t(scale(t(gsva.results)))
+      
+    ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+    col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      
+    ht[[i]] <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+    
+    pdf(paste0(DisGeNET_dir, "/gseNCG_summary_heatmap_", colnames(eb$p.value)[i], ".pdf"), width = 12, height = 16)
+    draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+    dev.off()
+    
+    ##### Return matrix with row/column sorting as in heatmap
+    ##### Cluster samples
+    gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+    
+    ##### Cluster genes
+    gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
+  
+    write.table(gsva.results.z.heatmap, paste0(DisGeNET_dir, "/gseNCG_summary_heatmap_", colnames(eb$p.value)[i], ".txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+    
+  } else {
+    ht[[i]] <- NULL
+  }
+}
+```
+
+`r if ( length(top_gseNCG.upset) > 1 ) { c("Upset plot showing intersections of DisGeNET pathways enriched across multiple comparisons.") }`
+
+```{r DisGeNET_gsea_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(top_gseNCG.upset) > 1 ) {
+  print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways", text.scale = 2))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_gseNCG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways", text.scale = 2))
+  dev.off()
+}
+```
+
+`r if ( length(contrastNames) > 1 ) { c("***") }`
+
+```{r DisGeNET_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
+##### Now once the plots are ready show them in separate tabs
+data.pathways <- list()
+
+##### NOTE, use all genes (NOT only DE genes) for GSEA!
+for( i in 1:ncol(eb$p.value) ){
+    
+  cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
+  
+  ##### Run analysis only for comparisons with significant results
+  #if ( length(topGenes_list[[i]]) > 1 ) {
+    
+    ##### Loop through pathways if available
+    if ( !is.na(top_gseNCG[[i]]) ) {
+      
+      ##### Prepare data with logFC values
+      ##### But first remove genes with invalid ENTREZIDs
+      data.pathways[[i]] <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      names(data.pathways[[i]]) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
+      
+      ##### Sort genes by expression values
+      data.pathways[[i]] <- sort(data.pathways[[i]], decreasing = TRUE)
+      
+      cat("\n##### Summary {.tabset} \n")
+      
+      cat("\n###### Table \n")
+      
+      ##### Summary table
+      cat(paste("\n\nTable presenting summary of enriched DisGeNET pathways in ", contrastNames[i], " comparison.\n\n", sep=""))
+      
+      cat(renderTags(top_gseNCG_table[[i]])$html)
+      cat("\n***\n")
+      
+      #cat("\n###### Heatmap \n")
+      #
+      ###### Summary heatmap
+      #if ( !is.null(ht[[i]]) ) {
+      #  cat(paste("\n\nHeatmap presenting Gene Set Variation Analysis (GSVA) **enrichment scores** in enriched pathways (*y-axis*) across all samples (*x-axis*) in **", contrastNames[i], "** comparison.\n\n", sep=""))
+      #  print(draw(ht[[i]]))
+      #  cat("\n***\n")
+      #}
+
+      cat("\n###### Plots \n")
+      
+      ##### Bar and dot plots
+      cat(paste("\n\nBar (A) and dot (B) plots of enriched DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png)", sep="")), "\n")
+      cat("\n***\n")
+      
+      
+      cat(paste("\n\nHeatmap of enriched DisGeNET pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
+      
+      ##### Create heatmap-like functional classification
+      png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png", sep=""))
+      print(heatplot(top_gseNCG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
+      invisible(dev.off())
+        
+      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png)", sep="")), "\n")
+      cat("\n***\n")
+      
+      cat(paste("Enrichment map with DisGeNET enriched terms organised into a network with edges connecting overlapping gene sets. The gradient *color* scale and *point size* illustrate *p-values* observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      
+      ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
+      topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+      emapplot.results <- tryCatch({
+      emapplot(topPathways.genes, foldChange=data.pathways[[i]])}
+      , error=function(e){cat("\n")})
+        
+      if ( !is.null(emapplot.results) ) {
+        png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png", sep=""))
+        print(emapplot(topPathways.genes, foldChange=data.pathways[[i]]))
+        invisible(dev.off())
+          
+        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png)", sep="")), "\n")
+          
+      } else {
+        cat(paste("\nEnrichment map for is **not available** for that comparison\n", sep=""))
+      }
+      cat("\n***\n")
+      
+      cat("\n##### GSEA plots {.tabset} \n")
+      
+      cat(paste("Plots presenting GSEA results. The *top* panel illustrates running *enrichment score* (ES), which reflects the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes, for the ", top_gseNCG.df[[i]]$Description[j], " gene set as the analysis walks down the ranked list. Gene sets with a distinct peak at the beginning or end of the ranked list are generally the most interesting. The *bottom* panel shows the value of the ranking metric as you move down the list of ranked genes. The ranking metric measures a gene’s correlation with a phenotype. The value of the ranking metric goes from positive to negative as you move down the ranked list. A positive value indicates correlation with the first phenotype and a negative value indicates correlation with the second phenotype..\n\n", sep=""))
+      
+      for ( j in 1:nrow(top_gseNCG.df[[i]]) ) {
+        
+        ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
+        cat("\n###### ", top_gseNCG.df[[i]]$Description[j], "\n")
+        
+        topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
+        print(gseaplot2(top_gseNCG[[i]], geneSetID = j, title = top_gseNCG[[i]]$Description[j]))
+        invisible(dev.off())
+        
+        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
+        
+        cat("\n***\n")
+      }
+      
+      cat("\n##### Gene-concept networks {.tabset} \n")
+      
+      cat(paste("Linkages of genes involved in enriched DisGeNET pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      
+      for ( j in 1:nrow(top_gseNCG.df[[i]]) ) {
+        
+        ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
+        cat("\n###### ", top_gseNCG.df[[i]]$Description[j], "\n")
+        
+        topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
+        
+        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".network.png", sep=""))
+        print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
+        invisible(dev.off())
+        
+        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
+        
+        cat("\n***\n")
+      }
+    } else {
+      cat(paste("\n**No enriched DisGeNET pathways** were detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat("\n***\n")
+    }
+  #} else {
+  #  cat(paste("\n**No differentially expressed genes** were detected in ", contrastNames[i], " comparison\n", sep=""))
+  #  cat("\n***\n")
+  #}
+}
+```
+
+## Over-representation analysis
 
 <details>
 <summary>Parameters</summary>
@@ -1806,14 +2505,11 @@ Enrichment analysis based on the *[KEGG](https://www.genome.jp/kegg/){target="_b
 </font> 
 </details>
 
-```{r KEGG_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
-##### Create folder for storing pathway analysis results plots
-KEGG_dir <- paste(params$output_dir, "KEGG_pathways", sep = "/")
-if ( !file.exists(KEGG_dir) ) {
-  dir.create(KEGG_dir, recursive=TRUE)
-}
-setwd(KEGG_dir)
+### KEGG pathways {.tabset}
 
+Over-representation analysis based on the *[KEGG](https://www.genome.jp/kegg/){target="_blank"}* repository.
+
+```{r KEGG_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
 ##### Create lists to store pathways enrichment results for each comparison
 top_enrichKEGG <- list()
 top_enrichKEGG.df <- list()
@@ -1894,10 +2590,10 @@ top_enrichKEGG.upset <- Filter(function(a) any(!is.na(a)), top_enrichKEGG.upset)
 
 ```{r KEGG_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 if ( length(top_enrichKEGG.upset) > 1 ) {
-  print(upset(fromList(top_enrichKEGG.upset), order.by = "freq", nsets = length(top_enrichKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  print(upset(fromList(top_enrichKEGG.upset), order.by = "freq", nsets = length(top_enrichKEGG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways", text.scale = 1.8))
   
   png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_enrichKEGG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
-  print(upset(fromList(top_enrichKEGG.upset), order.by = "freq", nsets = length(top_enrichKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  print(upset(fromList(top_enrichKEGG.upset), order.by = "freq", nsets = length(top_enrichKEGG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways", text.scale = 1.8))
   dev.off()
 }
 ```
@@ -2011,295 +2707,21 @@ for( i in 1:ncol(eb$p.value) ){
         cat("\n***\n")
       }
     } else {
-      cat(paste("\n**No over-represented KEGG pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat(paste("\n**No over-represented KEGG pathways** were detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
     }
   } else {
-    cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
+    cat(paste("\n**No differentially expressed genes** were detected in ", contrastNames[i], " comparison\n", sep=""))
     cat("\n***\n")
   }
 }
 ```
 
-### Gene set enrichment analysis {.tabset}
+### DisGeNET pathways {.tabset}
 
-<details>
-<summary>Parameters</summary>
-<font size="2">
-
-* p-value: **`r  params$pvalueCutoff_gsea`**
-* Permutation numbers: **`r  params$nPerm_gsea`**
-* Minimal size of each geneset: **`r  params$minGSSize`**
-* Maximal size of each geneset: **`r  params$maxGSSize`**
-
-`r if ( params$pAdjustMethod_gsea=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using ", params$pAdjustMethod_gsea, " method.")) }`
-
-</font> 
-</details>
-
-```{r KEGG_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
-##### Create lists to store pathways enrichemnt results for each comparison
-top_gseKEGG <- list()
-top_gseKEGG.df <- list()
-top_gseKEGG.genes <- list()
-top_gseKEGG.upset <- list()
-top_gseKEGG_table <- list()
-
-##### NOTE, use all genes (NOT only DE genes) for GSEA!
-for (i in 1:ncol(eb$p.value) ) {
-  
-  top_gseKEGG[[i]] <- NA
-  top_gseKEGG.df[[i]] <- NA
-  top_gseKEGG.genes[[i]] <- NA
-  top_gseKEGG.upset[[i]] <- NA
-  top_gseKEGG_table[[i]] <- NA
-  
-  ##### Run analysis only for comparisons with significant results
-  #if ( !is.na(topGenes_list[[i]]) ) {
-    
-    ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
-    genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-    names(genes.ENTREZID) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-      
-    ##### Sort genes by FC values
-    genes.ENTREZID <- sort(genes.ENTREZID, decreasing = TRUE)
-    
-    ##### Keep only unique genes
-    genes.ENTREZID <- genes.ENTREZID[ unique(names(genes.ENTREZID)) ]
-    
-    ##### Run analysis only for > 1 gene
-    if ( length(genes.ENTREZID) > 1 ) {
-      
-      gseKEGG.results <- tryCatch({
-        gseKEGG( geneList=genes.ENTREZID, organism = 'hsa', pvalueCutoff = params$pvalueCutoff_gsea, pAdjustMethod = params$pAdjustMethod_gsea, minGSSize = params$minGSSize, maxGSSize = params$maxGSSize, use_internal_data = params$use_internal_data_kegg, nPerm = params$nPerm_gsea, seed = seed)}
-        , error=function(e){cat("\n")})
-      
-      if ( !is.null(gseKEGG.results) && nrow(gseKEGG.results) > 0 ) {
-        
-        top_gseKEGG[[i]] <- gseKEGG.results
-        
-        ##### Substitute ENTREZIDs with Gene symbols
-        top_gseKEGG.genes[[i]] <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-        ##### Save the normalised expression data, log2FC and p-values for DE genes in enriched pathways
-        ##### First extract DE genes involved in the pathway
-        for ( j in 1:nrow(top_gseKEGG.genes[[i]]) ) {
-          topGenes_list.pathway <- top_gseKEGG.genes[[i]]$core_enrichment[j]
-          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
-          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
-          
-          write.table(data2plot_topGenes , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
-          
-          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
-          
-          write.table(topGenes_list_p[ rownames(topGenes_list_p) %in% topGenes_list.pathway, ] , file=paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
-        }
-        
-        ##### For Upset plot
-        top_gseKEGG.upset[[i]] <- rownames(as.data.frame(top_gseKEGG.genes[[i]]))
-        
-        top_gseKEGG.df[[i]] <- as.data.frame(top_gseKEGG.genes[[i]][, c("Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues", "rank", "leading_edge", "core_enrichment")])
-        top_gseKEGG_table[[i]]<- DT::datatable( data = top_gseKEGG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
-        DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
-        
-        ##### Create summary bar and dot plots
-        png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG.png", sep=""))
-        print(dotplot(top_gseKEGG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = FALSE))
-        invisible(dev.off())
-      }
-    }
-#  }
-}
-
-##### For Upset plot
-names(top_gseKEGG.upset) <- colnames(eb)
-
-##### Remove comparisons with no DE genes
-top_gseKEGG.upset <- Filter(function(a) any(!is.na(a)), top_gseKEGG.upset)
-```
-
-`r if ( length(top_gseKEGG.upset) > 1 ) { c("Upset plot showing intersections of KEGG pathways enriched across multiple comparisons.") }`
-
-```{r KEGG_gsea_analysis_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=FALSE}
-if ( length(top_gseKEGG.upset) > 1 ) {
-  print(upset(fromList(top_gseKEGG.upset), order.by = "freq", nsets = length(top_gseKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
-  
-  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_gseKEGG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
-  print(upset(fromList(top_gseKEGG.upset), order.by = "freq", nsets = length(top_gseKEGG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
-  dev.off()
-}
-```
-
-`r if ( length(contrastNames) > 1 ) { c("***") }`
-
-```{r KEGG_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
-setwd(KEGG_dir)
-
-##### Now once the plots are ready show them in separate tabs
-data.pathways <- list()
-
-##### NOTE, use all genes (NOT only DE genes) for GSEA!
-for( i in 1:ncol(eb$p.value) ){
-    
-  cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
-  
-  ##### Run analysis only for comparisons with significant results
-  #if ( length(topGenes_list[[i]]) > 1 ) {
-    
-    ##### Loop through pathways if available
-    if ( !is.na(top_gseKEGG[[i]]) ) {
-      
-      ##### Prepare data with logFC values
-      ##### But first remove genes with invalid ENTREZIDs
-      data.pathways[[i]] <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-      names(data.pathways[[i]]) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-      
-      ##### Sort genes by FC values
-      data.pathways[[i]] <- sort(data.pathways[[i]], decreasing = TRUE)
-    
-      cat("\n##### Summary {.tabset} \n")
-      
-      cat("\n###### Table \n")
-      
-      ##### Summary table
-      cat(paste("\n\nTable presenting summary of enriched KEGG pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
-      
-      cat(renderTags(top_gseKEGG_table[[i]])$html)
-      cat("\n***\n")
-      
-      cat("\n###### Plots \n")
-      
-      ##### Bar and dot plots
-      cat(paste("\n\nBar (A) and dot (B) plots of enriched KEGG pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG.png)", sep="")), "\n")
-      cat("\n***\n")
-      
-      
-      cat(paste("\n\nHeatmap of enriched KEGG pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
-      
-      ##### Create heatmap-like functional classification
-      png(file = paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG_heatmap.png", sep=""))
-      print(heatplot(top_gseKEGG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
-      invisible(dev.off())
-        
-      cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG_heatmap.png)", sep="")), "\n")
-      cat("\n***\n")
-      
-      cat("\n##### KEGG plots {.tabset} \n")
-      
-      cat(paste("Visualization of KEGG pathways enriched in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
-        
-        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
-         
-        ##### NOTE: Some pathways are problematic. Skip these pathways
-        # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
-          
-          ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
-          if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
-            
-            pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
-            
-            ##### Rename pathview plots
-            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".png"))
-            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".xml"))
-            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
-          }
-          
-          ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
-          if ( file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
-            cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
-          } else {
-            cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
-          }
-          
-        } else {
-          cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
-        }
-        cat("\n***\n")
-      }
-
-      cat("\n##### GSEA plots {.tabset} \n")
-      
-      cat(paste("Plots presenting GSEA results. The *top* panel illustrates running *enrichment score* (ES), which reflects the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes, for the ", top_gseKEGG.df[[i]]$Description[j], " gene set as the analysis walks down the ranked list. Gene sets with a distinct peak at the beginning or end of the ranked list are generally the most interesting. The *bottom* panel shows the value of the ranking metric as you move down the list of ranked genes. The ranking metric measures a genes correlation with a phenotype. The value of the ranking metric goes from positive to negative as you move down the ranked list. A positive value indicates correlation with the first phenotype and a negative value indicates correlation with the second phenotype.\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
-        
-        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
-        
-        topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
-        print(gseaplot2(top_gseKEGG[[i]], geneSetID = j, title = top_gseKEGG[[i]]$Description[j]))
-        invisible(dev.off())
-        
-        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
-        
-        cat("\n***\n")
-      }
-      
-      cat("\n##### Gene-concept networks {.tabset} \n")
-      
-      cat(paste("Linkages of genes involved in enriched KEGG pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
-        
-        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
-        
-        topPathways.genes <- setReadable(top_gseKEGG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-        png(file = paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".network.png", sep=""))
-        print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
-        invisible(dev.off())
-        
-        cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
-        
-        cat("\n***\n")
-      }
-    } else {
-      cat(paste("\n**No enriched KEGG pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
-      cat("\n***\n")
-    }
-  #} else {
-  #  cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
-  #  cat("\n***\n")
-  #}
-}
-```
-
-## DisGeNET pathways
-
-Enrichment analysis based on the *[DisGeNET](https://www.disgenet.org/){target="_blank"}* repository.
-
-### Over-representation analysis {.tabset}
-
-<details>
-<summary>Parameters</summary>
-<font size="2">
-
-* p-value: **`r  params$pvalueCutoff`**
-* q-value: **`r  params$qvalueCutoff`**
-* Minimal size of each geneset: **`r  params$minGSSize`**
-* Maximal size of each geneset: **`r  params$maxGSSize`**
-
-`r if ( params$pAdjustMethod=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using ", params$pAdjustMethod, " method.")) }`
-
-</font> 
-</details>
+Over-representation analysis based on the *[DisGeNET](https://www.disgenet.org/){target="_blank"}* repository.
 
 ```{r DisGeNET_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
-##### Create folder for storing pathway analysis results plots
-DisGeNET_dir <- paste(params$output_dir, "DisGeNET_pathways", sep = "/")
-if ( !file.exists(DisGeNET_dir) ) {
-  dir.create(DisGeNET_dir, recursive=TRUE)
-}
-setwd(DisGeNET_dir)
-
 ##### Create lists to store pathways enrichment results for each comparison
 enrichDGN <- list()
 enrichDGN.df <- list()
@@ -2381,10 +2803,10 @@ enrichDGN.upset <- Filter(function(a) any(!is.na(a)), enrichDGN.upset)
 
 ```{r DisGeNET_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
 if ( length(enrichDGN.upset) > 1 ) {
-  print(upset(fromList(enrichDGN.upset), order.by = "freq", nsets = length(enrichDGN.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  print(upset(fromList(enrichDGN.upset), order.by = "freq", nsets = length(enrichDGN.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways", text.scale = 1.8))
   
   png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_enrichDGN_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
-  print(upset(fromList(enrichDGN.upset), order.by = "freq", nsets = length(enrichDGN.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways per comparison"))
+  print(upset(fromList(enrichDGN.upset), order.by = "freq", nsets = length(enrichDGN.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways", text.scale = 1.8))
   dev.off()
 }
 ```
@@ -2459,246 +2881,739 @@ for( i in 1:ncol(eb$p.value) ){
         cat("\n***\n")
       }
     } else {
-      cat(paste("\n**No over-represented DisGeNET pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
+      cat(paste("\n**No over-represented DisGeNET pathways** were detected in ", contrastNames[i], " comparison\n", sep=""))
       cat("\n***\n")
     }
   } else {
-    cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
+    cat(paste("\n**No differentially expressed genes** were detected in ", contrastNames[i], " comparison\n", sep=""))
     cat("\n***\n")
   }
 }
 ```
 
-### Gene set enrichment analysis {.tabset}
+## MSigDB and Reactome pathways {.tabset}
+
+### MSigDB (H)
+
+Heatmap presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **hallmark gene sets** (**H**) (*y-axis*) across all samples (*x-axis*).
+
+```{r MSigDB_H_pathways_heatmap, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide'}
+##### Create folder for storing pathway analysis results plots
+MSigDB_dir <- paste(params$output_dir, "MSigDB_pathways", sep = "/")
+if ( !file.exists(MSigDB_dir) ) {
+  dir.create(MSigDB_dir, recursive=TRUE)
+}
+setwd(MSigDB_dir)
+
+ht <- NULL
+
+##### Retrieve a data frame of gene sets from MSigDB and their member genes
+gene_sets = msigdbr(species = "Homo sapiens", category = "H")
+
+msigdbr_list_h = split(x = gene_sets $gene_symbol, f = gene_sets $gs_name)
+
+##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
+#gsva.results <- gsva(data, msigdbr_list_h, mx.diff=FALSE)
+gsva.results <- gsva(data, msigdbr_list_h)
+  
+if ( nrow(gsva.results) > 1 ) {
+  ##### Cluster genes
+  hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+  
+  ##### Cluster samples
+  hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
+  
+  ##### Generate heatmap (complexHeatmap)
+  ##### Scale rows the data first (row scale)
+  gsva.results.z <- t(scale(t(gsva.results)))
+    
+  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+  col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      
+  ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+  
+  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+    
+  pdf(paste0(MSigDB_dir, "/MSigDB_H_summary_heatmap.pdf"), width = 12, height = 12)
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+  dev.off()
+    
+  ##### Return matrix with row/column sorting as in heatmap
+  ##### Cluster samples
+  gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+    
+  ##### Cluster genes
+  gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
+  
+  write.table(gsva.results.z.heatmap, paste0(MSigDB_dir, "/MSigDB_H_summary_heatmap.txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+  
+} else {
+  cat(paste("\n**No MSigDB pathways** were detected\n", sep=""))
+}
+```
+
+***
+
+### MSigDB (C6)
+
+Heatmap presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **oncogenic signature gene sets** (**C6**) (*y-axis*) across all samples (*x-axis*).
+
+```{r MSigDB_C6_pathways_heatmap, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide'}
+##### Retrieve a data frame of gene sets from MSigDB and their member genes
+gene_sets = msigdbr(species = "Homo sapiens", category = "C6")
+
+msigdbr_list_c6 = split(x = gene_sets $gene_symbol, f = gene_sets $gs_name)
+
+##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
+#gsva.results <- gsva(data, msigdbr_list_c6, mx.diff=FALSE)
+gsva.results <- gsva(data, msigdbr_list_c6)
+  
+if ( nrow(gsva.results) > 1 ) {
+  ##### Cluster genes
+  hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+  
+  ##### Cluster samples
+  hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
+  
+  ##### Generate heatmap (complexHeatmap)
+  ##### Scale rows the data first (row scale)
+  gsva.results.z <- t(scale(t(gsva.results)))
+    
+  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+  col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      
+  ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+  
+  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+  
+  pdf(paste0(MSigDB_dir, "/MSigDB_C6_summary_heatmap.pdf"), width = 12, height = 30)
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+  dev.off()
+  
+  ##### Return matrix with row/column sorting as in heatmap
+  ##### Cluster samples
+  gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+    
+  ##### Cluster genes
+  gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
+  
+  write.table(gsva.results.z.heatmap, paste0(MSigDB_dir, "/MSigDB_C6_summary_heatmap.txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+    
+} else {
+  cat(paste("\n**No MSigDB pathways** were detected\n", sep=""))
+}
+```
+
+***
+
+### Reactome
+
+Heatmap presenting enrichment scores for **[Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways** (*y-axis*) across all samples (*x-axis*).
+
+```{r Reactome_pathways_heatmap, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide'}
+##### Create folder for storing pathway analysis results plots
+Reactome_dir <- paste(params$output_dir, "Reactome_pathways", sep = "/")
+if ( !file.exists(Reactome_dir) ) {
+  dir.create(Reactome_dir, recursive=TRUE)
+}
+setwd(Reactome_dir)
+
+#####  Map Reactome pathway identifiers to Entrez Gene identifiers
+reactome_pathways <- as.list(reactomePATHID2EXTID)
+
+##### Map Reactome pathway identifiers to Reactome pathway names
+reactome_pathways_names <- as.list(reactomePATHID2NAME)
+
+##### Keep only Homo sapiens pathways
+reactome_pathways <- reactome_pathways[ grep("R-HSA-", names(reactome_pathways), value = TRUE)]
+reactome_pathways_names <- reactome_pathways_names[ grep("R-HSA-", names(reactome_pathways_names), value = TRUE)]
+
+##### Make sure that pathways IDs match pathways names
+reactome_pathways <- reactome_pathways[ names(reactome_pathways) %in% names(reactome_pathways_names) ]
+reactome_pathways_names <- reactome_pathways_names[ names(reactome_pathways_names) %in% names(reactome_pathways) ]
+
+##### Remove "Homo sapiens" from the pathway name
+reactome_pathways_names  <- lapply(reactome_pathways_names,function(x) gsub("Homo sapiens: ", "", x)) 
+
+
+##### Change the Reactome pathway identifiers to Reactome pathway names
+reactome_pathways_names <- reactome_pathways_names[ names(reactome_pathways) ]
+names(reactome_pathways) <- reactome_pathways_names
+
+
+##### Substitute ENTREZIDs with Gene symbols
+##### Get keytypes for gene SYMBOL
+keys <- keys(org.Hs.eg.db, keytype = "ENTREZID")
+
+##### Summarize number of transcripts per gene Entrez ID
+gene_info <- AnnotationDbi::select(org.Hs.eg.db, keys = keys, columns = c("SYMBOL"), keytype = "ENTREZID")
+
+##### Substitute ENTREZIDs with Gene symbols 
+reactome_pathways.gene_symbols <- lapply(reactome_pathways, function(x) gene_info$SYMBOL[match(x, gene_info$ENTREZID)] )
+
+##### Remove unmapped genes (NAs)
+reactome_pathways.gene_symbols <- lapply(reactome_pathways.gene_symbols, function(x) x[!is.na(x)] )
+
+##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
+#gsva.results <- gsva(data, reactome_pathways.gene_symbols, mx.diff=FALSE)
+gsva.results <- gsva(data, reactome_pathways.gene_symbols)
+  
+if ( nrow(gsva.results) > 1 ) {
+  ##### Cluster genes
+  hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+  
+  ##### Cluster samples
+  hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
+  
+  ##### Generate heatmap (complexHeatmap)
+  ##### Scale rows the data first (row scale)
+  gsva.results.z <- t(scale(t(gsva.results)))
+    
+  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+  col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      
+  ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, show_row_names = FALSE)
+  
+  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+  
+  pdf(paste0(Reactome_dir, "/Reactome_summary_heatmap.pdf"), width = 12, height = 12)
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+  dev.off()
+    
+  ##### Return matrix with row/column sorting as in heatmap
+  ##### Cluster samples
+  gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+    
+  ##### Cluster genes
+  gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
+  
+  write.table(gsva.results.z.heatmap, paste0(Reactome_dir, "/Reactome_summary_heatmap.txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+    
+} else {
+  cat(paste("\n**No Reactome pathways** were detected\n", sep=""))
+}
+
+pathways.genes <- c(msigdbr_list_h, msigdbr_list_c6 ,reactome_pathways.gene_symbols)
+pathways.genes <- pathways.genes[ unique(names(pathways.genes)) ]
+```
+
+`r if ( runPOI ) { c("***") }`
+
+`r if ( runPOI ) { c("### Selected pathways") }`
+
+`r if ( runPOI ) { c("Heatmap presenting enrichment scores for **pathways of interest** (*y-axis*) across all samples (*x-axis*).") }`
+
+`r if ( runPOI ) { c("***") }`
+
+`r if ( runPOI ) { paste0("<details>") }`
+`r if ( runPOI ) { paste0("<summary>Selected pathways</summary>") }`
+`r if ( runPOI ) { paste0("<font size=\"2\">") }`
+
+`r if ( runPOI ) { paste(poi_list, collapse = ", ") }`
+
+`r if ( runPOI ) { paste0("</font>") }`
+`r if ( runPOI ) { paste0("</details>") }`
+
+`r if ( runPOI ) { c("***") }`
+
+```{r Selected_pathways_heatmap, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide', eval = runPOI}
+##### Create folder for storing pathway analysis results plots
+Selected_pathways_dir <- paste(params$output_dir, "Selected_pathways", sep = "/")
+if ( !file.exists(Selected_pathways_dir) ) {
+  dir.create(Selected_pathways_dir, recursive=TRUE)
+}
+setwd(Selected_pathways_dir)
+
+##### Keep only pathways of interest
+pathways.selected <- pathways.genes[ match(poi_list, names(pathways.genes)) ]
+
+##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
+#gsva.results <- gsva(data, pathways.selected, mx.diff=FALSE)
+gsva.results <- gsva(data, pathways.selected)
+
+##### Set heatmaps height
+if ( length(pathways.selected) < 10 ) {
+  heatmap_poi_height <- 4
+} else {
+  heatmap_poi_height <- 8
+}
+
+if ( nrow(gsva.results) > 1 ) {
+  ##### Cluster genes
+  hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+  
+  ##### Cluster samples
+  hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
+  
+  ##### Generate heatmap (complexHeatmap)
+  ##### Scale rows the data first (row scale)
+  gsva.results.z <- t(scale(t(gsva.results)))
+    
+  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+  col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      
+  ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+  
+  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+  
+  pdf(paste0(Selected_pathways_dir, "/Selected_pathways_summary_heatmap.pdf"), width = 12, height = heatmap_poi_height)
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+  dev.off()
+    
+  ##### Return matrix with row/column sorting as in heatmap
+  ##### Cluster samples
+  gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+    
+  ##### Cluster genes
+  gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
+  
+  write.table(gsva.results.z.heatmap, paste0(Selected_pathways_dir, "/Selected_pathways_summary_heatmap.txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+    
+} else {
+  cat(paste("\n**None of the selected pathways** were detected\n", sep=""))
+}
+```
+
+***
+
+## Differential expression (pathways)
 
 <details>
 <summary>Parameters</summary>
 <font size="2">
 
-* p-value: **`r  params$pvalueCutoff_gsea`**
-* Permutation numbers: **`r  params$nPerm_gsea`**
-* Minimal size of each geneset: **`r  params$minGSSize`**
-* Maximal size of each geneset: **`r  params$maxGSSize`**
+* Enrichment score: **`r  params$eScoreThreshold`**
+* p-value: **`r  params$pThreshold`**
 
-`r if ( params$pAdjustMethod=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using ", params$pAdjustMethod, " method.")) }`
+`r if ( params$adjMethod_pathways=="none" ) { c("**NOTE**, p-values were not corrected for multiple testing!") } else { c(paste0("P-values were corrected multiple testing using **", params$adjMethod_pathways, "** method.")) }`
 
 </font> 
 </details>
 
-```{r DisGeNET_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
-##### Create lists to store pathways enrichemnt results for each comparison
-top_gseNCG <- list()
-top_gseNCG.df <- list()
-top_gseNCG.genes <- list()
-top_gseNCG.upset <- list()
-top_gseNCG_table <- list()
+```{r DE_model_fit_pathways, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+##### Create matrix with GSEA enrichment scores calculated for each gene-set for individual samples
+#gsva.results <- gsva(data, pathways.selected, mx.diff=FALSE)
+gsva.results <- gsva(data, pathways.genes)
 
-##### NOTE, use all genes (NOT only DE genes) for GSEA!
-for (i in 1:ncol(eb$p.value) ) {
-  
-  top_gseNCG[[i]] <- NA
-  top_gseNCG.df[[i]] <- NA
-  top_gseNCG.genes[[i]] <- NA
-  top_gseNCG.upset[[i]] <- NA
-  top_gseNCG_table[[i]] <- NA
-  
-  ##### Run analysis only for comparisons with significant results
-  #if ( !is.na(topGenes_list_all[[i]]) ) {
+##### For better presentation keep only the first 6 words of each pathway name
+gsva.results.names <- word(rownames(gsva.results),start=1,end=6,sep=fixed(" "))
+gsva.results.short_names <- is.na(word(rownames(gsva.results),start=1,end=6,sep=fixed(" ")))
+gsva.results.names[ gsva.results.short_names ] <- rownames(gsva.results)[ gsva.results.short_names ]
+rownames(gsva.results) <- gsva.results.names
+
+##### Keep only unique pathways
+gsva.results <- gsva.results[ unique(rownames(gsva.results)), ]
+
+
+#####  Fit linear model to combined data, given the above design
+if ( all(is.na(targetFile$Replicates)) || all(targetFile$Replicates == "-") ) {
+  fit <- lmFit(gsva.results, mod)
+} else {
+  cat("Dealing with technical replicates...\n")
     
-    ##### Remove genes with invalid ENTREZIDs and check if at least two genes have valid ENTREZIDs
-    genes.ENTREZID <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-    names(genes.ENTREZID) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-      
-    ##### Sort genes by FC values
-    genes.ENTREZID <- sort(genes.ENTREZID, decreasing = TRUE)
+  biolrep <- targetFile$Replicates
+  biolrep[is.na(biolrep)] <- 0
+  maxRep <- max(biolrep)
     
-    ##### Keep only unique genes
-    genes.ENTREZID <- genes.ENTREZID[ unique(names(genes.ENTREZID)) ]
-    
-    ##### Run analysis only for > 1 gene
-    if ( length(genes.ENTREZID) > 1 ) {
-      
-      gseNCG.results <- tryCatch({
-        gseNCG( geneList=genes.ENTREZID, pvalueCutoff = params$pvalueCutoff_gsea, pAdjustMethod = params$pAdjustMethod_gsea, minGSSize = params$minGSSize, maxGSSize = params$maxGSSize, nPerm = params$nPerm_gsea, seed = seed)}
-        , error=function(e){cat("\n")})
-      
-      if ( !is.null(gseNCG.results) && nrow(gseNCG.results) > 0 ) {
-        
-        top_gseNCG[[i]] <- gseNCG.results
-        
-        ##### Substitute ENTREZIDs with Gene symbols
-        top_gseNCG.genes[[i]] <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-        ##### Save the normalised expression data for DE genes in enriched pathways
-        ##### First extract DE genes involved in the pathway
-        for ( j in 1:nrow(top_gseNCG.genes[[i]]) ) {
-          topGenes_list.pathway <- top_gseNCG.genes[[i]]$core_enrichment[j]
-          topGenes_list.pathway <- unique(unlist(strsplit(topGenes_list.pathway, split='/', fixed=TRUE)))
-          data2plot_topGenes <- data2plot[ rownames(data2plot) %in% topGenes_list.pathway, ]
-          
-          write.table(data2plot_topGenes , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_exprs.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
-          
-          write.table(topGenes_list_log2FC[ rownames(topGenes_list_log2FC) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_log2FC.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
-          
-          write.table(topGenes_list_p[ rownames(topGenes_list_p) %in% topGenes_list.pathway, ] , file=paste0(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), "_DE_genes_p_value.txt"),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
-        }
-        
-        ##### For Upset plot
-        top_gseNCG.upset[[i]] <- rownames(as.data.frame(top_gseNCG.genes[[i]]))
-    
-        top_gseNCG.df[[i]] <- as.data.frame(top_gseNCG.genes[[i]][, c("Description", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalues", "rank", "leading_edge", "core_enrichment")])
-        top_gseNCG_table[[i]]<- DT::datatable( data = top_gseNCG.df[[i]], caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
-          DT::formatRound(columns = c("enrichmentScore", "NES"), 2)
-        
-        ##### Create summary bar and dot plots
-        png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png", sep=""))
-        print(dotplot(top_gseNCG[[i]], orderBy = "p.adjust", showCategory = 30, decreasing = TRUE))
-        invisible(dev.off())
+  cumSum = maxRep
+  for (i in 1:length(biolrep)) {
+      if ( biolrep[i]==0 ) {
+          cumSum = cumSum+1
+          biolrep[i] <- cumSum
       }
-    }
-#  }
+  }
+    
+  corfit <- duplicateCorrelation(gsva.results, design=mod, ndups = 1, block = biolrep)
+  fit <- lmFit(gsva.results, mod, block = biolrep, correlation = corfit$consensus.correlation)
 }
 
-##### For Upset plot
-names(top_gseNCG.upset) <- colnames(eb)
 
-##### Remove comparisons with no DE genes
-top_gseNCG.upset <- Filter(function(a) any(!is.na(a)), top_gseNCG.upset)
+##### Create matrix of possible comparisons
+##### Make sure that the comparisons names are valid
+comb <- make.names(unique(targets))
+comb <- combn(comb, 2)
+
+#####  Get number of possible comparisons using the following formula:
+#
+# n!/((n-r)!(r!))
+#
+# n = the number of classes to compare
+# r = the number of elements for single comparison
+#
+################################################################################
+
+targetsNo <- length(levels(factor(targets)))
+combNo <- factorial(targetsNo)/(factorial(targetsNo-2)*(factorial(2))) # n!/((n-r)!(r!))
+
+contrasts <- NULL
+contrastNames <- NULL
+
+#####  Create string with possible contrasts
+for (i in 1:combNo) {
+  contrasts <- c(contrasts, paste(paste(comb[1,i], comb[2,i], sep="_vs_"),paste(comb[1,i], comb[2,i], sep=" -"), sep="="))
+  contrastNames[i] <- paste(comb[1,i], comb[2,i], sep=" vs ")
+}
+contrasts <- paste(contrasts, collapse=", ")
+
+#####  Create contrasts of interest
+func = "makeContrasts"
+arguments = paste(contrasts, "levels=mod",sep=", ")
+
+contrast.matrix <- eval(parse(text = paste(func, "(", arguments, ")",sep="")))
+
+#####  Fit contrasts to linear model
+fitContrasts <- contrasts.fit(fit, contrast.matrix)
+
+#####  Apply empirical Bayes statistics
+eb <- eBayes(fitContrasts)
 ```
 
-`r if ( length(top_gseNCG.upset) > 1 ) { c("Upset plot showing intersections of DisGeNET pathways enriched across multiple comparisons.") }`
-
-```{r DisGeNET_gsea_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
-if ( length(top_gseNCG.upset) > 1 ) {
-  print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
+```{r DE_results_pathways, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
+##### Differenatial expression analysis results visualisation
+for (i in 1:ncol(eb$p.value) ) {
+    
+  #####  P-value histograms
+  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_pathways_P_hist.png", sep=""), width = 6, height = 4, units = "in", res = 300, pointsize = 10)
+  histogram <- hist(eb$p.value[,i], breaks=seq(0,1,by= 0.01), main="", xlab="p-value")
+  exprected_p.value <- mean(histogram$counts)+(sd(histogram$counts)*1)
+  abline(v=params$pThreshold_pathways,col="red")
+  abline(h=exprected_p.value,col="blue")
+  dev.off()
   
-  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_gseNCG_upset.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
-  print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 3.5, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways per comparison"))
+  
+  #####  Volcano plots of Enrichment scores versus significance (adjusted p-values, +label top 10)
+  topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod_pathways, sort.by="none", number=nrow(gsva.results))
+  names(topGenes) <- gsub("logFC", "score", names(topGenes))
+  
+  png(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_pathways_volcano_plot", ".png", sep = ""), width = 6, height = 4, units = "in", res = 300, pointsize = 10)
+  plot(topGenes[,"score"],-log2(topGenes[,"adj.P.Val"]),pch=16,cex=0.5,xlab="Enrichment score difference",ylab="-log2(p-value)",main="",col="grey", xlim=c(min(topGenes[,"score"])-0.5, max(topGenes[,"score"])+0.5))
+  #####  Highlight genes with Enrichment scores above specified threshold
+  points(topGenes[abs(topGenes[,"score"])>params$eScoreThreshold,"score"],-log2(topGenes[abs(topGenes[,"score"])>params$eScoreThreshold,"adj.P.Val"]),cex=0.5,pch=16)
+  abline(h=-log2(params$pThreshold_pathways),col="red", lty = 2)
+  #####  Label top 10 most significant genes
+  ord <- order(-log2(topGenes[,"adj.P.Val"]),decreasing=TRUE)
+  top10 <- ord[1:10]
+  text(topGenes[top10,"score"],-log2(topGenes[top10,"adj.P.Val"]), labels=rownames(gsva.results[top10,]),cex=0.6,col="blue")
   dev.off()
 }
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("***") }`
+```{r DE_overlap_pathways, comment = NA, message=FALSE, warning=FALSE, results = 'asis'}
+eb.decideTests <- decideTests(eb, method="separate", adjust.method=params$adjMethod_pathways, p.value=params$pThreshold_pathways, lfc=params$eScoreThreshold)
 
-```{r DisGeNET_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
-##### Now once the plots are ready show them in separate tabs
-data.pathways <- list()
+eb.decideTests <- as.data.frame(eb.decideTests)
 
-##### NOTE, use all genes (NOT only DE genes) for GSEA!
-for( i in 1:ncol(eb$p.value) ){
+##### Record Enrichment scores and p-values for all pathways across all comparisons
+topGenes_list_log2FC <- NULL
+topGenes_list_p <- NULL
+
+#### Order the decideTests
+if ( ncol(eb.decideTests) > 1 ) {
+  eb.decideTests <- eb.decideTests[apply(as.data.frame(eb.decideTests)[,-1], 1, function(x) !all(x==0)),]
+  eb.decideTests.abs <- abs(eb.decideTests)
+  eb.decideTests.rowSums <- rowSums(eb.decideTests.abs)
+  eb.decideTests.colSums <- colSums(eb.decideTests.abs)
+  eb.decideTests <- eb.decideTests[ , names(sort(eb.decideTests.colSums, decreasing = TRUE)), drop = FALSE ]
+  eb.decideTests <- eb.decideTests[ names(sort(eb.decideTests.rowSums, decreasing = TRUE)), , drop = FALSE]
+} else {
+  eb.decideTests.abs <- abs(eb.decideTests)
+  eb.decideTests <- eb.decideTests[ order(eb.decideTests.abs[,1], decreasing = TRUE), , drop = FALSE]
+}
+
+write.table(eb.decideTests, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_pathways_decideTests.txt", sep = ""), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+
+##### Create list to store DE results for ALL pathways for each comparison
+topGenes_list_all <- list()
+
+#####  Write the analysis results into a file
+for (i in 1:ncol(eb$p.value) ) {
     
+	topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod_pathways,  sort.by="p", number=nrow(gsva.results))
+	names(topGenes) <- gsub("logFC", "score", names(topGenes))
+  topGenes <- topGenes[,colnames(topGenes) %in% c("score","t","B","P.Value","adj.P.Val")]
+  topGenes <- topGenes[ ,c("score","t","B","P.Value","adj.P.Val")]
+  colnames(topGenes) <- c("score", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod_pathways,sep="_"))
+  topGenes_list_all[[i]] <- topGenes
+    
+  write.table(topGenes, file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_pathways_topTable.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+  ##### Save Enrichment score values for DE pathways
+  topGenes <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod_pathways,  sort.by="none", number=nrow(gsva.results))
+  names(topGenes) <- gsub("logFC", "score", names(topGenes))
+  topGenes <- topGenes[,colnames(topGenes) %in% c("score","t","B","P.Value","adj.P.Val")]
+  topGenes <- topGenes[ ,c("score","t","B","P.Value","adj.P.Val")]
+  colnames(topGenes) <- c("score", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod_pathways,sep="_"))
+  
+  topGenes_list_log2FC <- cbind(topGenes_list_log2FC, topGenes$score)
+  
+  ##### Save Enrichment score values for DE pathways
+  topGenes_list_p <- cbind(topGenes_list_p, topGenes[ , paste("p-value", params$adjMethod_pathways,sep="_") ])
+}
+
+##### Write Enrichment score and p-values for all pathways across all comparisons into a file
+rownames(topGenes_list_log2FC) <- rownames(topGenes)
+colnames(topGenes_list_log2FC) <- colnames(eb)
+write.table(topGenes_list_log2FC , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_DE_pathways_enrichment_score.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+
+rownames(topGenes_list_p) <- rownames(topGenes)
+colnames(topGenes_list_p) <- colnames(eb)
+write.table(topGenes_list_p , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_DE_pathways_p_value.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+
+#####  ... write into a file only differnetially expressed genes
+topGenes.index <- NULL
+
+##### Create lists to store DE genes for each comparison
+topGenes_list <- list()
+topGenes_list_upset <- list()
+topGenes_list_table <- list()
+
+for (i in 1:ncol(eb$p.value) ) {
+  
+  topGenes_list[[i]] <- topTable(eb, coef=colnames(eb)[i], adjust=params$adjMethod_pathways,  sort.by="p", p.value=params$pThreshold_pathways, lfc=params$eScoreThreshold, number=nrow(gsva.results))
+  names(topGenes_list[[i]]) <- gsub("logFC", "score", names(topGenes_list[[i]]))
+  	
+  if ( length(topGenes_list[[i]] ) != 0 ) {
+    
+    topGenes_list[[i]]  <- topGenes_list[[i]] [,colnames(topGenes_list[[i]] ) %in% c("score","t","B","P.Value","adj.P.Val")]
+    topGenes_list[[i]]  <- topGenes_list[[i]] [ ,c("score","t","B","P.Value","adj.P.Val")]
+    colnames(topGenes_list[[i]] ) <- c("score", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod_pathways,sep="_"))
+    
+    write.table(topGenes_list[[i]] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_pathways.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+    ##### Save the normalised expression data for DE pathways
+    data2plot_topGenes <- gsva.results[ rownames(topGenes_list[[i]]), ]
+    
+    write.table(data2plot_topGenes , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_pathways_exprs.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+    ##### Save Enrichment score and p-values for DE pathways
+    write.table(topGenes_list_log2FC[ rownames(topGenes_list[[i]]), ] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_pathways_enrichment_score.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+    write.table(topGenes_list_p[ rownames(topGenes_list[[i]]), ] , file=paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_DE_pathways_p_value.txt", sep=""),sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE)
+    
+    ##### For Upset plot
+    topGenes_list_upset[[i]] <- rownames(topGenes_list[[i]])
+    
+    ##### Generate dataTable
+    topGenes4table <- topGenes_list[[i]][ , c("score", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))]
+    topGenes_list_table[[i]] <- DT::datatable( data = topGenes4table, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+        DT::formatStyle( columns = names(topGenes4table), 'text-align' = 'center' ) %>%
+        DT::formatRound(columns = c("score", "t-statistic", "B-statistic"), 2)
+    
+    topGenes.index <- unique(c(topGenes.index,rownames(topGenes_list[[i]] )))
+    topGenes_list[[i]] <- topGenes_list[[i]] 
+    
+  } else {
+    topGenes_list[[i]] <- NA
+    topGenes_list_upset[[i]] <- NA
+    topGenes_list_table[[i]] <- paste("\n**No differentially expressed genes** were detected in ", contrastNames[i], " comparison!\n", sep="")
+  }
+}
+
+##### For Upset plot
+names(topGenes_list_upset) <- colnames(eb)
+
+##### Remove comparisons with no DE genes
+topGenes_list_upset <- Filter(function(a) any(!is.na(a)), topGenes_list_upset)
+
+######## NEED TO FIX THIS as for one comparisn the summary table in "DE_results_visualisation" chunk is not apprearing
+
+```
+
+***
+
+<details>
+<summary>Differentially expressed genes</summary>
+<font size="2">
+
+*`r paste(topGenes.index, collapse = ", ")`*
+
+</font>
+</details>
+
+***
+
+### Summary {.tabset}
+
+#### Heatmap {.tabset}
+
+Heatmap presenting expression levels of `r length(topGenes.index)` **differentially expressed genes** (*y-axis*) across all samples (*x-axis*).
+
+##### Static
+
+```{r DE_heatmap_pathways, warning = FALSE, echo = FALSE, comment = FALSE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+##### Make sure that any DE genes were detected
+if ( length(topGenes.index) > 1 ) {
+  data.h <- data.frame(gsva.results[ rownames(gsva.results) %in% topGenes.index,])
+  
+  ##### Cluster genes
+  hc <- hclust(as.dist(1-cor(data.h, method="pearson")), method="ward.D2")
+    
+  ##### Cluster samples
+  hr <- hclust(as.dist(dist(data.h, method="euclidean")), method="ward.D2")
+    
+  ##### Generate heatmap (complexHeatmap)
+  if ( params$split && length(unique(targetFile$Target)) > 1 ) {
+    row_split <- length(unique(targetFile$Target))
+    column_split <- length(unique(targetFile$Target))
+  } else {
+    row_split <- NULL
+    column_split <- NULL
+  }
+  
+  ##### Scale rows the data first (row scale)
+  data.h.z <- t(scale(t(data.h)))
+  
+  ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+  col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
+  
+  ht <- Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+  
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+  
+  pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_pathways_heatmap_DE.pdf")), width = 12, height = 8)
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+  dev.off()
+  
+  ##### Return matrix with row/column sorting as in heatmap
+  ##### Cluster samples
+  data.h.z.heatmap <- data.h.z[, hc$labels[hc$order]]
+  
+  ##### Cluster genes
+  data.h.z.heatmap <- data.h.z.heatmap[hr$labels[hr$order], ]
+
+  ##### Write data from the heatmap into a file
+  write.table(data.h.z.heatmap, paste0(params$output_dir, "/", paste0(params$results_name, "_pathways_heatmap_DE_data.txt")), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+}
+```
+
+`r if ( length(topGenes.index) < 2 ) { c("\n**No differentially expressed genes** detected.\n") }`
+
+***
+
+##### Interactive
+
+```{r DE_heatmap_interactive_pathways, echo = TRUE, comment = TRUE, message = TRUE, warning = FALSE, results = 'asis', fig.width = 12, fig.height = 16}
+suppressMessages(library(heatmaply))
+
+##### Build list of outputs
+##### https://stackoverflow.com/questions/49990653/plotly-plot-doesnt-render-within-for-loop-of-rmarkdown-document
+output <- list()
+
+##### Generate heatmap (PLOTLY)
+##### Make sure that any DE genes were detected
+if ( length(topGenes.index) > 1 ) {
+  output[[1]] <- heatmaply(data.frame(data.h), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+    layout(autosize = TRUE, width = 800, height = 700, margin = list(l=150, r=50, b=100, t=50, pad=4), showlegend = FALSE)
+    
+  ##### Save the heatmap as html (PLOTLY)
+  saveWidgetFix(output[[1]], file = paste0(params$output_dir, "/", paste0(params$results_name, "_pathways_heatmap_DE.html")), selfcontained = TRUE)
+} else {
+  output[[1]] <- c("\n**No differentially expressed genes** detected\n")
+}
+
+cat(renderTags(output[[1]])$html)
+
+detach("package:heatmaply", unload=FALSE)
+```
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines to add more space for the interactive heatmap in the report section</span>") }`
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
+
+`r if ( length(topGenes.index) > 1 ) { c("<span style=\"color:#ffffff\">Add new lines...</span>") }`
+
+
+`r if ( length(contrastNames) < 1 ) { c("***") }`
+
+`r if ( length(contrastNames) < 1 ) { c("#### Venn diagram") }`
+
+```{r DE_venn_pathways, comment = NA, message=FALSE, warning=FALSE, results = 'hide', eval=FALSE}
+
+
+##### NEEDS FIXING 
+
+
+#####  Generate Venn diagrams
+if ( length(contrastNames) < 4) {
+  venn.counts <- vennCounts(eb.decideTests, include = "both")
+  colnames(venn.counts)[1:ncol(venn.counts)-1] <- contrastNames
+  vennDiagram(venn.counts)
+}
+
+##### ... save results in a file
+if ( length(contrastNames) < 4) {
+  pdf(file = paste(paste0(params$output_dir, "/", paste0(params$results_name)),"_DE_venn.pdf", sep = ""), width = 8, height = 8, pointsize = 7, bg = "transparent")
+  vennDiagram(venn.counts)
+  dev.off()
+}
+```
+
+`r if ( length(topGenes_list_upset) > 1 ) { c("***") }`
+
+`r if ( length(topGenes_list_upset) > 1 ) { c("#### Upset plot") }`
+
+`r if ( length(topGenes_list_upset) > 1 ) { c("Upset plot showing intersections of differentially expressed (DE) genes detected across multiple comparisons.") }`
+
+```{r DE_upset_plot_pathways, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+if ( length(topGenes_list_upset) > 1 ) {
+  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE pathways", text.scale = 2))
+  
+  png(file = paste0(params$output_dir, "/", paste0(params$results_name, "_pathways_upset_DE.png"), sep = ""), width = 12, height = 10, units = "in", res = 300, pointsize = 10)
+  print(upset(fromList(topGenes_list_upset), order.by = "freq", nsets = length(topGenes_list_upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "DE pathways", text.scale = 2))
+  dev.off()
+}
+```
+
+***
+
+#### Table
+
+```{r DE_summary_table_pathways, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+DT::datatable( data = eb.decideTests, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+      DT::formatStyle( columns = names(eb.decideTests), 'text-align' = 'center' ) %>%
+    
+    ##### Colour cells according to evidence level and trust rating
+    DT::formatStyle(columns = colnames(eb.decideTests), backgroundColor = DT::styleEqual(c(-1,0,1), c("blue", "transparent", "red")), color = DT::styleEqual(c(-1,0,1), c("white", "transparent", "white")))
+```
+
+***
+
+### Comparisons {.tabset}
+
+```{r DE_results_visualisation_pathways, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+##### Now once the plots are ready show them in separate tabs
+for( i in 1:ncol(eb$p.value) ){
+  
   cat("\n#### ", colnames(eb$p.value)[i], " {.tabset} \n")
   
-  ##### Run analysis only for comparisons with significant results
-  #if ( length(topGenes_list[[i]]) > 1 ) {
-    
-    ##### Loop through pathways if available
-    if ( !is.na(top_gseNCG[[i]]) ) {
-      
-      ##### Prepare data with logFC values
-      ##### But first remove genes with invalid ENTREZIDs
-      data.pathways[[i]] <- topGenes_list_all[[i]]$log2FC[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-      names(data.pathways[[i]]) <- topGenes_list_all[[i]]$ENTREZID[ !is.na(topGenes_list_all[[i]]$ENTREZID) ]
-      
-      ##### Sort genes by expression values
-      data.pathways[[i]] <- sort(data.pathways[[i]], decreasing = TRUE)
-      
-      cat("\n##### Summary {.tabset} \n")
-      
-      cat("\n###### Table \n")
-      
-      ##### Summary table
-      cat(paste("\n\nTable presenting summary of enriched DisGeNET pathways in ", contrastNames[i], " comparison.\n\n", sep=""))
-      
-      cat(renderTags(top_gseNCG_table[[i]])$html)
-      cat("\n***\n")
-      
-      cat("\n###### Plots \n")
-      
-      ##### Bar and dot plots
-      cat(paste("\n\nBar (A) and dot (B) plots of enriched DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png)", sep="")), "\n")
-      cat("\n***\n")
-      
-      
-      cat(paste("\n\nHeatmap of enriched DisGeNET pathways in **", contrastNames[i], "** comparison.\n\n", sep=""))
-      
-      ##### Create heatmap-like functional classification
-      png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png", sep=""))
-      print(heatplot(top_gseNCG.genes[[i]], foldChange=data.pathways[[i]], showCategory = 30))
-      invisible(dev.off())
-        
-      cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG_heatmap.png)", sep="")), "\n")
-      cat("\n***\n")
-      
-      cat(paste("Enrichment map with DisGeNET enriched terms organised into a network with edges connecting overlapping gene sets. The gradient *color* scale and *point size* illustrate *p-values* observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      
-      ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
-      topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-      emapplot.results <- tryCatch({
-      emapplot(topPathways.genes, foldChange=data.pathways[[i]])}
-      , error=function(e){cat("\n")})
-        
-      if ( !is.null(emapplot.results) ) {
-        png(file = paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png", sep=""))
-        print(emapplot(topPathways.genes, foldChange=data.pathways[[i]]))
-        invisible(dev.off())
-          
-        cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichment_map.png)", sep="")), "\n")
-          
-      } else {
-        cat(paste("\nEnrichment map for is **not available** for that comparison\n", sep=""))
-      }
-      cat("\n***\n")
-      
-      cat("\n##### GSEA plots {.tabset} \n")
-      
-      cat(paste("Plots presenting GSEA results. The *top* panel illustrates running *enrichment score* (ES), which reflects the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes, for the ", top_gseNCG.df[[i]]$Description[j], " gene set as the analysis walks down the ranked list. Gene sets with a distinct peak at the beginning or end of the ranked list are generally the most interesting. The *bottom* panel shows the value of the ranking metric as you move down the list of ranked genes. The ranking metric measures a gene’s correlation with a phenotype. The value of the ranking metric goes from positive to negative as you move down the ranked list. A positive value indicates correlation with the first phenotype and a negative value indicates correlation with the second phenotype..\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_gseNCG.df[[i]]) ) {
-        
-        ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_gseNCG.df[[i]]$Description[j], "\n")
-        
-        topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png", sep=""))
-        print(gseaplot2(top_gseNCG[[i]], geneSetID = j, title = top_gseNCG[[i]]$Description[j]))
-        invisible(dev.off())
-        
-        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".gsea.png)", sep="")), "\n")
-        
-        cat("\n***\n")
-      }
-      
-      cat("\n##### Gene-concept networks {.tabset} \n")
-      
-      cat(paste("Linkages of genes involved in enriched DisGeNET pathways presented in a form of a network. The gradient *color* scale and *point size* illustrate expression *log2 fold-change* values observed in **", contrastNames[i], "** comparison and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_gseNCG.df[[i]]) ) {
-        
-        ##### Present DisGeNET pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_gseNCG.df[[i]]$Description[j], "\n")
-        
-        topPathways.genes <- setReadable(top_gseNCG[[i]], 'org.Hs.eg.db', 'ENTREZID')
-        
-        png(file = paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".network.png", sep=""))
-        print(cnetplot(topPathways.genes, foldChange=data.pathways[[i]]))
-        invisible(dev.off())
-        
-        cat(paste0("![](", paste(DisGeNET_dir, "/gseNCG_", colnames(eb$p.value)[i], "_", make.names(top_gseNCG.genes[[i]]$Description[j]), ".network.png)", sep="")), "\n")
-        
-        cat("\n***\n")
-      }
-    } else {
-      cat(paste("\n**No enriched DisGeNET pathways** detected in ", contrastNames[i], " comparison\n", sep=""))
-      cat("\n***\n")
-    }
-  #} else {
-  #  cat(paste("\n**No differentially expressed genes** detected in ", contrastNames[i], " comparison\n", sep=""))
-  #  cat("\n***\n")
-  #}
+  ##### Present volcano plots
+  cat("\n##### Volcano plot \n")
+  
+  cat(paste0("![](", paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_pathways_volcano_plot.png)", sep="")), "\n")
+  cat("\n***\n")
+  
+  ##### Present tables with DE results and stats
+  cat("\n##### Table \n")
+  
+  cat(renderTags(topGenes_list_table[[i]])$html)
+  
+  cat("\n***\n")
+  
+  ##### Present p-value histograms
+  cat("\n##### P-values distribution \n")
+  
+  cat(paste0("![](", paste(paste0(params$output_dir, "/", paste0(params$results_name)), "_", colnames(eb$p.value)[i], "_pathways_P_hist.png)", sep="")), "\n")
+  cat("\n***\n")
 }
 ```
 
