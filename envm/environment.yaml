@@ -28,6 +28,7 @@ dependencies:
         - bioconductor-pathview
         - bioconductor-kegg.db
         - bioconductor-gsva
+        - bioconductor-reactome.db
         - bioconductor-preprocesscore
         - bioconductor-tximport
         - bioconductor-rhdf5
@@ -59,6 +60,7 @@ dependencies:
         - r-htmlwidgets
         - r-devtools
         - r-manhattanly
+        - r-msigdbr
         - r-lares
         - r-truncnorm
         - r-rcolorbrewer
