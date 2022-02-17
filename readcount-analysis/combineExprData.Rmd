@@ -1285,17 +1285,40 @@ if ( "Karasinska" %in% annotFeatures ) {
 }
 
 ##### Add colours for PuRIST scores (if provided)
-if ( all(c("PuRIST_score","PAMG_score") %in% annotFeatures) ) {
+if ( all(c("PuRIST_score","PAMG_score","EMT_score") %in% annotFeatures) ) {
+  PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
+  
+  PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
+  
+  EMT_score.col <- colorRamp2(sort(targetFile$EMT_score), colorspace::diverge_hcl(n=length(targetFile$EMT_score), h=c(246, 40), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col, PAMG_score=PAMG_score.col, EMT_score=EMT_score.col)"))))
+  
+} else if ( all(c("PuRIST_score","PAMG_score") %in% annotFeatures) ) {
   PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
   
   PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
   
   ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col, PAMG_score=PAMG_score.col)"))))
   
+} else if ( all(c("PuRIST_score","EMT_score") %in% annotFeatures) ) {
+  PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
+  
+  EMT_score.col <- colorRamp2(sort(targetFile$EMT_score), colorspace::diverge_hcl(n=length(targetFile$EMT_score), h=c(246, 40), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col, EMT_score=EMT_score.col)"))))
+  
 } else if ( "PuRIST_score" %in% annotFeatures ) {
   PuRIST_score.col <- colorRamp2(sort(targetFile$PuRIST_score), colorspace::diverge_hcl(n=length(targetFile$PuRIST_score), h=c(246, 40), c=96))
   
   ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PuRIST_score=PuRIST_score.col)"))))
+  
+} else if ( all(c("PAMG_score","EMT_score") %in% annotFeatures) ) {
+  PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
+  
+  EMT_score.col <- colorRamp2(sort(targetFile$EMT_score), colorspace::diverge_hcl(n=length(targetFile$EMT_score), h=c(246, 40), c=96))
+  
+  ha = HeatmapAnnotation(df = targetFile[, colnames(targetFile) %in% annotFeatures, drop = FALSE], col = eval(parse(text = paste0("list(", paste0(HeatmapAnnotation.col.list, "=Target.col", collapse=","), ", PAMG_score=PAMG_score.col, EMT_score=EMT_score.col)"))))
   
 } else if ( "PAMG_score" %in% annotFeatures ) {
   PAMG_score.col <- colorRamp2(sort(targetFile$PAMG_score), colorspace::diverge_hcl(n=length(targetFile$PAMG_score), h=c(40, 246), c=96))
