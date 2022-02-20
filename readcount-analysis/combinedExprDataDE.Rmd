@@ -1338,7 +1338,7 @@ detach("package:heatmaply", unload=FALSE)
 
 ***
 
-## Differential expression (genes)
+## Differential expression: genes
 
 <details>
 <summary>Parameters</summary>
@@ -2083,7 +2083,7 @@ for( i in 1:ncol(eb$p.value) ){
         
         ##### Summary heatmap
         cat(paste("\n\nHeatmap presenting Gene Set Variation Analysis (GSVA) **enrichment scores** in enriched pathways (*y-axis*) across all samples (*x-axis*) in **", contrastNames[i], "** comparison.\n\n", sep=""))
-        print(draw(ht[[i]]))
+        print(draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
         
         cat("\n\n")
         cat("\n***\n")
@@ -2391,12 +2391,14 @@ for( i in 1:ncol(eb$p.value) ){
       cat(renderTags(top_gseNCG_table[[i]])$html)
       cat("\n***\n")
       
-      #cat("\n###### Heatmap \n")
-      #
-      ###### Summary heatmap
       #if ( !is.null(ht[[i]]) ) {
+      #  cat("\n###### Heatmap \n")
+      #  
+      #  ##### Summary heatmap
       #  cat(paste("\n\nHeatmap presenting Gene Set Variation Analysis (GSVA) **enrichment scores** in enriched pathways (*y-axis*) across all samples (*x-axis*) in **", contrastNames[i], "** comparison.\n\n", sep=""))
-      #  print(draw(ht[[i]]))
+      #  print(draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+      #  
+      #  cat("\n\n")
       #  cat("\n***\n")
       #}
 
@@ -2932,7 +2934,7 @@ if ( nrow(gsva.results) > 1 ) {
       
   ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
-  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
     
   pdf(paste0(MSigDB_dir, "/MSigDB_H_summary_heatmap.pdf"), width = 12, height = 12)
   draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
@@ -2984,7 +2986,7 @@ if ( nrow(gsva.results) > 1 ) {
       
   ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
-  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
   
   pdf(paste0(MSigDB_dir, "/MSigDB_C6_summary_heatmap.pdf"), width = 12, height = 30)
   draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
@@ -3008,7 +3010,7 @@ if ( nrow(gsva.results) > 1 ) {
 
 ### Reactome
 
-Heatmap presenting enrichment scores for **[Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways** (*y-axis*) across all samples (*x-axis*).
+Heatmap presenting enrichment scores for [Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways (*y-axis*) across all samples (*x-axis*).
 
 ```{r Reactome_pathways_heatmap, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide'}
 ##### Create folder for storing pathway analysis results plots
@@ -3074,7 +3076,7 @@ if ( nrow(gsva.results) > 1 ) {
       
   ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, show_row_names = FALSE)
   
-  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
   
   pdf(paste0(Reactome_dir, "/Reactome_summary_heatmap.pdf"), width = 12, height = 12)
   draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
@@ -3154,7 +3156,7 @@ if ( nrow(gsva.results) > 1 ) {
       
   ht <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
   
-  print(draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm")))
+  draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
   
   pdf(paste0(Selected_pathways_dir, "/Selected_pathways_summary_heatmap.pdf"), width = 12, height = heatmap_poi_height)
   draw(ht, heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
@@ -3176,7 +3178,7 @@ if ( nrow(gsva.results) > 1 ) {
 
 ***
 
-## Differential expression (pathways)
+## Differential expression: pathways
 
 <details>
 <summary>Parameters</summary>
