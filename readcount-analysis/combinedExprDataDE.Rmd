@@ -168,6 +168,9 @@ saveWidgetFix <- function ( widget, file, ...) {
   setwd(outDir);
   htmlwidgets::saveWidget(widget,file=file,...)
 }
+
+##### Remove empty object in a list
+na.omit.list <- function(y) { return(y[!vapply(y, function(x) all(is.na(x)), logical(1))]) }
 ```
 
 ```{r load_data, message=FALSE, warning=FALSE}
@@ -1991,8 +1994,12 @@ top_gseKEGG.upset <- Filter(function(a) any(!is.na(a)), top_gseKEGG.upset)
 ht <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
-  #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)
-  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]])
+  
+  ##### Remove empty object in a list
+  topGenes_list.pathway.genes[[i]] <- na.omit.list(topGenes_list.pathway.genes[[i]])
+  
+  #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)  
+  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], method = "ssgsea")
   
   if ( nrow(gsva.results) > 1 ) {
     ##### Cluster genes
@@ -2306,8 +2313,12 @@ top_gseNCG.upset <- Filter(function(a) any(!is.na(a)), top_gseNCG.upset)
 ht <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
+  
+  ##### Remove empty object in a list
+  topGenes_list.pathway.genes[[i]] <- na.omit.list(topGenes_list.pathway.genes[[i]])
+  
   #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)
-  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]])
+  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], method = "ssgsea")
   
   if ( nrow(gsva.results) > 1 ) {
     ##### Cluster genes
@@ -2916,7 +2927,7 @@ msigdbr_list_h = split(x = gene_sets $gene_symbol, f = gene_sets $gs_name)
 
 ##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
 #gsva.results <- gsva(data, msigdbr_list_h, mx.diff=FALSE)
-gsva.results <- gsva(data, msigdbr_list_h)
+gsva.results <- gsva(data, msigdbr_list_h, method = "ssgsea")
   
 if ( nrow(gsva.results) > 1 ) {
   ##### Cluster genes
@@ -2968,7 +2979,7 @@ msigdbr_list_c6 = split(x = gene_sets $gene_symbol, f = gene_sets $gs_name)
 
 ##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
 #gsva.results <- gsva(data, msigdbr_list_c6, mx.diff=FALSE)
-gsva.results <- gsva(data, msigdbr_list_c6)
+gsva.results <- gsva(data, msigdbr_list_c6, method = "ssgsea")
   
 if ( nrow(gsva.results) > 1 ) {
   ##### Cluster genes
@@ -3058,7 +3069,7 @@ reactome_pathways.gene_symbols <- lapply(reactome_pathways.gene_symbols, functio
 
 ##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
 #gsva.results <- gsva(data, reactome_pathways.gene_symbols, mx.diff=FALSE)
-gsva.results <- gsva(data, reactome_pathways.gene_symbols)
+gsva.results <- gsva(data, reactome_pathways.gene_symbols, method = "ssgsea")
   
 if ( nrow(gsva.results) > 1 ) {
   ##### Cluster genes
@@ -3131,7 +3142,7 @@ pathways.selected <- pathways.genes[ match(poi_list, names(pathways.genes)) ]
 
 ##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
 #gsva.results <- gsva(data, pathways.selected, mx.diff=FALSE)
-gsva.results <- gsva(data, pathways.selected)
+gsva.results <- gsva(data, pathways.selected, method = "ssgsea")
 
 ##### Set heatmaps height
 if ( length(pathways.selected) < 10 ) {
@@ -3195,7 +3206,7 @@ if ( nrow(gsva.results) > 1 ) {
 ```{r DE_model_fit_pathways, comment = NA, message=FALSE, warning=FALSE, results = 'hide'}
 ##### Create matrix with GSEA enrichment scores calculated for each gene-set for individual samples
 #gsva.results <- gsva(data, pathways.selected, mx.diff=FALSE)
-gsva.results <- gsva(data, pathways.genes)
+gsva.results <- gsva(data, pathways.genes, method = "ssgsea")
 
 ##### For better presentation keep only the first 6 words of each pathway name
 gsva.results.names <- word(rownames(gsva.results),start=1,end=6,sep=fixed(" "))
