@@ -16,7 +16,7 @@ channels:
 
 #install following packages in the conda environment
 dependencies:
-        - r-base>=3.6.1
+        - r-base=4.0.5
         - libiconv
         - r-tidyverse
         - bioconductor-edger
@@ -27,6 +27,7 @@ dependencies:
         - bioconductor-clusterprofiler
         - bioconductor-pathview
         - bioconductor-kegg.db
+        - bioconductor-reactome.db
         - bioconductor-gsva
         - bioconductor-preprocesscore
         - bioconductor-tximport
@@ -46,7 +47,7 @@ dependencies:
         - r-matrixstats
         - r-knitr
         - r-heatmaply
-        - r-plotly=4.9.0
+        - r-plotly
         - plotly-orca
         - r-scales
         - r-rcircos
@@ -58,11 +59,11 @@ dependencies:
         - r-htmltools
         - r-htmlwidgets
         - r-devtools
-        - r-manhattanly
-        - r-lares
         - r-truncnorm
         - r-rcolorbrewer
         - r-corrplot
+        - r-msigdbr
+        - r-rvcheck=0.1.8
         - pandoc
         - libopenblas=0.3.3
         - bioconductor-ensdb.hsapiens.v75
@@ -70,4 +71,3 @@ dependencies:
         - bioconductor-bsgenome.hsapiens.ucsc.hg19
         - bioconductor-bsgenome.hsapiens.ucsc.hg38
         - awscli
-
