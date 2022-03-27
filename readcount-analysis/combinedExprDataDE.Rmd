@@ -5,7 +5,7 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
   exprDir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data'
   exprFile: 'PRMT5.counts.matrix.txt'
-  annotFile: 'PRMT5_target_D6.txt'
+  annotFile: 'PRMT5_target.txt'
   annotFeatures: 'Target,Time,Treatment'
   output_dir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/PRMT5_CPM_TMM_DE'
   transform: 'CPM'
@@ -3407,7 +3407,7 @@ for (i in 1:ncol(eb$p.value) ) {
     topGenes_list_upset[[i]] <- rownames(topGenes_list[[i]])
     
     ##### Generate dataTable
-    topGenes4table <- topGenes_list[[i]][ , c("score", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod,sep="_"))]
+    topGenes4table <- topGenes_list[[i]][ , c("score", "t-statistic", "B-statistic", "p-value", paste("p-value", params$adjMethod_pathways,sep="_"))]
     topGenes_list_table[[i]] <- DT::datatable( data = topGenes4table, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
         DT::formatStyle( columns = names(topGenes4table), 'text-align' = 'center' ) %>%
         DT::formatRound(columns = c("score", "t-statistic", "B-statistic"), 2)
