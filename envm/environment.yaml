@@ -53,6 +53,7 @@ dependencies:
         - r-rcircos
         - r-upsetr
         - r-ggplot2
+        - r-ggnewscale
         - r-ggforce
         - r-pdftools
         - r-png
