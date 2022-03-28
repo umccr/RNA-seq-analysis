@@ -2956,7 +2956,9 @@ for( i in 1:ncol(eb$p.value) ){
 
 ## MSigDB and Reactome pathways {.tabset}
 
-### MSigDB (H)
+### MSigDB (H) {.tabset}
+
+#### Heatmap
 
 Heatmap presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **hallmark gene sets** (**H**) (*y-axis*) across all samples (*x-axis*).
 
@@ -3017,7 +3019,21 @@ if ( nrow(gsva.results) > 1 ) {
 
 ***
 
-### MSigDB (C6)
+#### Table
+
+Table presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **hallmark gene sets** (**H**) (*y-axis*) across all samples (*x-axis*).
+
+```{r MSigDB_H_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+DT::datatable( data = gsva.results, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+      DT::formatStyle( columns = colnames(gsva.results), 'text-align' = 'center' ) %>%
+      DT::formatRound(columns = colnames(gsva.results), 2)
+```
+
+***
+
+### MSigDB (C6) {.tabset}
+
+#### Heatmap
 
 Heatmap presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **oncogenic signature gene sets** (**C6**) (*y-axis*) across all samples (*x-axis*).
 
@@ -3069,7 +3085,21 @@ if ( nrow(gsva.results) > 1 ) {
 
 ***
 
-### Reactome
+#### Table
+
+Table presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **oncogenic signature gene sets** (**C6**) (*y-axis*) across all samples (*x-axis*).
+
+```{r MSigDB_C6_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+DT::datatable( data = gsva.results, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+      DT::formatStyle( columns = colnames(gsva.results), 'text-align' = 'center' ) %>%
+      DT::formatRound(columns = colnames(gsva.results), 2)
+```
+
+***
+
+### Reactome {.tabset}
+
+#### Heatmap
 
 Heatmap presenting enrichment scores for [Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways (*y-axis*) across all samples (*x-axis*).
 
@@ -3158,6 +3188,18 @@ if ( nrow(gsva.results) > 1 ) {
 
 pathways.genes <- c(msigdbr_list_h, msigdbr_list_c6 ,reactome_pathways.gene_symbols)
 pathways.genes <- pathways.genes[ unique(names(pathways.genes)) ]
+```
+
+***
+
+#### Table
+
+Table presenting enrichment scores for [Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways (*y-axis*) across all samples (*x-axis*).
+
+```{r Reactome_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+DT::datatable( data = gsva.results, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
+      DT::formatStyle( columns = colnames(gsva.results), 'text-align' = 'center' ) %>%
+      DT::formatRound(columns = colnames(gsva.results), 2)
 ```
 
 `r if ( runPOI ) { c("***") }`
