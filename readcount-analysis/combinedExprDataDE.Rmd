@@ -254,8 +254,6 @@ detach("package:plotly", unload=FALSE)
 
 ## Data transformation and filtering
 
-The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
-
 ```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
@@ -374,13 +372,22 @@ if ( params$filter && params$transform == "CPM" ) {
     y$transformed <- tpm_from_rpkm(y$transformed)
   }
 }
+
+##### Calculate how many genes were filtered out from the data
+if ( params$filter) {
+  before_filtering <- nrow(data)
+  after_filtering <- nrow(y$filtered.transformed)
+  filtered.percentage <- round((before_filtering-after_filtering)*100/nrow(data), digits = 0)
+}
 ```
+
+The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { paste0(before_filtering-after_filtering, " genes with low counts, which is **", filtered.percentage, "%** out of the total ",  before_filtering, " input genes) were filtered out. ") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
 
 `r if ( params$transform == "CPM" ) { paste0("The CPM of 1 (cut-off for removing low expressed genes) corresponds to ", cpm.min, " reads in sample with the lowest sequencing depth (", cpm.min.sample, "), and ", cpm.max, " reads in sample with the greatest sequencing depth (", cpm.max.sample, "). The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the sample with the lowest sequencing depth (", cpm.min.sample, "). The red vertical line indicates the threshold for filtering genes with low counts.") } else { paste0("The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the patient data. The red vertical line indicates the threshold for filtering genes with low counts.") }`
 
 ```{r data_transformation_vs_counts_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
 suppressMessages(library(plotly))
-  
+
 ##### Organise the data into data frame
 if ( params$log ) {
   data.df <- as.data.frame(cbind( exp(y$transformed[,cpm.min.sample]), data[, cpm.min.sample]))
@@ -400,6 +407,7 @@ data.df <- data.df[ data.df$Counts < quantile(data.df$Counts, 0.99), ]
 data.df <- data.df[ seq(1,nrow(data.df), by=25), ]
 
 ##### Sort transformed data
+data.df <- data.df[ order(data.df$Transformed), ]
 data.df$Transformed <- sort(data.df$Transformed)
 data.df$Counts <- sort(data.df$Counts)
 
