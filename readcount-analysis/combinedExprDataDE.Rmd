@@ -254,12 +254,18 @@ detach("package:plotly", unload=FALSE)
 
 ## Data transformation and filtering
 
-The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`. Plot(s) below present `r params$transform` data distribution.
+The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { c("Genes with low counts were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
 
 ```{r data_transformation_filtering, comment = NA, message=FALSE, warning=FALSE}
 ##### Filtering to remove low expressed genes. For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Genes with very low counts across all libraries provide little evidence for differential expression. In the biological point of view, a gene must be expressed at some minimal level before it is likely to be translated into a protein or to be biologically important. In addition, the pronounced discretenes of these counts interferes with some of the statistical approximations that are used later in the pipeline. These genes should be filtered out prior to further analysis. Users should filter with CPM rather than filtering on the counts directly, as the latter does not account for differences in library sizes between samples. For instance for the CPM-transformed data we keep only genes that have CPM of 1
 ##### Transformation to CPM or TPM scale (see these blogs for details https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/ and https://haroldpimentel.wordpress.com/2014/05/08/what-the-fpkm-a-review-rna-seq-expression-units/ ).  CPM = Counts Per Million,  TPM = Transcripts Per Kilobase Million. 
 ##### CPM transformation and filtering
+
+##### Keep info about samples with the lowest and greates counts for defined CPM threshold
+cpm.min <- round(min(as.numeric(colSums(data)*1e-6)), digits=0)
+cpm.max <- round(max(as.numeric(colSums(data)*1e-6)), digits=0)
+cpm.min.sample <- colnames(data)[ order(colSums(data)*1e-6)[1] ]
+cpm.max.sample <- colnames(data)[ order(colSums(data)*1e-6)[ncol(data)] ]
 
 if ( params$filter && params$transform == "CPM" ) {
   
@@ -369,6 +375,48 @@ if ( params$filter && params$transform == "CPM" ) {
   }
 }
 ```
+
+`r if ( params$transform == "CPM" ) { paste0("The CPM of 1 (cut-off for removing low expressed genes) corresponds to ", cpm.min, " reads in sample with the lowest sequencing depth (", cpm.min.sample, "), and ", cpm.max, " reads in sample with the greatest sequencing depth (", cpm.max.sample, "). The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the sample with the lowest sequencing depth (", cpm.min.sample, "). The red vertical line indicates the threshold for filtering genes with low counts.") } else { paste0("The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the patient data. The red vertical line indicates the threshold for filtering genes with low counts.") }`
+
+```{r data_transformation_vs_counts_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
+suppressMessages(library(plotly))
+  
+##### Organise the data into data frame
+if ( params$log ) {
+  data.df <- as.data.frame(cbind( exp(y$transformed[,cpm.min.sample]), data[, cpm.min.sample]))
+  names(data.df) <- c("Transformed", "Counts")
+  data.df$Transformed <- log(data.df$Transformed)
+
+} else {
+  data.df <- as.data.frame(cbind( y$transformed[,cpm.min.sample], data[, cpm.min.sample]))
+  names(data.df) <- c("Transformed", "Counts")
+  data.df$Transformed <- log(data.df$Transformed)
+}
+
+##### Keep only genes with read counts below the 99th percentile
+data.df <- data.df[ data.df$Counts < quantile(data.df$Counts, 0.99), ]
+
+##### Keep only every 25th genes to reduce the size of the plot
+data.df <- data.df[ seq(1,nrow(data.df), by=25), ]
+
+##### Sort transformed data
+data.df$Transformed <- sort(data.df$Transformed)
+data.df$Counts <- sort(data.df$Counts)
+
+##### Generate plot for filtered data
+counts_vs_transformed <- plot_ly( data.df, x = ~Transformed, y = ~Counts, width = 800, height = 300, color = I('black'), marker = list(size = 5), type="scatter", mode = "markers", name = paste0(params$transform, " / Counts (", cpm.min.sample, ")") ) %>% 
+  add_trace(x = c(1, 1), y= c(0, max(data.df$Counts)), mode = "lines", color = I("red"), name = "Filtering threshold") %>%
+    
+  layout(title = "", xaxis = list(title = paste0(params$transform, "s")), yaxis = list(title = "Counts"), showlegend=TRUE)
+  
+##### Save interactive plot as html file
+saveWidgetFix(counts_vs_transformed, file = paste(params$output_dir, "counts_vs_transformed.html", sep = "/"))
+
+##### Detach plotly package. Otherwise it clashes with other graphics devices
+detach("package:plotly", unload=FALSE)
+```
+
+Plot(s) below present `r params$transform` data distribution before and after filtering genes with low counts.
 
 ```{r data_transformation_plot, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 6}
 ##### Collect the most extreme density values for set the x-axis and y-axis boundaries
@@ -2099,7 +2147,7 @@ for( i in 1:ncol(eb$p.value) ){
       cat("\n###### Plots \n")
       
       ##### Bar and dot plots
-      cat(paste("\n\nBar (A) and dot (B) plots of enriched KEGG pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("\n\nDot plot (A) and heatmap (B) of enriched KEGG pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG.png)", sep="")), "\n")
       cat("\n***\n")
       
@@ -2416,7 +2464,7 @@ for( i in 1:ncol(eb$p.value) ){
       cat("\n###### Plots \n")
       
       ##### Bar and dot plots
-      cat(paste("\n\nBar (A) and dot (B) plots of enriched DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
+      cat(paste("\n\nDot plot (A) and heatmap (B) of enriched DisGeNET pathways in **", contrastNames[i], "** comparison. The gradient *color* scale and *point size* illustrate adjusted *p-values* and *number of differentially expressed genes* involved in individual pathways, respectively.\n\n", sep=""))
       cat(paste0("![](", paste(DisGeNET_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseNCG.png)", sep="")), "\n")
       cat("\n***\n")
       
