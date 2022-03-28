@@ -406,9 +406,11 @@ data.df$Counts <- sort(data.df$Counts)
 ##### Generate plot for filtered data
 counts_vs_transformed <- plot_ly( data.df, x = ~Transformed, y = ~Counts, width = 800, height = 300, color = I('black'), marker = list(size = 5), type="scatter", mode = "markers", name = paste0(params$transform, " / Counts (", cpm.min.sample, ")") ) %>% 
   add_trace(x = c(1, 1), y= c(0, max(data.df$Counts)), mode = "lines", color = I("red"), name = "Filtering threshold") %>%
-    
-  layout(title = "", xaxis = list(title = paste0(params$transform, "s")), yaxis = list(title = "Counts"), showlegend=TRUE)
   
+  layout(title = "", xaxis = list(title = paste0(params$transform, "s")), yaxis = list(title = "Counts"), showlegend=TRUE)
+
+counts_vs_transformed
+
 ##### Save interactive plot as html file
 saveWidgetFix(counts_vs_transformed, file = paste(params$output_dir, "counts_vs_transformed.html", sep = "/"))
 
