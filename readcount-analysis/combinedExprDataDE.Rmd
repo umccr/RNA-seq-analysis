@@ -3,11 +3,11 @@ title: "Differential expression analysis"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data'
+  exprDir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data'
   exprFile: 'PRMT5.counts.matrix.txt'
   annotFile: 'PRMT5_target.txt'
   annotFeatures: 'Target,Time,Treatment'
-  output_dir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/PRMT5_CPM_TMM_DE_temp'
+  output_dir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/PRMT5_CPM_TMM_DE'
   transform: 'CPM'
   norm: 'TMM'
   batch_rm: TRUE
@@ -17,7 +17,7 @@ params:
   log: TRUE
   top_genes: 500
   split: FALSE
-  results_name: 'PRMT5_CPM_TMM_DE_temp'
+  results_name: 'PRMT5_CPM_TMM_DE'
   lfcThreshold: 2
   pThreshold: 0.05
   adjMethod: "BH"
