@@ -3,11 +3,11 @@ title: "Differential expression analysis"
 author: "UMCCR"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
-  exprDir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data'
+  exprDir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data'
   exprFile: 'PRMT5.counts.matrix.txt'
   annotFile: 'PRMT5_target.txt'
   annotFeatures: 'Target,Time,Treatment'
-  output_dir: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/PRMT5_CPM_TMM_DE'
+  output_dir: '/Users/jmarzec/data/Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/PRMT5_CPM_TMM_DE_temp'
   transform: 'CPM'
   norm: 'TMM'
   batch_rm: TRUE
@@ -17,7 +17,7 @@ params:
   log: TRUE
   top_genes: 500
   split: FALSE
-  results_name: 'PRMT5_CPM_TMM_DE'
+  results_name: 'PRMT5_CPM_TMM_DE_temp'
   lfcThreshold: 2
   pThreshold: 0.05
   adjMethod: "BH"
@@ -381,7 +381,7 @@ if ( params$filter) {
 }
 ```
 
-The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { paste0(before_filtering-after_filtering, " genes with low counts, which is **", filtered.percentage, "%** out of the total ",  before_filtering, " input genes) were filtered out. ") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
+The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { paste0("**", before_filtering-after_filtering, "** genes with low counts, which is **", filtered.percentage, "%** out of the ",  before_filtering, " input genes) were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
 
 `r if ( params$transform == "CPM" ) { paste0("The CPM of 1 (cut-off for removing low expressed genes) corresponds to ", cpm.min, " reads in sample with the lowest sequencing depth (", cpm.min.sample, "), and ", cpm.max, " reads in sample with the greatest sequencing depth (", cpm.max.sample, "). The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the sample with the lowest sequencing depth (", cpm.min.sample, "). The red vertical line indicates the threshold for filtering genes with low counts.") } else { paste0("The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the patient data. The red vertical line indicates the threshold for filtering genes with low counts.") }`
 
@@ -408,8 +408,6 @@ data.df <- data.df[ seq(1,nrow(data.df), by=25), ]
 
 ##### Sort transformed data
 data.df <- data.df[ order(data.df$Transformed), ]
-data.df$Transformed <- sort(data.df$Transformed)
-data.df$Counts <- sort(data.df$Counts)
 
 ##### Generate plot for filtered data
 counts_vs_transformed <- plot_ly( data.df, x = ~Transformed, y = ~Counts, width = 800, height = 300, color = I('black'), marker = list(size = 5), type="scatter", mode = "markers", name = paste0(params$transform, " / Counts (", cpm.min.sample, ")") ) %>% 
