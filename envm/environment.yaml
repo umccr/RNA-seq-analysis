@@ -18,7 +18,13 @@ channels:
 dependencies:
         - r-base=4.0.5
         - libiconv
-        - r-tidyverse
+        - pandoc
+        - libopenblas=0.3.3
+        - awscli
+        - bioconductor-ensdb.hsapiens.v75
+        - bioconductor-ensdb.hsapiens.v86
+        - bioconductor-bsgenome.hsapiens.ucsc.hg19
+        - bioconductor-bsgenome.hsapiens.ucsc.hg38
         - bioconductor-edger
         - bioconductor-limma
         - bioconductor-glimma
@@ -40,6 +46,7 @@ dependencies:
         - r-readr
         - r-dplyr
         - r-tidyr
+        - r-tidyverse
         - r-tibble
         - r-glue
         - r-rlang
@@ -65,10 +72,3 @@ dependencies:
         - r-corrplot
         - r-msigdbr
         - r-rvcheck=0.1.8
-        - pandoc
-        - libopenblas=0.3.3
-        - bioconductor-ensdb.hsapiens.v75
-        - bioconductor-ensdb.hsapiens.v86
-        - bioconductor-bsgenome.hsapiens.ucsc.hg19
-        - bioconductor-bsgenome.hsapiens.ucsc.hg38
-        - awscli
