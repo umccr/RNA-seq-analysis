@@ -27,7 +27,7 @@ params:
   eScoreThreshold: 0.2
   pThreshold_pathways: 0.001
   adjMethod_pathways: "none"
-  poi: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data//pathways_of_interest.txt'
+  poi: '/g/data3/gx8/projects/Jacek_Pancreatic_data_harmonization/expression/projects/PRMT5/Combined_data/pathways_of_interest.txt'
   minGSSize: 5
   maxGSSize: 500
   pvalueCutoff_gsea: 0.2
@@ -381,7 +381,7 @@ if ( params$filter) {
 }
 ```
 
-The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { paste0("**", before_filtering-after_filtering, "** genes with low counts, which is **", filtered.percentage, "%** out of the ",  before_filtering, " input genes) were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
+The read count data is converted into **`r params$transform`**s using *[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html){target="_blank"}* functions. `r if ( !params$filter ) { c("The option for filtering out genes with low counts is switched OFF") } else if ( params$filter ) { paste0("**", before_filtering-after_filtering, "** genes with low counts, which is **", filtered.percentage, "%** out of the ",  before_filtering, " input genes, were filtered out") }`. `r if ( !params$log ) { c("The data is not log-transformed") } else if ( params$log ) { c("The data is log2-transformed") }`.
 
 `r if ( params$transform == "CPM" ) { paste0("The CPM of 1 (cut-off for removing low expressed genes) corresponds to ", cpm.min, " reads in sample with the lowest sequencing depth (", cpm.min.sample, "), and ", cpm.max, " reads in sample with the greatest sequencing depth (", cpm.max.sample, "). The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the sample with the lowest sequencing depth (", cpm.min.sample, "). The red vertical line indicates the threshold for filtering genes with low counts.") } else { paste0("The plot below presents the relation between read counts and the corresponding ", params$transform, " values in the patient data. The red vertical line indicates the threshold for filtering genes with low counts.") }`
 
@@ -2051,43 +2051,48 @@ ht <- list()
 
 for (i in 1:ncol(eb$p.value) ) {
   
-  ##### Remove empty object in a list
-  topGenes_list.pathway.genes[[i]] <- na.omit.list(topGenes_list.pathway.genes[[i]])
+    ##### Remove empty object in a list
+    topGenes_list.pathway.genes[[i]] <- na.omit.list(topGenes_list.pathway.genes[[i]])
   
-  #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)  
-  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], method = "ssgsea")
+  if ( length(topGenes_list.pathway.genes[[i]]) > 1 ) {
   
-  if ( nrow(gsva.results) > 1 ) {
-    ##### Cluster genes
-    hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+    #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)  
+    gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], method = "ssgsea")
     
-    ##### Cluster samples
-    hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
-    
-    ##### Generate heatmap (complexHeatmap)
-    ##### Scale rows the data first (row scale)
-    gsva.results.z <- t(scale(t(gsva.results)))
+    if ( nrow(gsva.results) > 1 ) {
+      ##### Cluster genes
+      hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
       
-    ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-    col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      ##### Cluster samples
+      hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
       
-    ht[[i]] <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+      ##### Generate heatmap (complexHeatmap)
+      ##### Scale rows the data first (row scale)
+      gsva.results.z <- t(scale(t(gsva.results)))
+        
+      ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+      col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+        
+      ht[[i]] <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+      
+      pdf(paste0(KEGG_dir, "/gseKEGG_summary_heatmap_", colnames(eb$p.value)[i], ".pdf"), width = 12, height = 16)
+      draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+      dev.off()
+      
+      ##### Return matrix with row/column sorting as in heatmap
+      ##### Cluster samples
+      gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+      
+      ##### Cluster genes
+      gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
     
-    pdf(paste0(KEGG_dir, "/gseKEGG_summary_heatmap_", colnames(eb$p.value)[i], ".pdf"), width = 12, height = 16)
-    draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
-    dev.off()
-    
-    ##### Return matrix with row/column sorting as in heatmap
-    ##### Cluster samples
-    gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
-    
-    ##### Cluster genes
-    gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
-  
-    write.table(gsva.results.z.heatmap, paste0(KEGG_dir, "/gseKEGG_summary_heatmap_", colnames(eb$p.value)[i], ".txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
-    
+      write.table(gsva.results.z.heatmap, paste0(KEGG_dir, "/gseKEGG_summary_heatmap_", colnames(eb$p.value)[i], ".txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+      
+    } else {
+      ht[[i]] <- NULL
+    }
   } else {
-    ht[[i]] <- NULL
+      ht[[i]] <- NULL
   }
 }
 ```
@@ -2373,40 +2378,45 @@ for (i in 1:ncol(eb$p.value) ) {
   ##### Remove empty object in a list
   topGenes_list.pathway.genes[[i]] <- na.omit.list(topGenes_list.pathway.genes[[i]])
   
-  #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)
-  gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], method = "ssgsea")
-  
-  if ( nrow(gsva.results) > 1 ) {
-    ##### Cluster genes
-    hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
+  if ( length(topGenes_list.pathway.genes[[i]]) > 1 ) {
     
-    ##### Cluster samples
-    hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
+    #gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], mx.diff=FALSE)
+    gsva.results <- gsva(data, topGenes_list.pathway.genes[[i]], method = "ssgsea")
     
-    ##### Generate heatmap (complexHeatmap)
-    ##### Scale rows the data first (row scale)
-    gsva.results.z <- t(scale(t(gsva.results)))
+    if ( nrow(gsva.results) > 1 ) {
+      ##### Cluster genes
+      hc <- hclust(as.dist(1-cor(gsva.results, method="pearson")), method="ward.D2")
       
-    ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
-    col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+      ##### Cluster samples
+      hr <- hclust(as.dist(dist(gsva.results, method="euclidean")), method="ward.D2")
       
-    ht[[i]] <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+      ##### Generate heatmap (complexHeatmap)
+      ##### Scale rows the data first (row scale)
+      gsva.results.z <- t(scale(t(gsva.results)))
+        
+      ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
+      col.h = colorRamp2(seq(min(gsva.results.z), max(gsva.results.z), length = 3), c("blue", "#EEEEEE", "red"))
+        
+      ht[[i]] <- Heatmap(gsva.results.z, name = "Score", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+      
+      pdf(paste0(DisGeNET_dir, "/gseNCG_summary_heatmap_", colnames(eb$p.value)[i], ".pdf"), width = 12, height = 16)
+      draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
+      dev.off()
+      
+      ##### Return matrix with row/column sorting as in heatmap
+      ##### Cluster samples
+      gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
+      
+      ##### Cluster genes
+      gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
     
-    pdf(paste0(DisGeNET_dir, "/gseNCG_summary_heatmap_", colnames(eb$p.value)[i], ".pdf"), width = 12, height = 16)
-    draw(ht[[i]], heatmap_legend_side = "left", annotation_legend_side = "left", padding = unit(c(5, 5, 5, 60), "mm"))
-    dev.off()
-    
-    ##### Return matrix with row/column sorting as in heatmap
-    ##### Cluster samples
-    gsva.results.z.heatmap <- gsva.results.z[, hc$labels[hc$order]]
-    
-    ##### Cluster genes
-    gsva.results.z.heatmap <- gsva.results.z.heatmap[hr$labels[hr$order], ]
-  
-    write.table(gsva.results.z.heatmap, paste0(DisGeNET_dir, "/gseNCG_summary_heatmap_", colnames(eb$p.value)[i], ".txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
-    
+      write.table(gsva.results.z.heatmap, paste0(DisGeNET_dir, "/gseNCG_summary_heatmap_", colnames(eb$p.value)[i], ".txt"), sep="\t", quote=FALSE, row.names=TRUE, col.names=NA, append = FALSE )
+      
+    } else {
+      ht[[i]] <- NULL
+    }
   } else {
-    ht[[i]] <- NULL
+      ht[[i]] <- NULL
   }
 }
 ```
@@ -2981,7 +2991,7 @@ ht <- NULL
 ##### Retrieve a data frame of gene sets from MSigDB and their member genes
 gene_sets = msigdbr(species = "Homo sapiens", category = "H")
 
-msigdbr_list_h = split(x = gene_sets $gene_symbol, f = gene_sets $gs_name)
+msigdbr_list_h = split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
 
 ##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
 #gsva.results <- gsva(data, msigdbr_list_h, mx.diff=FALSE)
@@ -3047,7 +3057,7 @@ Heatmap presenting enrichment scores for [Molecular Signatures Database (MSigDB)
 ##### Retrieve a data frame of gene sets from MSigDB and their member genes
 gene_sets = msigdbr(species = "Homo sapiens", category = "C6")
 
-msigdbr_list_c6 = split(x = gene_sets $gene_symbol, f = gene_sets $gs_name)
+msigdbr_list_c6 = split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
 
 ##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
 #gsva.results <- gsva(data, msigdbr_list_c6, mx.diff=FALSE)
