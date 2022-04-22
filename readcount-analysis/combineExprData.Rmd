@@ -1513,6 +1513,7 @@ batches <- as.character(targetFile[[ params$batch_col ]])
 ##### Perform batch-effect correction using limma
 if ( length(unique(batches)) > 1 ) {
   data_before_batch_rm <- data
+  data_before_batch_rm_heatmap <- data.h
   data <- limma::removeBatchEffect(data_before_batch_rm, batch = batches)
   
   ##### Also keep the annotated data for heatmaps
@@ -1746,7 +1747,7 @@ if ( length(targetFile$Target) > 2 ) {
 
 `r if ( params$batch_rm ) { c(paste0("Heatmap presenting expression levels of **", params$top_genes, "** genes (*y-axis*) with the highest expression variance across all samples (*x-axis*).")) }`
 
-```{r heatmap_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
+```{r heatmap_batch_rm, warning = FALSE, echo = TRUE, message = TRUE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
 ##### Keep only genes with variance > 0 across all samples
 rsd <- apply(data2plot,1,sd)
 data.h_batch_rm <- data2plot[rsd>0,]
@@ -1759,7 +1760,7 @@ if ( nrow(data.h_batch_rm) < params$top_genes ) {
 }
 
 ##### Subset genes
-data.h_batch_rm <- data.frame(data[sel,])
+data.h_batch_rm <- data.frame(data.h_batch_rm[sel,])
 
 ##### Prepare heatmap annotation (samples)
 Target.col  <- targets.colour[[1]]
@@ -1794,13 +1795,13 @@ data.h_batch_rm.z <- t(scale(t(data.h_batch_rm)))
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
 col.h = colorRamp2(seq(min(data.h_batch_rm.z), max(data.h_batch_rm.z), length = 3), c("blue", "#EEEEEE", "red"))
 
-cat("After batch correction")
+# After batch correction
 
 #### Heatmap (AFTER batch correction)
-Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, column_title = "After batch correction")
 
 pdf(paste0(params$output_dir, "/", paste0(params$results_name, "_heatmap_batch_rm.pdf")), width = 12, height = 12)
-Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE)
+Heatmap(data.h_batch_rm.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, use_raster = FALSE, column_title = "After batch correction")
 dev.off()
 
 ##### Return matrix with row/column sorting as in heatmap
@@ -1822,21 +1823,21 @@ write.table(data.h_batch_rm.z.heatmap, paste0(params$output_dir, "/", paste0(par
 
 #### Heatmap (BEFORE batch correction)
 ##### Cluster genes
-hc <- hclust(as.dist(1-cor(data_before_batch_rm, method="pearson")), method="ward.D2")
+hc <- hclust(as.dist(1-cor(data_before_batch_rm_heatmap, method="pearson")), method="ward.D2")
 
 ##### Cluster samples
-hr <- hclust(as.dist(dist(data_before_batch_rm, method="euclidean")), method="ward.D2")
+hr <- hclust(as.dist(dist(data_before_batch_rm_heatmap, method="euclidean")), method="ward.D2")
 
 ##### Scale rows the data first (row scale)
-data.h.z <- t(scale(t(data_before_batch_rm)))
+data.h.z <- t(scale(t(data_before_batch_rm_heatmap)))
   
 ##### Define colour space ( https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html#colors )
 col.h = colorRamp2(seq(min(data.h.z), max(data.h.z), length = 3), c("blue", "#EEEEEE", "red"))
 
-cat("Before batch correction")
+# Before batch correction
 
 #### Heatmap (BEFORE batch correction)
-Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h)
+Heatmap(data.h.z, name = "expr", top_annotation = ha, cluster_rows = hr, cluster_columns = hc, row_split = row_split, column_split = column_split, col = col.h, column_title = "Before batch correction")
 ```
 
 ```{r heatmap_interactive_batch_rm, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=params$batch_rm}
@@ -1849,7 +1850,13 @@ colnames(col_side_colors) <- "Target"
 col_side_palette <- targets.colour[[2]]
 names(col_side_palette) <- col_side_colors$Target
 
-p <- heatmaply(data.frame(data_before_batch_rm), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
+##### Cluster genes
+hc <- hclust(as.dist(1-cor(data.h_batch_rm, method="pearson")), method="ward.D2")
+
+##### Cluster samples
+hr <- hclust(as.dist(dist(data.h_batch_rm, method="euclidean")), method="ward.D2")
+
+p <- heatmaply(data.frame(data.h_batch_rm.z), Rowv = hr, Colv = rev(hc), k_col=1, k_row=1, colors = colorRampPalette(c("darkblue","darkblue","darkslateblue","darkslateblue","white","firebrick3","firebrick3","firebrick4","firebrick4"))(100), col_side_colors = col_side_colors, col_side_palette = col_side_palette, scale="row", trace="none", hide_colorbar = TRUE, fontsize_row = 8, fontsize_col = 8) %>%
 layout(autosize = TRUE, width = 800, margin = list(l=150, r=50, b=150, t=50, pad=4), showlegend = FALSE)
 
 ##### Save the heatmap as html (PLOTLY)
