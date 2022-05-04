@@ -33,6 +33,7 @@ params:
   pvalueCutoff_gsea: 0.2
   pAdjustMethod_gsea: "BH"
   nPerm_gsea: 1000
+  kegg_plots: FALSE
   use_internal_data_kegg: FALSE
   grch_version: 38
   ensembl_version: 86
@@ -94,6 +95,7 @@ set.seed(seed)
 * **pvalueCutoff_gsea**: `r params$pvalueCutoff_gsea`
 * **pAdjustMethod_gsea**: `r params$pAdjustMethod_gsea`
 * **nPerm_gsea**: `r params$nPerm`
+* **kegg_plots**: `r params$kegg_plots`
 * **use_internal_data_kegg**: `r params$use_internal_data_kegg`
 * **top_genes**: `r params$top_genes`
 * **split**: `r params$split`
@@ -1852,9 +1854,7 @@ detach("package:heatmaply", unload=FALSE)
 
 ```{r DE_venn, comment = NA, message=FALSE, warning=FALSE, results = 'hide', eval=FALSE}
 
-
-##### NEEDS FIXING 
-
+##### Development in progress !!!
 
 #####  Generate Venn diagrams
 if ( length(contrastNames) < 4) {
@@ -2196,41 +2196,43 @@ for( i in 1:ncol(eb$p.value) ){
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_gseKEGG_heatmap.png)", sep="")), "\n")
       cat("\n***\n")
       
-      cat("\n##### KEGG plots {.tabset} \n")
-      
-      cat(paste("Visualization of KEGG pathways enriched in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
+      if ( params$kegg_plots ) {
+        cat("\n##### KEGG plots {.tabset} \n")
         
-        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
-         
-        ##### NOTE: Some pathways are problematic. Skip these pathways
-        # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
+        cat(paste("Visualization of KEGG pathways enriched in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values observed in that comparison.\n\n", sep=""))
+        
+        for ( j in 1:nrow(top_gseKEGG.df[[i]]) ) {
           
-          ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
-          if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+          ##### Present KEGG pathway with gene expression values mapped to gradient color scale
+          cat("\n###### ", top_gseKEGG.df[[i]]$Description[j], "\n")
+           
+          ##### NOTE: Some pathways are problematic. Skip these pathways
+          # https://support.bioconductor.org/p/122172/
+          if ( rownames(top_gseKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
             
-            pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
+            ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
+            if ( !file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+              
+              pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_gseKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
+              
+              ##### Rename pathview plots
+              file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".png"))
+              file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".xml"))
+              file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
+            }
             
-            ##### Rename pathview plots
-            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".png"))
-            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".xml"))
-            file.rename(paste(KEGG_dir, "/", rownames(top_gseKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png"))
-          }
-          
-          ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
-          if ( file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
-            cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+            ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
+            if ( file.exists(paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+              cat(paste0("![](", paste(KEGG_dir, "/gseKEGG_", colnames(eb$p.value)[i], "_", make.names(top_gseKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+            } else {
+              cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+            }
+            
           } else {
             cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
           }
-          
-        } else {
-          cat(paste("\nPlot for pathway ", top_gseKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+          cat("\n***\n")
         }
-        cat("\n***\n")
       }
 
       cat("\n##### GSEA plots {.tabset} \n")
@@ -2750,41 +2752,43 @@ for( i in 1:ncol(eb$p.value) ){
       cat(paste0("![](", paste(KEGG_dir, "/summary_", gsub("\\s", "_", contrastNames[i], perl=TRUE), "_enrichKEGG_heatmap.png)", sep="")), "\n")
       cat("\n***\n")
       
-      cat("\n##### KEGG plots {.tabset} \n")
-      
-      cat(paste("Visualization of KEGG pathways over-represented in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values of **differentially expressed genes** observed in that comparison.\n\n", sep=""))
-      
-      for ( j in 1:nrow(top_enrichKEGG.df[[i]]) ) {
+      if ( params$kegg_plots ) {
+        cat("\n##### KEGG plots {.tabset} \n")
         
-        ##### Present KEGG pathway with gene expression values mapped to gradient color scale
-        cat("\n###### ", top_enrichKEGG.df[[i]]$Description[j], "\n")
-         
-        ##### NOTE: Some pathways are problematic. Skip these pathways
-        # https://support.bioconductor.org/p/122172/
-        if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
+        cat(paste("Visualization of KEGG pathways over-represented in **", contrastNames[i], "** comparison. The gradient *color* scale illustrates expression *log2 fold-change* values of **differentially expressed genes** observed in that comparison.\n\n", sep=""))
+        
+        for ( j in 1:nrow(top_enrichKEGG.df[[i]]) ) {
           
-          ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
-          if ( !file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+          ##### Present KEGG pathway with gene expression values mapped to gradient color scale
+          cat("\n###### ", top_enrichKEGG.df[[i]]$Description[j], "\n")
+           
+          ##### NOTE: Some pathways are problematic. Skip these pathways
+          # https://support.bioconductor.org/p/122172/
+          if ( rownames(top_enrichKEGG.df[[i]])[j] %!in% c("hsa04723", "hsa04215", "hsa05206", "hsa05322","hsa04530") ) {
             
-            pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
+            ##### Check if the plot is already present in the results folder to avoid dowloading again (since this is time consuming process!)
+            if ( !file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+              
+              pathview.res <- pathview(gene.data  = data.pathways[[i]] , pathway.id = rownames(top_enrichKEGG.df[[i]])[j], species = "hsa", limit = list(gene=max(abs(data.pathways[[i]] )), cpd=1), kegg.dir = KEGG_dir)
+              
+              ##### Rename pathview plots
+              file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".png"))
+              file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".xml"))
+              file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png"))
+            }
             
-            ##### Rename pathview plots
-            file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".png"))
-            file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".xml", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".xml"))
-            file.rename(paste(KEGG_dir, "/", rownames(top_enrichKEGG.df[[i]])[j], ".pathview.png", sep=""), paste0(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png"))
-          }
-          
-          ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
-          if ( file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
-            cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+            ##### Check once againf if the pathway diagrams has been downloaded as sometimes they are not
+            if ( file.exists(paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png", sep="")) ) {
+              cat(paste0("![](", paste(KEGG_dir, "/enrichKEGG_", colnames(eb$p.value)[i], "_", make.names(top_enrichKEGG.genes[[i]]$Description[j]), ".pathview.png)", sep="")), "\n")
+            } else {
+              cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+            }
+            
           } else {
             cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
           }
-          
-        } else {
-          cat(paste("\nPlot for pathway ", top_enrichKEGG.df[[i]]$Description[j], " is **not available**\n", sep=""))
+          cat("\n***\n")
         }
-        cat("\n***\n")
       }
       
       cat("\n##### Gene-concept networks {.tabset} \n")
@@ -3061,6 +3065,9 @@ if ( nrow(gsva.results) > 1 ) {
 Table presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **hallmark gene sets** (**H**) (*y-axis*) across all samples (*x-axis*).
 
 ```{r MSigDB_H_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+##### Trim pathways names length to 50 characters
+rownames(gsva.results) <- substring(rownames(gsva.results), 1, 50)
+
 DT::datatable( data = gsva.results, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
       DT::formatStyle( columns = colnames(gsva.results), 'text-align' = 'center' ) %>%
       DT::formatRound(columns = colnames(gsva.results), 2)
@@ -3127,6 +3134,9 @@ if ( nrow(gsva.results) > 1 ) {
 Table presenting enrichment scores for [Molecular Signatures Database (MSigDB)](https://www.gsea-msigdb.org/gsea/msigdb){target="_blank"} **oncogenic signature gene sets** (**C6**) (*y-axis*) across all samples (*x-axis*).
 
 ```{r MSigDB_C6_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+##### Trim pathways names length to 50 characters
+rownames(gsva.results) <- substring(rownames(gsva.results), 1, 50)
+
 DT::datatable( data = gsva.results, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
       DT::formatStyle( columns = colnames(gsva.results), 'text-align' = 'center' ) %>%
       DT::formatRound(columns = colnames(gsva.results), 2)
@@ -3234,6 +3244,9 @@ pathways.genes <- pathways.genes[ unique(names(pathways.genes)) ]
 Table presenting enrichment scores for [Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways (*y-axis*) across all samples (*x-axis*).
 
 ```{r Reactome_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+##### Trim pathways names length to 50 characters
+rownames(gsva.results) <- substring(rownames(gsva.results), 1, 50)
+
 DT::datatable( data = gsva.results, caption = htmltools::tags$caption(style = 'caption-side: top; text-align: left;'), filter = "top", extensions = c('Buttons','FixedColumns','Scroller'), options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('excel', 'csv', 'pdf','copy','colvis'), scrollX = TRUE, fixedColumns = list(leftColumns = 1), deferRender = TRUE, scrollY = 200, scroller = TRUE), width = 800,  escape = FALSE ) %>%
       DT::formatStyle( columns = colnames(gsva.results), 'text-align' = 'center' ) %>%
       DT::formatRound(columns = colnames(gsva.results), 2)
@@ -3681,9 +3694,7 @@ detach("package:heatmaply", unload=FALSE)
 
 ```{r DE_venn_pathways, comment = NA, message=FALSE, warning=FALSE, results = 'hide', eval=FALSE}
 
-
-##### NEEDS FIXING 
-
+##### Development in progress !!!
 
 #####  Generate Venn diagrams
 if ( length(contrastNames) < 4) {
