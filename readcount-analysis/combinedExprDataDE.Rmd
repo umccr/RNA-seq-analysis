@@ -35,6 +35,7 @@ params:
   nPerm_gsea: 1000
   kegg_plots: FALSE
   use_internal_data_kegg: FALSE
+  run_DisGeNET: FALSE
   grch_version: 38
   ensembl_version: 86
   save_session: FALSE
@@ -97,6 +98,7 @@ set.seed(seed)
 * **nPerm_gsea**: `r params$nPerm`
 * **kegg_plots**: `r params$kegg_plots`
 * **use_internal_data_kegg**: `r params$use_internal_data_kegg`
+* **run_DisGeNET**: `r params$run_DisGeNET`
 * **top_genes**: `r params$top_genes`
 * **split**: `r params$split`
 * **results_name**: `r params$results_name`
@@ -2285,11 +2287,11 @@ for( i in 1:ncol(eb$p.value) ){
 }
 ```
 
-### DisGeNET pathways {.tabset}
+`r if ( params$run_DisGeNET ) { c("### DisGeNET pathways {.tabset}") }`
 
-Gene set enrichment analysis based on the *[DisGeNET](https://www.disgenet.org/){target="_blank"}* repository.
+`r if ( params$run_DisGeNET ) { c("Gene set enrichment analysis based on the *[DisGeNET](https://www.disgenet.org/){target=\"_blank\"}* repository.") }`
 
-```{r DisGeNET_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
+```{r DisGeNET_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide', eval = params$run_DisGeNET}
 ##### Create folder for storing pathway analysis results plots
 DisGeNET_dir <- paste(params$output_dir, "DisGeNET_pathways", sep = "/")
 if ( !file.exists(DisGeNET_dir) ) {
@@ -2444,9 +2446,9 @@ for (i in 1:ncol(eb$p.value) ) {
 }
 ```
 
-`r if ( length(top_gseNCG.upset) > 1 ) { c("Upset plot showing intersections of DisGeNET pathways enriched across multiple comparisons.") }`
+`r if ( params$run_DisGeNET ) { c("Upset plot showing intersections of DisGeNET pathways enriched across multiple comparisons.") }`
 
-```{r DisGeNET_gsea_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+```{r DisGeNET_gsea_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = params$run_DisGeNET}
 if ( length(top_gseNCG.upset) > 1 ) {
   print(upset(fromList(top_gseNCG.upset), order.by = "freq", nsets = length(top_gseNCG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Enriched pathways", text.scale = 2))
   
@@ -2456,9 +2458,9 @@ if ( length(top_gseNCG.upset) > 1 ) {
 }
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("***") }`
+`r if ( length(contrastNames) > 1 && params$run_DisGeNET ) { c("***") }`
 
-```{r DisGeNET_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
+```{r DisGeNET_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis", eval = params$run_DisGeNET}
 ##### Now once the plots are ready show them in separate tabs
 data.pathways <- list()
 
@@ -2821,11 +2823,11 @@ for( i in 1:ncol(eb$p.value) ){
 }
 ```
 
-### DisGeNET pathways {.tabset}
+`r if ( params$run_DisGeNET ) { c("### DisGeNET pathways {.tabset}") }`
 
-Over-representation analysis based on the *[DisGeNET](https://www.disgenet.org/){target="_blank"}* repository.
+`r if ( params$run_DisGeNET ) { c("Over-representation analysis based on the *[DisGeNET](https://www.disgenet.org/){target=\"_blank\"}* repository.") }`
 
-```{r DisGeNET_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+```{r DisGeNET_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide', eval = params$run_DisGeNET}
 ##### Create lists to store pathways enrichment results for each comparison
 enrichDGN <- list()
 enrichDGN.df <- list()
@@ -2903,9 +2905,9 @@ names(enrichDGN.upset) <- colnames(eb)
 enrichDGN.upset <- Filter(function(a) any(!is.na(a)), enrichDGN.upset)
 ```
 
-`r if ( length(enrichDGN.upset) > 1 ) { c("Upset plot showing intersections of DisGeNET pathways over-representated across multiple comparisons.") }`
+`r if ( params$run_DisGeNET ) { c("Upset plot showing intersections of DisGeNET pathways over-representated across multiple comparisons.") }`
 
-```{r DisGeNET_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+```{r DisGeNET_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = params$run_DisGeNET}
 if ( length(enrichDGN.upset) > 1 ) {
   print(upset(fromList(enrichDGN.upset), order.by = "freq", nsets = length(enrichDGN.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways", text.scale = 1.8))
   
@@ -2915,9 +2917,9 @@ if ( length(enrichDGN.upset) > 1 ) {
 }
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("***") }`
+`r if ( length(contrastNames) > 1 && params$run_DisGeNET ) { c("***") }`
 
-```{r DisGeNET_over_representation__visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
+```{r DisGeNET_over_representation__visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis", eval = params$run_DisGeNET}
 ##### Now once the plots are ready show them in separate tabs
 data.pathways <- list()
 

@@ -47,6 +47,7 @@
 #   kegg_plots:   Logical to generate KEGG plots, which need internet access and are time-consuming to download. Default is FALSE
 #   use_internal_data_kegg:    Logical to use KEGG.db or latest online KEGG data. Default is FALSE
 #   output_dir:   Directory for the results folder
+#   run_DisGeNET: Logical to run pathway analysis using DisGeNET datasets. Default is FALSE
 #   results_name: Desired core name for the results
 #   grch_version:  Human reference genome version used for genes annotation (default is "38")
 #   save_session:  Logical to save the session data. Default is FALSE
@@ -130,6 +131,8 @@ option_list = list(
               help="Logical to generate KEGG plots, which need internet access and are time-consuming to download"),
   make_option("--use_internal_data_kegg", action="store", default=FALSE, type='logical',
               help="Logical to use KEGG.db or latest online KEGG data"),
+  make_option("--run_DisGeNET", action="store", default=FALSE, type='logical',
+              help="Logical to run pathway analysis using DisGeNET datasets"),
   make_option("--output_dir", action="store", default=NA, type='character',
               help="Directory for the results folder"),
   make_option("--results_name", action="store", default=NA, type='character',
@@ -243,6 +246,7 @@ param_list <- list(exprDir = opt$exprDir,
                    nPerm_gsea = opt$nPerm_gsea,
                    kegg_plots = opt$kegg_plots,
                    use_internal_data_kegg = opt$use_internal_data_kegg,
+                   run_DisGeNET = opt$run_DisGeNET,
                    output_dir = opt$output_dir,
                    results_name = opt$results_name,
                    grch_version = as.numeric(opt$grch_version),
@@ -250,7 +254,7 @@ param_list <- list(exprDir = opt$exprDir,
                    save_session = opt$save_session,
                    seed = opt$seed)
 
-##### Pass the user-defined argumentas to the SVbezierPlot R markdown script and run the analysis
+##### Pass the user-defined arguments to the SVbezierPlot R markdown script and run the analysis
 rmarkdown::render(input = "combinedExprDataDE.Rmd",
                   output_file = paste0(opt$output_dir, "/", opt$results_name, ".html"),
                   output_dir = opt$output_dir,
