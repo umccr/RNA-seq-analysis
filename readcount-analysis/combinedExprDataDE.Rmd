@@ -3593,7 +3593,7 @@ topGenes_list_upset <- Filter(function(a) any(!is.na(a)), topGenes_list_upset)
 
 #### Heatmap {.tabset}
 
-Heatmap presenting expression levels of `r length(topGenes.index)` **differentially expressed genes** (*y-axis*) across all samples (*x-axis*).
+Heatmap presenting expression levels of `r length(topGenes.index)` **differentially expressed pathways** (*y-axis*) across all samples (*x-axis*).
 
 ##### Static
 
@@ -3665,7 +3665,7 @@ if ( length(topGenes.index) > 1 ) {
   ##### Save the heatmap as html (PLOTLY)
   saveWidgetFix(output[[1]], file = paste0(params$output_dir, "/", paste0(params$results_name, "_pathways_heatmap_DE.html")), selfcontained = TRUE)
 } else {
-  output[[1]] <- c("\n**No differentially expressed genes** detected\n")
+  output[[1]] <- c("\n**No differentially expressed pathways** detected\n")
 }
 
 cat(renderTags(output[[1]])$html)
