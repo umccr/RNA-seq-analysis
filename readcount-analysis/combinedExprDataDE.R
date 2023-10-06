@@ -44,10 +44,12 @@
 #   pvalueCutoff_gsea:    P-value threshold for calling enriched pathways (GSEA). Default is 0.2
 #   pAdjustMethod_gsea:   Method for correcting pathways enrichment results for multiple testing (GSEA). Default is "BH"
 #   nPerm_gsea:        Number of permutations for GSEA. Default is 1000
+#   run_kegg:     Logical to run KEGG pathway analysis. Default is FALSE
 #   kegg_plots:   Logical to generate KEGG plots, which need internet access and are time-consuming to download. Default is FALSE
 #   use_internal_data_kegg:    Logical to use KEGG.db or latest online KEGG data. Default is FALSE
 #   output_dir:   Directory for the results folder
 #   run_DisGeNET: Logical to run pathway analysis using DisGeNET datasets. Default is FALSE
+#   run_reactome: Logical to run Reactome pathway analysis. Default is FALSE
 #   results_name: Desired core name for the results
 #   grch_version:  Human reference genome version used for genes annotation (default is "38")
 #   save_session:  Logical to save the session data. Default is FALSE
@@ -127,12 +129,16 @@ option_list = list(
               help="Method for correcting pathways enrichment results for multiple testing (GSEA)"),
   make_option("--nPerm_gsea", action="store", default=1000, type='numeric',
               help="Number of permutations for GSEA"),
+  make_option("--run_kegg", action="store", default=FALSE, type='logical',
+              help="Logical to run KEGG pathway analysis"),
   make_option("--kegg_plots", action="store", default=FALSE, type='logical',
               help="Logical to generate KEGG plots, which need internet access and are time-consuming to download"),
   make_option("--use_internal_data_kegg", action="store", default=FALSE, type='logical',
               help="Logical to use KEGG.db or latest online KEGG data"),
   make_option("--run_DisGeNET", action="store", default=FALSE, type='logical',
               help="Logical to run pathway analysis using DisGeNET datasets"),
+  make_option("--run_reactome", action="store", default=FALSE, type='logical',
+              help="Logical to run Reactome pathway analysis"),
   make_option("--output_dir", action="store", default=NA, type='character',
               help="Directory for the results folder"),
   make_option("--results_name", action="store", default=NA, type='character',
@@ -244,9 +250,11 @@ param_list <- list(exprDir = opt$exprDir,
                    pvalueCutoff_gsea = opt$pvalueCutoff_gsea,
                    pAdjustMethod_gsea = opt$pAdjustMethod_gsea,
                    nPerm_gsea = opt$nPerm_gsea,
+                   run_kegg = opt$run_kegg,
                    kegg_plots = opt$kegg_plots,
                    use_internal_data_kegg = opt$use_internal_data_kegg,
                    run_DisGeNET = opt$run_DisGeNET,
+                   run_reactome = opt$run_reactome,
                    output_dir = opt$output_dir,
                    results_name = opt$results_name,
                    grch_version = as.numeric(opt$grch_version),

@@ -33,9 +33,11 @@ params:
   pvalueCutoff_gsea: 0.2
   pAdjustMethod_gsea: "BH"
   nPerm_gsea: 1000
+  run_kegg: FALSE
   kegg_plots: FALSE
   use_internal_data_kegg: FALSE
   run_DisGeNET: FALSE
+  run_reactome: FALSE
   grch_version: 38
   ensembl_version: 86
   save_session: FALSE
@@ -96,9 +98,11 @@ set.seed(seed)
 * **pvalueCutoff_gsea**: `r params$pvalueCutoff_gsea`
 * **pAdjustMethod_gsea**: `r params$pAdjustMethod_gsea`
 * **nPerm_gsea**: `r params$nPerm`
+* **run_kegg**: `r params$run_kegg`
 * **kegg_plots**: `r params$kegg_plots`
 * **use_internal_data_kegg**: `r params$use_internal_data_kegg`
 * **run_DisGeNET**: `r params$run_DisGeNET`
+* **run_reactome**: `r params$run_reactome`
 * **top_genes**: `r params$top_genes`
 * **split**: `r params$split`
 * **results_name**: `r params$results_name`
@@ -1961,11 +1965,12 @@ save.image(file = paste0(params$output_dir, "/", paste0(params$results_name, "_s
 </font> 
 </details>
 
-### KEGG pathways {.tabset}
 
-Gene set enrichment analysis based on the *[KEGG](https://www.genome.jp/kegg/){target="_blank"}* repository.
+`r if ( params$run_kegg ) { c("### KEGG pathways {.tabset}") }`
 
-```{r KEGG_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+`r if ( params$run_kegg ) { c("Gene set enrichment analysis based on the *[KEGG](https://www.genome.jp/kegg/){target=\"_blank\"}* repository.") }`
+
+```{r KEGG_gsea_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide', eval = params$run_kegg}
 ##### Create folder for storing pathway analysis results plots
 KEGG_dir <- paste(params$output_dir, "KEGG_pathways", sep = "/")
 if ( !file.exists(KEGG_dir) ) {
@@ -2068,7 +2073,7 @@ names(top_gseKEGG.upset) <- colnames(eb)
 top_gseKEGG.upset <- Filter(function(a) any(!is.na(a)), top_gseKEGG.upset)
 ```
 
-```{r KEGG_gsea_analysis_heatmap, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide'}
+```{r KEGG_gsea_analysis_heatmap, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results = 'hide', eval = params$run_kegg}
 ##### Create heatmap with GSEA enrichment scores calculated for each gene-set for individual samples
 ht <- list()
 
@@ -2120,7 +2125,7 @@ for (i in 1:ncol(eb$p.value) ) {
 }
 ```
 
-`r if ( length(top_gseKEGG.upset) > 1 ) { c("Upset plot showing intersections of KEGG pathways enriched across multiple comparisons.") }`
+`r if ( params$run_kegg && length(top_gseKEGG.upset) > 1 ) { c("Upset plot showing intersections of KEGG pathways enriched across multiple comparisons.") }`
 
 ```{r KEGG_gsea_analysis_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval=FALSE}
 if ( length(top_gseKEGG.upset) > 1 ) {
@@ -2132,9 +2137,9 @@ if ( length(top_gseKEGG.upset) > 1 ) {
 }
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("***") }`
+`r if ( params$run_kegg && length(contrastNames) > 1 ) { c("***") }`
 
-```{r KEGG_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results="asis"}
+```{r KEGG_gsea_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results="asis", eval = params$run_kegg}
 setwd(KEGG_dir)
 
 ##### Now once the plots are ready show them in separate tabs
@@ -2609,11 +2614,12 @@ for( i in 1:ncol(eb$p.value) ){
 </font> 
 </details>
 
-### KEGG pathways {.tabset}
 
-Over-representation analysis based on the *[KEGG](https://www.genome.jp/kegg/){target="_blank"}* repository.
+`r if ( params$run_kegg ) { c("### KEGG pathways {.tabset}") }`
 
-```{r KEGG_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide'}
+`r if ( params$run_kegg ) { c("Over-representation analysis based on the *[KEGG](https://www.genome.jp/kegg/){target=\"_blank\"}* repository.") }`
+
+```{r KEGG_over_representation_analysis, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 4, results = 'hide', eval = params$run_kegg}
 ##### Create lists to store pathways enrichment results for each comparison
 top_enrichKEGG <- list()
 top_enrichKEGG.df <- list()
@@ -2684,15 +2690,17 @@ for (i in 1:ncol(eb$p.value) ) {
 }
 
 ##### For Upset plot
-names(top_enrichKEGG.upset) <- colnames(eb)
-
-##### Remove comparisons with no DE genes
-top_enrichKEGG.upset <- Filter(function(a) any(!is.na(a)), top_enrichKEGG.upset)
+if ( length(top_enrichKEGG.upset) > 1 ) {
+  names(top_enrichKEGG.upset) <- colnames(eb)
+  
+  ##### Remove comparisons with no DE genes
+  top_enrichKEGG.upset <- Filter(function(a) any(!is.na(a)), top_enrichKEGG.upset)
+}
 ```
 
-`r if ( length(top_enrichKEGG.upset) > 1 ) { c("Upset plot showing intersections of KEGG pathways over-representated across multiple comparisons.") }`
+`r if ( params$run_kegg && length(top_enrichKEGG.upset) > 1 ) { c("Upset plot showing intersections of KEGG pathways over-representated across multiple comparisons.") }`
 
-```{r KEGG_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10}
+```{r KEGG_over_representation_upset_plot, warning = FALSE, echo = TRUE, message = FALSE, results = 'hide', fig.width = 12, fig.height = 10, eval = params$run_kegg}
 if ( length(top_enrichKEGG.upset) > 1 ) {
   print(upset(fromList(top_enrichKEGG.upset), order.by = "freq", nsets = length(top_enrichKEGG.upset), nintersects = NA, number.angles = 30, point.size = 10, line.size = 2, mainbar.y.label = "Comparisons intersections", sets.x.label = "Over-representated pathways", text.scale = 1.8))
   
@@ -2702,9 +2710,9 @@ if ( length(top_enrichKEGG.upset) > 1 ) {
 }
 ```
 
-`r if ( length(contrastNames) > 1 ) { c("***") }`
+`r if ( params$run_kegg && length(contrastNames) > 1 ) { c("***") }`
 
-```{r KEGG_over_representation_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis"}
+```{r KEGG_over_representation_visualisation, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 3, results="asis", eval = params$run_kegg}
 setwd(KEGG_dir)
 
 ##### Now once the plots are ready show them in separate tabs
@@ -2997,7 +3005,7 @@ for( i in 1:ncol(eb$p.value) ){
 }
 ```
 
-## MSigDB and Reactome pathways {.tabset}
+`r if ( params$run_reactome ) { c("## MSigDB and Reactome pathways {.tabset}") } else { c("## MSigDB pathways {.tabset}") }`
 
 ### MSigDB (H) {.tabset}
 
@@ -3144,15 +3152,15 @@ DT::datatable( data = gsva.results, caption = htmltools::tags$caption(style = 'c
       DT::formatRound(columns = colnames(gsva.results), 2)
 ```
 
-***
+`r if ( params$run_reactome ) { c("***") }`
 
-### Reactome {.tabset}
+`r if ( params$run_reactome ) { c("### Reactome {.tabset}") }`
 
-#### Heatmap
+`r if ( params$run_reactome ) { c("#### Heatmap") }`
 
-Heatmap presenting enrichment scores for [Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways (*y-axis*) across all samples (*x-axis*).
+`r if ( params$run_reactome ) { c("Heatmap presenting enrichment scores for  *[Reactome](https://reactome.org/PathwayBrowser){target=\"_blank\"}* pathways (*y-axis*) across all samples (*x-axis*).") }`
 
-```{r Reactome_pathways_heatmap, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide'}
+```{r Reactome_pathways_heatmap, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide', eval = params$run_reactome}
 ##### Create folder for storing pathway analysis results plots
 Reactome_dir <- paste(params$output_dir, "Reactome_pathways", sep = "/")
 if ( !file.exists(Reactome_dir) ) {
@@ -3234,18 +3242,24 @@ if ( nrow(gsva.results) > 1 ) {
 } else {
   cat(paste("\n**No Reactome pathways** were detected\n", sep=""))
 }
+```
 
-pathways.genes <- c(msigdbr_list_h, msigdbr_list_c6 ,reactome_pathways.gene_symbols)
+```{r pathways_genes, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 12, fig.height = 12, results = 'hide'}
+if ( params$run_reactome ) { 
+  pathways.genes <- c(msigdbr_list_h, msigdbr_list_c6 ,reactome_pathways.gene_symbols)
+} else {
+  pathways.genes <- c(msigdbr_list_h, msigdbr_list_c6)
+}
 pathways.genes <- pathways.genes[ unique(names(pathways.genes)) ]
 ```
 
-***
+`r if ( params$run_reactome ) { c("***") }`
 
-#### Table
+`r if ( params$run_reactome ) { c("#### Table") }`
 
-Table presenting enrichment scores for [Reactome](https://reactome.org/PathwayBrowser){target="_blank"} pathways (*y-axis*) across all samples (*x-axis*).
+`r if ( params$run_reactome ) { c("Table presenting enrichment scores for  *[Reactome](https://reactome.org/PathwayBrowser){target=\"_blank\"}* pathways (*y-axis*) across all samples (*x-axis*).") }`
 
-```{r Reactome_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis"}
+```{r Reactome_pathways_table, echo=FALSE, comment = NA, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 3, results="asis", eval = params$run_reactome}
 ##### Trim pathways names length to 50 characters
 rownames(gsva.results) <- substring(rownames(gsva.results), 1, 50)
 
