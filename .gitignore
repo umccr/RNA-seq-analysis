@@ -11,6 +11,9 @@
 ######################
 *.Rhistory
 readcount-analysis/*.css
+*.html
+*.md
+*.RData
 
 # Big data files #
 ######################
